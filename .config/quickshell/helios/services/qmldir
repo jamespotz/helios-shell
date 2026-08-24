@@ -1,0 +1,13 @@
+module services
+singleton Colors 1.0 Colors.qml
+singleton Config 1.0 Config.qml
+singleton Bridge 1.0 Bridge.qml
+singleton Notifications 1.0 Notifications.qml
+singleton Weather 1.0 Weather.qml
+singleton Activity 1.0 Activity.qml
+singleton ExtraApps 1.0 ExtraApps.qml
+singleton Wallpaper 1.0 Wallpaper.qml
+singleton Themes 1.0 Themes.qml
+singleton Cava 1.0 Cava.qml
+singleton Clipboard 1.0 Clipboard.qml
+singleton WifiNetworks 1.0 WifiNetworks.qml

@@ -1,0 +1,13 @@
+# Ignore the hidden git directory
+\.git
+
+# Ignore a specific file
+README.md
+
+# Ignore all files ending in .bak
+\.bak$
+
+# Ignore the linker scripts and their ignore file
+^link\.sh$
+^unlink\.sh$
+^\.linkignore$
