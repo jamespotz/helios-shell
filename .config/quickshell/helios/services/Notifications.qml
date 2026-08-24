@@ -59,11 +59,8 @@ QtObject {
     }
 
     // Raises and focuses the window of the app that sent a notification.
-    // Matched by Wayland app-id against the notification's desktop-entry
-    // (falling back to appName) since notifications carry no window handle
-    // of their own — substring match both ways since desktopEntry is often
-    // a reverse-DNS id (e.g. "org.mozilla.firefox") while appId may be the
-    // short form ("firefox"), or vice versa.
+    // Also tries to invoke the notification's "default" action for deep-
+    // linking (e.g., Slack thread navigation) before focusing the window.
     function focusApp(notification) {
         const needle = (notification.desktopEntry || notification.appName || "").toLowerCase();
         if (!needle) return false;

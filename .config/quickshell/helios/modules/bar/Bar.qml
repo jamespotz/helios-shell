@@ -121,7 +121,22 @@ PanelWindow {
         windows: [bar]
         active: false
         onCleared: {
+            if (trayMenuCooldown.running) return;
             if (bar.panelOpen) Bridge.closeIsland();
+        }
+    }
+
+    // Cooldown after a tray right-click — prevents the focus grab's
+    // onCleared from closing the island when a platform menu steals focus.
+    Timer {
+        id: trayMenuCooldown
+        interval: 1500
+    }
+
+    Connections {
+        target: Bridge
+        function onTrayMenuOpenChanged() {
+            if (Bridge.trayMenuOpen) trayMenuCooldown.restart();
         }
     }
 

@@ -13,19 +13,21 @@ Row {
             id: trayItem
             required property var modelData
 
-            width: 22
-            height: 22
+            width: 24
+            height: 24
 
             Rectangle {
                 anchors.fill: parent
-                radius: width / 2
+                radius: 6
                 color: Colors.surfaceHigh
-                opacity: trayHover.hovered ? 1 : 0
+                opacity: trayHover.hovered ? 0.6 : 0
+
+                Behavior on opacity { NumberAnimation { duration: 100; easing.type: Easing.OutCubic } }
             }
 
             Image {
                 anchors.fill: parent
-                anchors.margins: 2
+                anchors.margins: 3
                 source: trayItem.modelData.icon
                 fillMode: Image.PreserveAspectFit
                 smooth: true
@@ -39,10 +41,10 @@ Row {
                 cursorShape: Qt.PointingHandCursor
                 onClicked: mouse => {
                     if (mouse.button === Qt.RightButton) {
-                        // Full app-provided context menu (all entries the app
-                        // registered via its StatusNotifierItem/DBusMenu),
-                        // not just the single secondaryActivate() shortcut.
                         if (trayItem.modelData.hasMenu) {
+                            // Signal the bar to start its cooldown timer before
+                            // the platform menu steals focus.
+                            Bridge.trayMenuOpen = !Bridge.trayMenuOpen;
                             const pos = trayItem.mapToItem(QsWindow.contentItem, mouse.x, mouse.y);
                             trayItem.modelData.display(QsWindow.window, pos.x, pos.y);
                         } else {

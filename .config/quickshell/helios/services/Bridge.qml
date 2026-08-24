@@ -16,6 +16,7 @@ QtObject {
 
     property bool liquidGlassEnabled: false
     property bool dndEnabled: false
+    property bool trayMenuOpen: false
 
     signal lockRequested()
 
