@@ -1,6 +1,7 @@
 pragma Singleton
 import QtQuick
 import Quickshell.Services.Notifications
+import Quickshell.Hyprland
 
 QtObject {
     id: root
@@ -39,5 +40,24 @@ QtObject {
 
     function dismissAll() {
         for (const n of root.list) n.dismiss();
+    }
+
+    // Raises and focuses the window of the app that sent a notification.
+    // Matched by Wayland app-id against the notification's desktop-entry
+    // (falling back to appName) since notifications carry no window handle
+    // of their own — substring match both ways since desktopEntry is often
+    // a reverse-DNS id (e.g. "org.mozilla.firefox") while appId may be the
+    // short form ("firefox"), or vice versa.
+    function focusApp(notification) {
+        const needle = (notification.desktopEntry || notification.appName || "").toLowerCase();
+        if (!needle) return false;
+        for (const top of Hyprland.toplevels.values) {
+            const appId = (top.wayland && top.wayland.appId || "").toLowerCase();
+            if (appId && (appId === needle || appId.includes(needle) || needle.includes(appId))) {
+                top.wayland.activate();
+                return true;
+            }
+        }
+        return false;
     }
 }

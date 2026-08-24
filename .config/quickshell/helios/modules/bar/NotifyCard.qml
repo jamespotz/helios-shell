@@ -38,7 +38,7 @@ Item {
             }
 
             Column {
-                width: parent.width - 40 - 10 - 28 - 10
+                width: parent.width - 40 - 10 - 28 - 10 - 28 - 10
                 anchors.verticalCenter: parent.verticalCenter
                 spacing: 2
 
@@ -57,6 +57,13 @@ Item {
                     font.pixelSize: Config.fontSize - 1
                     text: root.count === 1 ? root.list[0].body : ""
                 }
+            }
+
+            IconButton {
+                icon: "open_in_new"
+                iconSize: 14
+                anchors.verticalCenter: parent.verticalCenter
+                onClicked: if (root.count === 1) Notifications.focusApp(root.list[0])
             }
 
             IconButton {
@@ -153,9 +160,22 @@ Item {
 
                     StyledText {
                         anchors.verticalCenter: parent.verticalCenter
-                        width: row.width - 22 - 16 - 22 - 24
+                        width: row.width - 22 - 16 - 22 - 24 - 16 - 22
                         elide: Text.ElideRight
                         text: row.modelData.summary
+                    }
+
+                    MaterialIcon {
+                        anchors.verticalCenter: parent.verticalCenter
+                        icon: "open_in_new"
+                        font.pixelSize: 14
+
+                        MouseArea {
+                            anchors.fill: parent
+                            anchors.margins: -6
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: Notifications.focusApp(row.modelData)
+                        }
                     }
 
                     MaterialIcon {

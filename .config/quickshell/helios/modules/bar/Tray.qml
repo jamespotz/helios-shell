@@ -35,13 +35,24 @@ Row {
 
             MouseArea {
                 anchors.fill: parent
-                acceptedButtons: Qt.LeftButton | Qt.RightButton
+                acceptedButtons: Qt.LeftButton | Qt.MiddleButton | Qt.RightButton
                 cursorShape: Qt.PointingHandCursor
                 onClicked: mouse => {
-                    if (mouse.button === Qt.RightButton)
+                    if (mouse.button === Qt.RightButton) {
+                        // Full app-provided context menu (all entries the app
+                        // registered via its StatusNotifierItem/DBusMenu),
+                        // not just the single secondaryActivate() shortcut.
+                        if (trayItem.modelData.hasMenu) {
+                            const pos = trayItem.mapToItem(QsWindow.contentItem, mouse.x, mouse.y);
+                            trayItem.modelData.display(QsWindow.window, pos.x, pos.y);
+                        } else {
+                            trayItem.modelData.secondaryActivate();
+                        }
+                    } else if (mouse.button === Qt.MiddleButton) {
                         trayItem.modelData.secondaryActivate();
-                    else
+                    } else {
                         trayItem.modelData.activate();
+                    }
                 }
             }
         }
