@@ -1,6 +1,4 @@
 import QtQuick
-import Quickshell
-import Quickshell.Io
 import Quickshell.Bluetooth
 import Quickshell.Services.Mpris
 import Qt5Compat.GraphicalEffects
@@ -48,48 +46,10 @@ Item {
     // --- Equalizer, wired to a real EasyEffects output preset. EasyEffects
     // has no live per-band-gain API, only whole-preset load — see
     // easyeffects-eq.py for how band drags get turned into a loadable preset.
-    readonly property string eqScriptPath: Quickshell.env("HOME") + "/.config/quickshell/helios/modules/bar/easyeffects-eq.py"
-    readonly property var eqBandLabels: ["31", "63", "125", "250", "500", "1k", "2k", "4k", "8k", "16k"]
-    readonly property var eqPresets: ({
-        flat:    [0.50, 0.50, 0.50, 0.50, 0.50, 0.50, 0.50, 0.50, 0.50, 0.50],
-        bass:    [0.90, 0.85, 0.75, 0.65, 0.55, 0.45, 0.40, 0.35, 0.30, 0.30],
-        pop:     [0.40, 0.45, 0.55, 0.65, 0.70, 0.65, 0.55, 0.50, 0.50, 0.55],
-        rock:    [0.70, 0.65, 0.50, 0.40, 0.45, 0.55, 0.65, 0.70, 0.70, 0.65],
-        treble:  [0.30, 0.35, 0.40, 0.45, 0.50, 0.55, 0.75, 0.85, 0.90, 0.90],
-        vocal:   [0.35, 0.40, 0.50, 0.65, 0.75, 0.75, 0.65, 0.50, 0.45, 0.40],
-        jazz:    [0.55, 0.50, 0.45, 0.50, 0.60, 0.60, 0.50, 0.45, 0.50, 0.55],
-        classic: [0.50, 0.50, 0.50, 0.55, 0.55, 0.50, 0.50, 0.50, 0.55, 0.60]
-    })
-    property string currentPreset: "treble"
-    property var eqValues: eqPresets["treble"].slice()
-
-    readonly property bool eqIsSaved: {
-        const p = eqValues, preset = eqPresets[currentPreset];
-        if (!preset) return false;
-        for (let i = 0; i < preset.length; i++) {
-            if (Math.abs(preset[i] - p[i]) > 0.001) return false;
-        }
-        return true;
-    }
-
-    function applyPreset(name) {
-        root.currentPreset = name;
-        root.eqValues = root.eqPresets[name].slice();
-        const presetName = name.charAt(0).toUpperCase() + name.slice(1);
-        eqLoadPresetProc.command = ["flatpak", "run", "com.github.wwmm.easyeffects", "--load-preset", presetName];
-        eqLoadPresetProc.running = true;
-    }
-
-    // One of these per band-drag release, not per drag frame — each call
-    // shells out to `flatpak run`, too slow to fire continuously.
-    function applyLiveBands() {
-        const args = root.eqValues.map(v => String((v - 0.5) * 24));
-        eqLiveApplyProc.command = ["python3", root.eqScriptPath].concat(args);
-        eqLiveApplyProc.running = true;
-    }
-
-    Process { id: eqLoadPresetProc }
-    Process { id: eqLiveApplyProc }
+    // Band values/preset selection live in the Equalizer singleton, not here,
+    // so they survive the island closing and reopening (PanelWrapper's
+    // Loader destroys and recreates this component on every tab switch) and
+    // only reset to default when the shell itself restarts.
 
     implicitWidth: 660
     implicitHeight: col.implicitHeight
@@ -304,7 +264,7 @@ Item {
                     spacing: 6
 
                     MaterialIcon {
-                        visible: root.eqIsSaved
+                        visible: Equalizer.eqIsSaved
                         icon: "check_circle"
                         filled: true
                         font.pixelSize: 14
@@ -314,7 +274,7 @@ Item {
 
                     StyledText {
                         anchors.verticalCenter: parent.verticalCenter
-                        text: root.currentPreset.charAt(0).toUpperCase() + root.currentPreset.slice(1)
+                        text: Equalizer.currentPreset.charAt(0).toUpperCase() + Equalizer.currentPreset.slice(1)
                         color: Colors.accent
                         font.bold: true
                     }
@@ -327,7 +287,7 @@ Item {
                 spacing: (parent.width - 10 * 18) / 9
 
                 Repeater {
-                    model: root.eqBandLabels
+                    model: Equalizer.eqBandLabels
 
                     Column {
                         required property string modelData
@@ -337,14 +297,14 @@ Item {
 
                         VerticalSlider {
                             height: 78
-                            value: root.eqValues[index]
+                            value: Equalizer.eqValues[index]
                             centerValue: 0.5
                             onMoved: v => {
-                                const values = root.eqValues.slice();
+                                const values = Equalizer.eqValues.slice();
                                 values[index] = v;
-                                root.eqValues = values;
+                                Equalizer.eqValues = values;
                             }
-                            onReleased: root.applyLiveBands()
+                            onReleased: Equalizer.applyLiveBands()
                         }
                         StyledText {
                             text: modelData
@@ -364,11 +324,11 @@ Item {
                 columnSpacing: 8
 
                 Repeater {
-                    model: Object.keys(root.eqPresets)
+                    model: Object.keys(Equalizer.eqPresets)
 
                     Rectangle {
                         required property string modelData
-                        readonly property bool active: root.currentPreset === modelData
+                        readonly property bool active: Equalizer.currentPreset === modelData
 
                         width: (parent.width - 3 * 8) / 4
                         height: 32
@@ -395,7 +355,7 @@ Item {
                         MouseArea {
                             anchors.fill: parent
                             cursorShape: Qt.PointingHandCursor
-                            onClicked: root.applyPreset(modelData)
+                            onClicked: Equalizer.applyPreset(modelData)
                         }
                     }
                 }
