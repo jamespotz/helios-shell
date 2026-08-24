@@ -89,7 +89,7 @@ Item {
                 Process {
                     id: thumbDecoder
                     command: ["sh", "-c",
-                        "mkdir -p \"$(dirname \"$2\")\" && printf '%s' \"$1\" | cliphist decode > \"$2\"",
+                        "[ -f \"$2\" ] || { mkdir -p \"$(dirname \"$2\")\" && printf '%s' \"$1\" | cliphist decode > \"$2\"; }",
                         "_", row.modelData.line, row.thumbPath]
                     onExited: row.thumbSource = "file://" + row.thumbPath
                 }

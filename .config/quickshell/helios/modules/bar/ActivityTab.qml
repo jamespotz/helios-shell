@@ -121,7 +121,7 @@ Item {
                 radius: Colors.radiusLarge
                 color: Colors.surface
 
-                readonly property real maxMinutes: Math.max(...Activity.weekly.map(d => d.minutes))
+                readonly property real maxMinutes: Math.max(1, ...Activity.weekly.map(d => d.minutes))
 
                 Row {
                     anchors.fill: parent

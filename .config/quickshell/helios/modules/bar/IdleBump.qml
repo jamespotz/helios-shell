@@ -90,7 +90,7 @@ Item {
         MiniVisualizer {
             visible: root.mediaPlaying && Config.showIdleMedia
             active: root.mediaPlaying && Config.showIdleMedia
-            levels: Cava.bars.map(v => v / Cava.maxRange)
+            levels: active ? Cava.bars.map(v => v / Cava.maxRange) : []
             barColor: Colors.text
             maxHeight: 10
             anchors.verticalCenter: parent.verticalCenter

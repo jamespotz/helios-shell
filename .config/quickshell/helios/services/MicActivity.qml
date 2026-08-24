@@ -1,6 +1,5 @@
 pragma Singleton
 import QtQuick
-import QtQml.Models
 import Quickshell.Services.Pipewire
 
 // True whenever any application on the system — Zoom, Discord, Teams,
@@ -15,6 +14,12 @@ import Quickshell.Services.Pipewire
 // isStream/AudioSource filter as a real mic capture, so each candidate
 // stream's upstream link is checked too: only a link whose source is an
 // actual capture device (not a Sink, i.e. not a monitor) counts.
+//
+// Link lookup goes through the global Pipewire.linkGroups rather than a
+// per-node PwNodeLinkTracker — verified live that PwNodeLinkTracker.linkGroups
+// never populates for a tracked stream node (stays empty even for a link
+// created well after the tracker existed), while Pipewire.linkGroups reflects
+// reality as soon as the underlying links are tracked below.
 QtObject {
     id: root
 
@@ -23,19 +28,15 @@ QtObject {
         : []
 
     property PwObjectTracker tracker: PwObjectTracker { objects: root.candidateStreams }
-
-    property Instantiator linkTrackers: Instantiator {
-        model: root.candidateStreams
-        delegate: PwNodeLinkTracker { node: modelData }
-    }
+    property PwObjectTracker linkTracker: PwObjectTracker { objects: Pipewire.links.values }
 
     readonly property bool isSystemMicActive: {
-        for (let i = 0; i < root.linkTrackers.count; i++) {
-            const groups = root.linkTrackers.objectAt(i).linkGroups;
-            for (let j = 0; j < groups.length; j++) {
-                if (groups[j].source && !groups[j].source.isSink)
-                    return true;
-            }
+        const candidateIds = root.candidateStreams.map(n => n.id);
+        const groups = Pipewire.linkGroups.values;
+        for (let i = 0; i < groups.length; i++) {
+            const g = groups[i];
+            if (g.target && candidateIds.includes(g.target.id) && g.source && !g.source.isSink)
+                return true;
         }
         return false;
     }

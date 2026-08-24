@@ -188,6 +188,7 @@ Item {
                             fillMode: Image.PreserveAspectCrop
                             asynchronous: true
                             visible: false
+                            sourceSize: Qt.size(grid.cellWidth * 2, grid.cellHeight * 2)
                         }
 
                         OpacityMask {

@@ -5,4 +5,5 @@
 # semicolon-chained inline version, even though the exact same string worked
 # fine when run directly or via a live `hyprctl dispatch`.
 pkill -f 'quickshell -c helios'
+while pgrep -f 'quickshell -c helios' >/dev/null; do sleep 0.05; done
 exec quickshell -c helios -d

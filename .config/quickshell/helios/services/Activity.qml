@@ -69,6 +69,7 @@ QtObject {
     // interval instead of misattributing a whole session to the wrong day.
     function _tick() {
         const now = Date.now();
+        let changed = false;
         if (root.currentApp && root.currentSince > 0) {
             const elapsed = (now - root.currentSince) / 1000;
             if (elapsed > 0) {
@@ -76,9 +77,11 @@ QtObject {
                 const day = Object.assign({}, root.days[key]);
                 day[root.currentApp] = (day[root.currentApp] || 0) + elapsed;
                 root.days = Object.assign({}, root.days, { [key]: day });
+                changed = true;
             }
         }
         root.currentSince = now;
+        return changed;
     }
 
     function _onFocusChanged() {
@@ -227,7 +230,7 @@ QtObject {
         interval: 15000
         running: true
         repeat: true
-        onTriggered: { root._tick(); root._save(); }
+        onTriggered: { if (root._tick()) root._save(); }
     }
 
     Component.onCompleted: root._onFocusChanged()
