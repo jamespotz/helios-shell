@@ -16,6 +16,22 @@ Item {
         anchors.verticalCenter: parent.verticalCenter
         spacing: 16
 
+        Rectangle {
+            visible: ScreenRecorder.recording
+            width: 8
+            height: 8
+            radius: 4
+            color: Colors.danger
+            anchors.verticalCenter: parent.verticalCenter
+
+            SequentialAnimation on opacity {
+                running: ScreenRecorder.recording
+                loops: Animation.Infinite
+                NumberAnimation { from: 1; to: 0.25; duration: 600 }
+                NumberAnimation { from: 0.25; to: 1; duration: 600 }
+            }
+        }
+
         Workspaces {
             visible: Config.showWorkspaces
             targetScreen: root.targetScreen

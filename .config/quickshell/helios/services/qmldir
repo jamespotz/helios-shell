@@ -11,3 +11,4 @@ singleton Themes 1.0 Themes.qml
 singleton Cava 1.0 Cava.qml
 singleton Clipboard 1.0 Clipboard.qml
 singleton WifiNetworks 1.0 WifiNetworks.qml
+singleton ScreenRecorder 1.0 ScreenRecorder.qml

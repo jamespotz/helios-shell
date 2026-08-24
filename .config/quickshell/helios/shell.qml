@@ -100,5 +100,22 @@ ShellRoot {
         // here. Call `refresh` first if you need it current before listing.
         function list(): string { return Clipboard.items.map(i => i.preview).join("\n") }
         function refresh() { Clipboard.refresh() }
+        function toggle() {
+            const screen = Utils.screenForMonitor(Quickshell.screens, Hyprland.focusedMonitor) || Quickshell.screens[0];
+            Bridge.toggleIsland(screen.name, "clipboard");
+        }
+    }
+
+    IpcHandler {
+        target: "recorder"
+        // Starts/stops against whichever monitor Hyprland currently has
+        // focused — same "focused" convention as the `island` handler —
+        // so a hotkey works regardless of which screen's island it opens.
+        function toggle() {
+            const screen = Utils.screenForMonitor(Quickshell.screens, Hyprland.focusedMonitor) || Quickshell.screens[0];
+            ScreenRecorder.toggle(screen.name);
+        }
+        function stop() { ScreenRecorder.stop() }
+        function mode(name: string) { ScreenRecorder.setMode(name) }
     }
 }

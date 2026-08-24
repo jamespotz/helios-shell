@@ -5,8 +5,8 @@
 -- Every `ipc call <target> <function>` below corresponds 1:1 to an
 -- IpcHandler in the helios QML tree (shell.qml + modules/*). IPC functions
 -- that require an argument (theme apply(name), wallpaper set(path)/
--- folder(path), weather location(text)) aren't bound here — there's no
--- sensible default to hardcode, so drive those from the matching island tab
+-- folder(path), weather location(text), recorder mode(name)) aren't bound
+-- here — there's no sensible default to hardcode, so drive those from the matching island tab
 -- instead. `island appearance(...)`/`liquidGlass(enabled)` are config knobs
 -- meant to be set once from the theme tab UI, not toggled from a hotkey.
 
@@ -58,6 +58,8 @@ hl.bind(mainMod .. " + ALT + T", hl.dsp.exec_cmd(helios .. " island toggle theme
   { description = "Toggle theme picker island" })
 hl.bind(mainMod .. " + ALT + I", hl.dsp.exec_cmd(helios .. " island toggle island"),
   { description = "Toggle island settings island" })
+hl.bind(mainMod .. " + ALT + R", hl.dsp.exec_cmd(helios .. " island toggle recorder"),
+  { description = "Toggle screen recorder island" })
 hl.bind(mainMod .. " + ALT + ESCAPE", hl.dsp.exec_cmd(helios .. " island close"),
   { description = "Close island panel, whatever tab is open" })
 
@@ -67,6 +69,17 @@ hl.bind(mainMod .. " + SHIFT + T", hl.dsp.exec_cmd(helios .. " theme dynamic"),
   { description = "Apply dynamic theme from current wallpaper" })
 hl.bind(mainMod .. " + SHIFT + V", hl.dsp.exec_cmd(helios .. " clipboard refresh"),
   { description = "Refresh clipboard history" })
+-- Own `clipboard toggle` ipc (vs. the `island toggle clipboard` bind above) so
+-- this keeps working even if the clipboard tab's island target ever changes.
+hl.bind(mainMod .. " + V", hl.dsp.exec_cmd(helios .. " clipboard toggle"),
+  { description = "Toggle clipboard history island" })
+
+-- Screen recorder: start/stop against whatever capture mode (Full Screen /
+-- Window-App / Custom Area) is currently selected in the recorder tab,
+-- without needing to open the island first.
+hl.bind(mainMod .. " + SHIFT + C", hl.dsp.exec_cmd(helios .. " recorder toggle"),
+  { description = "Start/stop screen recording" })
+
 
 -- Reload / relaunch (SUPER + SHIFT + R) --------------------------------
 

@@ -31,6 +31,25 @@ Item {
         anchors.centerIn: parent
         spacing: 6
 
+        // Always shown regardless of the idle-bump widget toggles below —
+        // an active recording is safety-relevant state the user should never
+        // have to hover/expand the island to discover.
+        Rectangle {
+            visible: ScreenRecorder.recording
+            width: 8
+            height: 8
+            radius: 4
+            color: Colors.danger
+            anchors.verticalCenter: parent.verticalCenter
+
+            SequentialAnimation on opacity {
+                running: ScreenRecorder.recording
+                loops: Animation.Infinite
+                NumberAnimation { from: 1; to: 0.25; duration: 600 }
+                NumberAnimation { from: 0.25; to: 1; duration: 600 }
+            }
+        }
+
         Workspaces {
             visible: Config.showIdleWorkspaces
             targetScreen: root.targetScreen

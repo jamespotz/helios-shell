@@ -2,9 +2,10 @@ import QtQuick
 import "../../services"
 import "../../components"
 
-// App/screen-time dashboard. Stats and the month heatmap are mock data from
+// App/screen-time dashboard, backed by real focus-time tracking in
 // services/Activity.qml (see that file's header) — the day nav below only
-// re-labels the header for now since the mock dataset doesn't vary per day.
+// re-labels the header for now, since Activity's derived data is always
+// "this week"/"today", not yet parameterized by dayOffset.
 Item {
     id: root
 

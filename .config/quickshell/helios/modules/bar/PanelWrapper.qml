@@ -65,6 +65,11 @@ Item {
                     onClicked: Bridge.setIslandTab("clipboard")
                 }
                 IconButton {
+                    icon: "videocam"
+                    active: Bridge.islandTab === "recorder"
+                    onClicked: Bridge.setIslandTab("recorder")
+                }
+                IconButton {
                     icon: "cloud"
                     active: Bridge.islandTab === "weather"
                     onClicked: Bridge.setIslandTab("weather")
@@ -124,6 +129,7 @@ Item {
                         : Bridge.islandTab === "wifi" ? wifiTab
                         : Bridge.islandTab === "media" ? mediaTab
                         : Bridge.islandTab === "clipboard" ? clipboardTab
+                        : Bridge.islandTab === "recorder" ? recorderTab
                         : Bridge.islandTab === "weather" ? weatherTab
                         : Bridge.islandTab === "calendar" ? weatherTab
                         : Bridge.islandTab === "activity" ? activityTab
@@ -162,6 +168,7 @@ Item {
     Component { id: wifiTab; WifiTab {} }
     Component { id: mediaTab; MediaCard {} }
     Component { id: clipboardTab; ClipboardTab {} }
+    Component { id: recorderTab; ScreenRecorderTab {} }
     Component { id: weatherTab; WeatherPanel {} }
     Component { id: activityTab; ActivityTab {} }
     Component { id: wallpaperTab; WallpaperSettings {} }

@@ -95,6 +95,12 @@ Row {
     }
 
     IconButton {
+        icon: ScreenRecorder.recording ? "stop_circle" : "videocam"
+        active: ScreenRecorder.recording || root.isIslandTab("recorder")
+        onClicked: root.openIslandTab("recorder")
+    }
+
+    IconButton {
         icon: "auto_awesome"
         active: Bridge.liquidGlassEnabled
         onClicked: Bridge.toggleLiquidGlass()
