@@ -42,9 +42,9 @@ Row {
                 onClicked: mouse => {
                     if (mouse.button === Qt.RightButton) {
                         if (trayItem.modelData.hasMenu) {
-                            // Signal the bar to start its cooldown timer before
+                            // Tell the bar to start its cooldown timer before
                             // the platform menu steals focus.
-                            Bridge.trayMenuOpen = !Bridge.trayMenuOpen;
+                            Bridge.trayMenuOpened();
                             const pos = trayItem.mapToItem(QsWindow.contentItem, mouse.x, mouse.y);
                             trayItem.modelData.display(QsWindow.window, pos.x, pos.y);
                         } else {

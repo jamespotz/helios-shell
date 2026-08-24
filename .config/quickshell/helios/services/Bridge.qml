@@ -16,7 +16,15 @@ QtObject {
 
     property bool liquidGlassEnabled: false
     property bool dndEnabled: false
-    property bool trayMenuOpen: false
+
+    // Fired every time a tray icon opens its native context menu — a signal,
+    // not a bool, because there's no "menu closed" event to reset a flag
+    // with, and a plain bool toggled on each right-click misses every other
+    // click (QML only fires onXChanged on an actual value change, so
+    // toggling true->false->true->... silently no-ops half the time, and
+    // any click that would toggle true->true because a previous cycle never
+    // got reset does too).
+    signal trayMenuOpened()
 
     signal lockRequested()
 

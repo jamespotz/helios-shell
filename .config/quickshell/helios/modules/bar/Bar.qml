@@ -158,9 +158,7 @@ PanelWindow {
 
     Connections {
         target: Bridge
-        function onTrayMenuOpenChanged() {
-            if (Bridge.trayMenuOpen) trayMenuCooldown.restart();
-        }
+        function onTrayMenuOpened() { trayMenuCooldown.restart(); }
     }
 
     // hitArea snaps to its target size *instantly* — no Behavior — and owns
