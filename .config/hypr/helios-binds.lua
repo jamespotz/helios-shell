@@ -42,7 +42,7 @@ hl.bind(mainMod .. " + ALT + Down", hl.dsp.exec_cmd(helios .. " osd brightnessDo
 
 hl.bind(mainMod .. " + ALT + V", hl.dsp.exec_cmd(helios .. " island toggle clipboard"),
   { description = "Toggle clipboard history island" })
-hl.bind(mainMod .. " + ALT + B", hl.dsp.exec_cmd(helios .. " island toggle bluetooth"),
+hl.bind(mainMod .. " + SHIFT + B", hl.dsp.exec_cmd(helios .. " island toggle bluetooth"),
   { description = "Toggle bluetooth island" })
 hl.bind(mainMod .. " + ALT + N", hl.dsp.exec_cmd(helios .. " island toggle wifi"),
   { description = "Toggle network (wifi) island" })
@@ -58,7 +58,7 @@ hl.bind(mainMod .. " + ALT + T", hl.dsp.exec_cmd(helios .. " island toggle theme
   { description = "Toggle theme picker island" })
 hl.bind(mainMod .. " + ALT + I", hl.dsp.exec_cmd(helios .. " island toggle island"),
   { description = "Toggle island settings island" })
-hl.bind(mainMod .. " + ALT + R", hl.dsp.exec_cmd(helios .. " island toggle recorder"),
+hl.bind(mainMod .. " + R", hl.dsp.exec_cmd(helios .. " island toggle recorder"),
   { description = "Toggle screen recorder island" })
 hl.bind(mainMod .. " + ALT + ESCAPE", hl.dsp.exec_cmd(helios .. " island close"),
   { description = "Close island panel, whatever tab is open" })

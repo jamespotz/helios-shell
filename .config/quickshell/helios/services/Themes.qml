@@ -46,10 +46,35 @@ QtObject {
             label: "Catppuccin Latte", background: "#eff1f5", surface: "#e6e9ef", surfaceHigh: "#dce0e8",
             overlay: "#9ca0b0", text: "#4c4f69", subtext: "#5c5f77", accent: "#8839ef",
             accentText: "#eff1f5", danger: "#d20f39", warning: "#df8e1d", success: "#40a02b"
+        },
+        gruvboxLight: {
+            label: "Gruvbox Light", background: "#fbf1c7", surface: "#ebdbb2", surfaceHigh: "#d5c4a1",
+            overlay: "#7c6f64", text: "#3c3836", subtext: "#504945", accent: "#af3a03",
+            accentText: "#fbf1c7", danger: "#9d0006", warning: "#b57614", success: "#79740e"
+        },
+        kanagawaLotus: {
+            label: "Kanagawa Lotus", background: "#f2ecbc", surface: "#e5ddb0", surfaceHigh: "#dcd5ac",
+            overlay: "#716e61", text: "#545464", subtext: "#8a8980", accent: "#4d699b",
+            accentText: "#f2ecbc", danger: "#c84053", warning: "#e98a00", success: "#6f894e"
+        },
+        tokyoNightDay: {
+            label: "Tokyo Night Day", background: "#e1e2e7", surface: "#d0d5e3", surfaceHigh: "#c4c8da",
+            overlay: "#b4b5b9", text: "#3760bf", subtext: "#6172b0", accent: "#2e7de9",
+            accentText: "#e1e2e7", danger: "#f52a65", warning: "#8c6c3e", success: "#587539"
+        },
+        rosePineDawn: {
+            label: "Rosé Pine Dawn", background: "#faf4ed", surface: "#fffaf3", surfaceHigh: "#f2e9e1",
+            overlay: "#9893a5", text: "#464261", subtext: "#797593", accent: "#907aa9",
+            accentText: "#faf4ed", danger: "#b4637a", warning: "#ea9d34", success: "#6d8f89"
+        },
+        solarizedLight: {
+            label: "Solarized Light", background: "#fdf6e3", surface: "#eee8d5", surfaceHigh: "#e3dcc6",
+            overlay: "#93a1a1", text: "#657b83", subtext: "#839496", accent: "#268bd2",
+            accentText: "#fdf6e3", danger: "#dc322f", warning: "#b58900", success: "#859900"
         }
     })
 
-    readonly property var presetOrder: ["helios", "kanagawa", "tokyonight", "dracula", "gruvbox", "catppuccinMocha", "catppuccinLatte"]
+    readonly property var presetOrder: ["helios", "kanagawa", "tokyonight", "dracula", "gruvbox", "catppuccinMocha", "catppuccinLatte", "gruvboxLight", "kanagawaLotus", "tokyoNightDay", "rosePineDawn", "solarizedLight"]
 
     readonly property string mode: settingsAdapter.mode
     readonly property string presetName: settingsAdapter.presetName
@@ -465,6 +490,10 @@ QtObject {
         const hi = (group, fg, bg) => "  hi('" + group + "', { fg = '" + fg + "', bg = '" + bg + "' })\n";
         return "local M = {}\n\n"
             + "function M.setup()\n"
+            // base16-colorscheme.nvim never touches &background, so plugins
+            // that branch on it (devicons, etc.) keep assuming dark and fall
+            // back to near-black colors once we hand them a light palette.
+            + "  vim.o.background = '" + (root.isDark(p.background) ? "dark" : "light") + "'\n"
             + "  require('base16-colorscheme').setup({\n"
             + "    base00 = '" + p.background + "',\n"
             + "    base01 = '" + p.surface + "',\n"
@@ -789,7 +818,15 @@ QtObject {
 
     // --- Persistence --------------------------------------------------------
 
-    Component.onCompleted: {
+    // Applies whatever's currently in settingsAdapter to Colors. Called both
+    // at startup and whenever settingsFile finishes loading — blockLoading
+    // guarantees the raw file bytes are read synchronously, but JsonAdapter's
+    // own parse-and-populate of mode/presetName/dynamicPalette from that data
+    // happens on a later tick, after Component.onCompleted has already run.
+    // So onCompleted alone raced the adapter and always saw its "helios"
+    // defaults; restoring here too, on the FileView's loaded signal, is what
+    // actually picks up the saved theme.
+    function restoreFromSettings() {
         if (root.mode === "dynamic" && settingsAdapter.dynamicPalette) {
             try {
                 Colors.apply(JSON.parse(settingsAdapter.dynamicPalette));
@@ -801,9 +838,14 @@ QtObject {
         }
     }
 
+    Component.onCompleted: root.restoreFromSettings()
+
     property FileView settingsFile: FileView {
         path: Quickshell.statePath("theme.json")
         watchChanges: true
+        blockLoading: true
+        preload: true
+        onLoaded: root.restoreFromSettings()
 
         JsonAdapter {
             id: settingsAdapter
