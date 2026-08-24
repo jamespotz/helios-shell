@@ -12,6 +12,7 @@ Item {
     readonly property var wn: WifiNetworks
     property bool addNetworkOpen: false
     property string addSecurity: "wpa"
+    property bool addPasswordVisible: false
 
     // Closing the tab with a password prompt open shouldn't leave it (and
     // any stale "Incorrect password" error) expanded the next time this
@@ -101,11 +102,13 @@ Item {
 
                 readonly property bool known: root.wn.isKnown(modelData.ssid)
                 readonly property bool needsPassword: root.wn.expandedNetwork === modelData.ssid
+                property bool passwordVisible: false
 
                 width: networkList.width
                 spacing: 4
 
                 HoverRow {
+                    id: card
                     width: parent.width
                     highlighted: netRow.modelData.connected
                     onClicked: root.wn.activate(netRow.modelData)
@@ -148,11 +151,18 @@ Item {
                             visible: netRow.known
                             icon: "delete"
                             font.pixelSize: 14
+                            // Only surfaces on hover — an always-on delete icon
+                            // next to every known network reads as clutter;
+                            // Apple's own Wi-Fi menu keeps per-row actions
+                            // hidden until you're actually pointed at the row.
+                            opacity: card.hovering ? 1 : 0
+                            Behavior on opacity { NumberAnimation { duration: Config.animFast } }
 
                             MouseArea {
                                 anchors.fill: parent
                                 anchors.margins: -2
                                 cursorShape: Qt.PointingHandCursor
+                                enabled: card.hovering
                                 onClicked: root.wn.forget(netRow.modelData.ssid)
                             }
                         }
@@ -167,39 +177,85 @@ Item {
                     leftPadding: 4
                 }
 
-                Row {
+                Column {
                     width: parent.width
                     visible: netRow.needsPassword
-                    spacing: 6
+                    spacing: 8
 
-                    Rectangle {
-                        width: parent.width - 32 - 32 - 12
-                        height: 32
-                        radius: Colors.radiusSmall
-                        color: Colors.surfaceHigh
+                    Row {
+                        width: parent.width
+                        spacing: 6
 
-                        TextInput {
-                            id: pwInput
-                            anchors.fill: parent
-                            anchors.margins: 8
-                            color: Colors.text
-                            font.family: Config.fontFamily
-                            font.pixelSize: Config.fontSize
-                            echoMode: TextInput.Password
-                            clip: true
-                            focus: netRow.needsPassword
-                            Keys.onReturnPressed: root.wn.submitPassword(netRow.modelData.ssid, pwInput.text)
+                        Rectangle {
+                            width: parent.width - 32 - 6
+                            height: 32
+                            radius: height / 2
+                            color: Colors.surfaceHigh
+
+                            TextInput {
+                                id: pwInput
+                                anchors.fill: parent
+                                anchors.leftMargin: 12
+                                anchors.rightMargin: 32
+                                color: Colors.text
+                                font.family: Config.fontFamily
+                                font.pixelSize: Config.fontSize
+                                echoMode: netRow.passwordVisible ? TextInput.Normal : TextInput.Password
+                                clip: true
+                                focus: netRow.needsPassword
+                                Keys.onReturnPressed: root.wn.submitPassword(netRow.modelData.ssid, pwInput.text)
+                            }
+
+                            MaterialIcon {
+                                anchors.right: parent.right
+                                anchors.rightMargin: 10
+                                anchors.verticalCenter: parent.verticalCenter
+                                icon: netRow.passwordVisible ? "visibility_off" : "visibility"
+                                font.pixelSize: 15
+                                opacity: 0.6
+
+                                MouseArea {
+                                    anchors.fill: parent
+                                    anchors.margins: -6
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: netRow.passwordVisible = !netRow.passwordVisible
+                                }
+                            }
+                        }
+
+                        IconButton {
+                            icon: "close"
+                            onClicked: root.wn.expandedNetwork = ""
                         }
                     }
 
-                    IconButton {
-                        icon: "arrow_forward"
-                        onClicked: root.wn.submitPassword(netRow.modelData.ssid, pwInput.text)
-                    }
+                    Rectangle {
+                        width: parent.width
+                        height: 32
+                        radius: height / 2
+                        color: Colors.secondary
 
-                    IconButton {
-                        icon: "close"
-                        onClicked: root.wn.expandedNetwork = ""
+                        StyledText {
+                            anchors.centerIn: parent
+                            text: "Join"
+                            color: Colors.secondaryText
+                            font.bold: true
+                        }
+
+                        Rectangle {
+                            anchors.fill: parent
+                            radius: parent.radius
+                            color: Colors.surfaceHigh
+                            opacity: joinBtnHover.hovered ? 0.2 : 0
+                        }
+
+                        HoverHandler { id: joinBtnHover }
+
+                        MouseArea {
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: root.wn.submitPassword(netRow.modelData.ssid, pwInput.text)
+                        }
                     }
                 }
             }
@@ -212,8 +268,6 @@ Item {
             height: 36
             highlighted: root.addNetworkOpen
             visible: Networking.wifiEnabled && !!root.wn.wifiDevice
-            border.width: 1
-            border.color: Colors.overlay
             onClicked: root.addNetworkOpen = !root.addNetworkOpen
 
             Row {
@@ -240,13 +294,14 @@ Item {
             Rectangle {
                 width: parent.width
                 height: 32
-                radius: Colors.radiusSmall
+                radius: height / 2
                 color: Colors.surfaceHigh
 
                 TextInput {
                     id: addSsidInput
                     anchors.fill: parent
-                    anchors.margins: 8
+                    anchors.leftMargin: 12
+                    anchors.rightMargin: 12
                     color: Colors.text
                     font.family: Config.fontFamily
                     font.pixelSize: Config.fontSize
@@ -281,7 +336,7 @@ Item {
 
                         width: label.implicitWidth + 20
                         height: 28
-                        radius: Colors.radiusSmall
+                        radius: height / 2
                         color: active ? Colors.secondary : Colors.surfaceHigh
                         Behavior on color { ColorAnimation { duration: Config.animFast } }
 
@@ -311,53 +366,59 @@ Item {
                 }
             }
 
-            Row {
+            Rectangle {
                 width: parent.width
-                spacing: 6
+                height: 32
+                radius: height / 2
+                color: Colors.surfaceHigh
                 visible: root.addSecurity !== "open"
 
-                Rectangle {
-                    width: parent.width - 38 - 6
-                    height: 32
-                    radius: Colors.radiusSmall
-                    color: Colors.surfaceHigh
+                TextInput {
+                    id: addPwInput
+                    anchors.fill: parent
+                    anchors.leftMargin: 12
+                    anchors.rightMargin: 32
+                    color: Colors.text
+                    font.family: Config.fontFamily
+                    font.pixelSize: Config.fontSize
+                    echoMode: root.addPasswordVisible ? TextInput.Normal : TextInput.Password
+                    clip: true
+                    Keys.onReturnPressed: root.submitAddNetwork()
 
-                    TextInput {
-                        id: addPwInput
-                        anchors.fill: parent
-                        anchors.margins: 8
-                        color: Colors.text
-                        font.family: Config.fontFamily
-                        font.pixelSize: Config.fontSize
-                        echoMode: TextInput.Password
-                        clip: true
-                        Keys.onReturnPressed: root.submitAddNetwork()
-
-                        StyledText {
-                            visible: addPwInput.text.length === 0
-                            text: "Password"
-                            opacity: 0.5
-                            anchors.verticalCenter: parent.verticalCenter
-                        }
+                    StyledText {
+                        visible: addPwInput.text.length === 0
+                        text: "Password"
+                        opacity: 0.5
+                        anchors.verticalCenter: parent.verticalCenter
                     }
                 }
 
-                IconButton {
-                    icon: "arrow_forward"
-                    onClicked: root.submitAddNetwork()
+                MaterialIcon {
+                    anchors.right: parent.right
+                    anchors.rightMargin: 10
+                    anchors.verticalCenter: parent.verticalCenter
+                    icon: root.addPasswordVisible ? "visibility_off" : "visibility"
+                    font.pixelSize: 15
+                    opacity: 0.6
+
+                    MouseArea {
+                        anchors.fill: parent
+                        anchors.margins: -6
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: root.addPasswordVisible = !root.addPasswordVisible
+                    }
                 }
             }
 
             Rectangle {
                 width: parent.width
                 height: 32
-                radius: Colors.radiusSmall
+                radius: height / 2
                 color: Colors.secondary
-                visible: root.addSecurity === "open"
 
                 StyledText {
                     anchors.centerIn: parent
-                    text: "Connect"
+                    text: "Join"
                     color: Colors.secondaryText
                     font.bold: true
                 }
@@ -387,5 +448,6 @@ Item {
         addSsidInput.text = "";
         addPwInput.text = "";
         addNetworkOpen = false;
+        addPasswordVisible = false;
     }
 }

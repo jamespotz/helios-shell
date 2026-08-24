@@ -1,4 +1,5 @@
 import QtQuick
+import Quickshell.Services.UPower
 import "../../services"
 import "../../components"
 
@@ -90,6 +91,12 @@ Item {
                     onClicked: Bridge.setIslandTab("theme")
                 }
                 IconButton {
+                    icon: PowerProfiles.profile === PowerProfile.PowerSaver ? "eco"
+                        : PowerProfiles.profile === PowerProfile.Performance ? "bolt" : "balance"
+                    active: Bridge.islandTab === "power"
+                    onClicked: Bridge.setIslandTab("power")
+                }
+                IconButton {
                     icon: "tune"
                     active: Bridge.islandTab === "island"
                     onClicked: Bridge.setIslandTab("island")
@@ -136,6 +143,7 @@ Item {
                         : Bridge.islandTab === "wallpaper" ? wallpaperTab
                         : Bridge.islandTab === "theme" ? themeTab
                         : Bridge.islandTab === "island" ? islandTab
+                        : Bridge.islandTab === "power" ? powerTab
                         : volumeTab
                 }
             }
@@ -174,4 +182,5 @@ Item {
     Component { id: wallpaperTab; WallpaperSettings {} }
     Component { id: themeTab; ThemeSettings {} }
     Component { id: islandTab; IslandSettings {} }
+    Component { id: powerTab; PowerTab {} }
 }

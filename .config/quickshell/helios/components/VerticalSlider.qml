@@ -2,10 +2,13 @@ import QtQuick
 import "../services"
 
 // Vertical counterpart to Slider.qml, used by MediaCard's equalizer bands.
+// Fill is bidirectional from centerValue (0dB) rather than bottom-up, so a
+// band reads as "boosted" or "cut" the way a real EQ does.
 Item {
     id: root
 
     property real value: 0.5 // 0..1
+    property real centerValue: 0.5
     property color fillColor: Colors.accent
 
     signal moved(real value)
@@ -24,11 +27,24 @@ Item {
         color: Colors.surfaceHigh
 
         Rectangle {
-            anchors.bottom: parent.bottom
+            // 0dB tie line
+            anchors.horizontalCenter: parent.horizontalCenter
+            width: 10
+            height: 1
+            color: Colors.overlay
+            opacity: 0.6
+            y: track.height * (1 - root.centerValue) - height / 2
+        }
+
+        Rectangle {
+            readonly property real topFrac: 1 - Math.max(root.value, root.centerValue)
+            readonly property real bottomFrac: 1 - Math.min(root.value, root.centerValue)
+
             width: parent.width
-            height: parent.height * root.value
             radius: parent.radius
             color: root.fillColor
+            y: track.height * topFrac
+            height: Math.max(0, track.height * (bottomFrac - topFrac))
         }
 
         Rectangle {

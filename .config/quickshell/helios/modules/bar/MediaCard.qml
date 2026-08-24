@@ -106,10 +106,10 @@ Item {
             Rectangle {
                 width: 96
                 height: 96
-                radius: 48
+                radius: 26
                 color: Colors.surfaceHigh
-                border.width: 2
-                border.color: Colors.accent
+                border.width: 1
+                border.color: Colors.overlay
                 clip: true
                 anchors.verticalCenter: parent.verticalCenter
 
@@ -125,7 +125,8 @@ Item {
                     anchors.centerIn: parent
                     visible: !(root.player && root.player.trackArtUrl)
                     icon: "music_note"
-                    font.pixelSize: 32
+                    font.pixelSize: 34
+                    opacity: 0.7
                 }
             }
 
@@ -138,23 +139,24 @@ Item {
                     width: parent.width
                     elide: Text.ElideRight
                     font.bold: true
-                    font.pixelSize: Config.fontSize + 5
+                    font.pixelSize: Config.fontSize + 6
                     text: root.player && root.player.trackTitle ? root.player.trackTitle : "Nothing playing"
                 }
                 StyledText {
                     width: parent.width
                     elide: Text.ElideRight
-                    opacity: 0.65
-                    text: root.player && root.player.trackArtist ? "BY " + root.player.trackArtist : ""
+                    opacity: 0.6
+                    text: root.player && root.player.trackArtist ? root.player.trackArtist : ""
                 }
 
                 Row {
-                    spacing: 8
+                    spacing: 6
+                    topPadding: 2
                     visible: !!root.connectedDevice || !!(root.player && root.player.identity)
 
                     Rectangle {
                         visible: !!root.connectedDevice
-                        width: btChip.implicitWidth + 20
+                        width: btChip.implicitWidth + 18
                         height: 22
                         radius: 11
                         color: Colors.surfaceHigh
@@ -163,7 +165,7 @@ Item {
                             id: btChip
                             anchors.centerIn: parent
                             spacing: 4
-                            MaterialIcon { icon: "bluetooth"; font.pixelSize: 12; anchors.verticalCenter: parent.verticalCenter }
+                            MaterialIcon { icon: "bluetooth"; font.pixelSize: 12; color: Colors.accent; anchors.verticalCenter: parent.verticalCenter }
                             StyledText {
                                 text: root.connectedDevice ? (root.connectedDevice.name || root.connectedDevice.deviceName) : ""
                                 font.pixelSize: Config.fontSize - 3
@@ -172,12 +174,25 @@ Item {
                         }
                     }
 
-                    StyledText {
-                        anchors.verticalCenter: parent.verticalCenter
+                    Rectangle {
                         visible: !!(root.player && root.player.identity)
-                        text: "VIA " + (root.player ? root.player.identity : "")
-                        opacity: 0.5
-                        font.pixelSize: Config.fontSize - 3
+                        width: viaChip.implicitWidth + 18
+                        height: 22
+                        radius: 11
+                        color: Colors.surfaceHigh
+
+                        Row {
+                            id: viaChip
+                            anchors.centerIn: parent
+                            spacing: 4
+                            MaterialIcon { icon: "graphic_eq"; font.pixelSize: 12; opacity: 0.6; anchors.verticalCenter: parent.verticalCenter }
+                            StyledText {
+                                text: root.player ? root.player.identity : ""
+                                opacity: 0.6
+                                font.pixelSize: Config.fontSize - 3
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+                        }
                     }
                 }
             }
@@ -189,6 +204,8 @@ Item {
 
             Slider {
                 width: parent.width
+                trackHeight: 4
+                thumbHoverOnly: true
                 value: root.player && root.player.lengthSupported && root.player.length > 0
                     ? root.displayPosition / root.player.length : 0
                 onMoved: v => {
@@ -224,23 +241,28 @@ Item {
 
             IconButton {
                 icon: "skip_previous"
-                iconSize: 22
+                iconSize: 19
+                anchors.verticalCenter: parent.verticalCenter
                 onClicked: if (root.player && root.player.canGoPrevious) root.player.previous()
             }
             IconButton {
+                width: 44
+                height: 44
                 icon: root.player && root.player.isPlaying ? "pause" : "play_arrow"
-                iconSize: 22
+                iconSize: 26
                 active: !!(root.player && root.player.isPlaying)
+                anchors.verticalCenter: parent.verticalCenter
                 onClicked: if (root.player && root.player.canTogglePlaying) root.player.togglePlaying()
             }
             IconButton {
                 icon: "skip_next"
-                iconSize: 22
+                iconSize: 19
+                anchors.verticalCenter: parent.verticalCenter
                 onClicked: if (root.player && root.player.canGoNext) root.player.next()
             }
         }
 
-        Rectangle { width: parent.width; height: 1; color: Colors.overlay; opacity: 0.4 }
+        Rectangle { width: parent.width; height: 1; color: Colors.overlay; opacity: 0.15 }
 
         // --- Equalizer -------------------------------------------------------
         Column {
@@ -256,15 +278,15 @@ Item {
                 Row {
                     anchors.right: parent.right
                     anchors.verticalCenter: parent.verticalCenter
-                    spacing: 8
+                    spacing: 6
 
-                    Rectangle {
+                    MaterialIcon {
                         visible: root.eqIsSaved
-                        width: savedLabel.implicitWidth + 16
-                        height: 22
-                        radius: 11
-                        color: Colors.surfaceHigh
-                        StyledText { id: savedLabel; anchors.centerIn: parent; text: "Saved"; font.pixelSize: Config.fontSize - 3 }
+                        icon: "check_circle"
+                        filled: true
+                        font.pixelSize: 14
+                        color: Colors.success
+                        anchors.verticalCenter: parent.verticalCenter
                     }
 
                     StyledText {
@@ -293,6 +315,7 @@ Item {
                         VerticalSlider {
                             height: 78
                             value: root.eqValues[index]
+                            centerValue: 0.5
                             onMoved: v => {
                                 const values = root.eqValues.slice();
                                 values[index] = v;
@@ -326,7 +349,7 @@ Item {
 
                         width: (parent.width - 3 * 8) / 4
                         height: 32
-                        radius: Colors.radiusSmall
+                        radius: height / 2
                         color: active ? Colors.accent : Colors.surfaceHigh
                         Behavior on color { ColorAnimation { duration: Config.animFast } }
 

@@ -71,6 +71,13 @@ Row {
     }
 
     IconButton {
+        icon: PowerProfiles.profile === PowerProfile.PowerSaver ? "eco"
+            : PowerProfiles.profile === PowerProfile.Performance ? "bolt" : "balance"
+        active: root.isIslandTab("power")
+        onClicked: root.openIslandTab("power")
+    }
+
+    IconButton {
         visible: root.hasBattery
         icon: {
             const b = root.battery;

@@ -36,7 +36,7 @@ Item {
 
                     width: modeContent.implicitWidth + 16
                     height: 26
-                    radius: Colors.radiusSmall
+                    radius: height / 2
                     color: isActive ? Colors.accent : Colors.surfaceHigh
                     Behavior on color { ColorAnimation { duration: Config.animFast } }
 
@@ -167,7 +167,7 @@ Item {
             }
         }
 
-        Rectangle { width: parent.width; height: 1; color: Colors.overlay; opacity: 0.4 }
+        Rectangle { width: parent.width; height: 1; color: Colors.overlay; opacity: 0.15 }
 
         Row {
             width: parent.width

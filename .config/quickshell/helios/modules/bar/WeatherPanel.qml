@@ -22,6 +22,15 @@ Item {
         root.viewDate = d;
     }
 
+    // Whole calendar days between (viewYear, viewMonth, day) and today —
+    // used to tell whether a calendar cell falls inside the forecast's
+    // 3-day window and, if so, which dayOffset it maps to.
+    function daysFromToday(year, month, day) {
+        const cellDate = new Date(year, month, day);
+        const t = new Date(root.today.getFullYear(), root.today.getMonth(), root.today.getDate());
+        return Math.round((cellDate - t) / 86400000);
+    }
+
     readonly property var weeks: {
         const year = viewDate.getFullYear(), month = viewDate.getMonth();
         const startOffset = new Date(year, month, 1).getDay();
@@ -39,7 +48,10 @@ Item {
         && viewDate.getMonth() === today.getMonth()
 
     // --- Day nav on the right — indexes Weather.daily, clamped to what's
-    // actually available (0 = today, up to Weather.daily.length - 1) --------
+    // actually available (0 = today, up to Weather.daily.length - 1). A
+    // calendar cell within this same window is clickable and jumps the
+    // forecast straight to it, so the two columns read as one widget
+    // instead of two glued-together panels. --------
     property int dayOffset: 0
     readonly property int maxDayOffset: Math.max(0, Weather.daily.length - 1)
     onMaxDayOffsetChanged: dayOffset = Math.min(dayOffset, maxDayOffset)
@@ -74,7 +86,7 @@ Item {
             Column {
                 id: calCol
                 width: parent.width
-                spacing: 10
+                spacing: 12
 
                 Item {
                     width: parent.width
@@ -85,7 +97,7 @@ Item {
                         anchors.centerIn: parent
                         font.bold: true
                         text: Qt.formatDate(root.viewDate, "MMMM yyyy")
-                        font.pixelSize: Config.fontSize - 1
+                        font.pixelSize: Config.fontSize + 1
                     }
                     IconButton { icon: "chevron_right"; anchors.right: parent.right; anchors.verticalCenter: parent.verticalCenter; onClicked: root.shiftMonth(1) }
                 }
@@ -99,8 +111,9 @@ Item {
                             width: 230 / 7
                             horizontalAlignment: Text.AlignHCenter
                             text: modelData
-                            opacity: 0.5
-                            font.pixelSize: Config.fontSize - 3
+                            font.bold: true
+                            opacity: 0.4
+                            font.pixelSize: Config.fontSize - 4
                         }
                     }
                 }
@@ -123,10 +136,26 @@ Item {
                                     id: cell
                                     required property int modelData
                                     readonly property bool isToday: root.viewingCurrentMonth && modelData === root.today.getDate()
+                                    readonly property int diffFromToday: root.daysFromToday(root.viewDate.getFullYear(), root.viewDate.getMonth(), modelData)
+                                    readonly property bool isForecastLinkable: !cell.isToday && cell.diffFromToday >= 0 && cell.diffFromToday <= root.maxDayOffset
+                                    readonly property bool isSelectedForecastDay: !cell.isToday && cell.diffFromToday === root.dayOffset
 
                                     width: 230 / 7
                                     height: width
                                     visible: modelData > 0
+
+                                    // Soft halo behind today — an oversized, low-opacity
+                                    // fill reads as a glow without pulling in a real blur
+                                    // effect the rest of this codebase doesn't use.
+                                    Rectangle {
+                                        visible: cell.isToday
+                                        anchors.centerIn: parent
+                                        width: Math.min(parent.width, parent.height) + 4
+                                        height: width
+                                        radius: width / 2
+                                        color: Colors.accent
+                                        opacity: 0.18
+                                    }
 
                                     Rectangle {
                                         anchors.centerIn: parent
@@ -136,9 +165,29 @@ Item {
                                         color: cell.isToday ? Colors.accent : (dayHover.hovered ? Colors.overlay : "transparent")
                                         opacity: cell.isToday ? 1 : (dayHover.hovered ? 0.3 : 1)
                                         Behavior on opacity { NumberAnimation { duration: Config.animFast } }
+
+                                        // Thin ring marks which day the forecast column on
+                                        // the right is currently showing, when that isn't
+                                        // today (today's own fill already makes that obvious).
+                                        Rectangle {
+                                            visible: cell.isSelectedForecastDay
+                                            anchors.fill: parent
+                                            anchors.margins: -3
+                                            radius: width / 2
+                                            color: "transparent"
+                                            border.width: 1.5
+                                            border.color: Colors.accent
+                                        }
                                     }
 
                                     HoverHandler { id: dayHover }
+
+                                    MouseArea {
+                                        anchors.fill: parent
+                                        enabled: cell.isForecastLinkable
+                                        cursorShape: Qt.PointingHandCursor
+                                        onClicked: root.dayOffset = cell.diffFromToday
+                                    }
 
                                     StyledText {
                                         anchors.centerIn: parent
@@ -159,15 +208,25 @@ Item {
             width: 380
             spacing: 10
 
-            StyledText {
-                text: Qt.formatTime(root.now, "hh:mm") + ":" + Qt.formatTime(root.now, "ss")
-                font.family: Config.monoFontFamily
-                font.bold: true
-                font.pixelSize: Config.fontSize + 30
+            Row {
+                spacing: 6
+                StyledText {
+                    text: Qt.formatTime(root.now, "hh:mm")
+                    font.family: Config.monoFontFamily
+                    font.pixelSize: Config.fontSize + 30
+                }
+                StyledText {
+                    text: ":" + Qt.formatTime(root.now, "ss")
+                    font.family: Config.monoFontFamily
+                    font.pixelSize: Config.fontSize + 14
+                    opacity: 0.4
+                    anchors.bottom: parent.bottom
+                    anchors.bottomMargin: 8
+                }
             }
             StyledText {
                 text: Qt.formatDate(root.now, "dddd, MMM d")
-                opacity: 0.7
+                opacity: 0.6
             }
 
             StyledText {
@@ -189,12 +248,11 @@ Item {
 
                 delegate: Rectangle {
                     required property var modelData
+                    required property int index
                     width: 64
                     height: 80
-                    radius: 40
-                    color: Colors.surface
-                    border.width: 1
-                    border.color: Colors.overlay
+                    radius: 32
+                    color: index === 0 ? Colors.surfaceHigh : Colors.surface
 
                     Column {
                         anchors.centerIn: parent
@@ -235,7 +293,9 @@ Item {
                 StyledText {
                     anchors.centerIn: parent
                     font.bold: true
-                    text: Qt.formatDate(root.selectedDate, "dddd").toUpperCase()
+                    text: root.dayOffset === 0 ? "TODAY"
+                        : root.dayOffset === 1 ? "TOMORROW"
+                        : Qt.formatDate(root.selectedDate, "dddd").toUpperCase()
                     font.pixelSize: Config.fontSize - 2
                 }
                 IconButton {
@@ -255,7 +315,6 @@ Item {
 
                 StyledText {
                     text: root.selectedDay ? Math.round(root.selectedDay.tempC) + "°" : ""
-                    font.bold: true
                     font.pixelSize: Config.fontSize + 34
                     anchors.horizontalCenter: parent.horizontalCenter
                 }
@@ -284,16 +343,15 @@ Item {
                         required property var modelData
                         width: (parent.width - 3 * 6) / 4
                         height: width
-                        radius: width / 2
-                        color: "transparent"
-                        border.width: 1
-                        border.color: Colors.overlay
+                        radius: Colors.radiusSmall
+                        color: Colors.surface
 
                         Column {
                             anchors.centerIn: parent
-                            spacing: 1
-                            MaterialIcon { icon: modelData.icon; font.pixelSize: 12; opacity: 0.8; anchors.horizontalCenter: parent.horizontalCenter }
-                            StyledText { text: modelData.value; font.pixelSize: Config.fontSize - 5; anchors.horizontalCenter: parent.horizontalCenter }
+                            spacing: 2
+                            MaterialIcon { icon: modelData.icon; font.pixelSize: 13; color: Colors.accent; anchors.horizontalCenter: parent.horizontalCenter }
+                            StyledText { text: modelData.value; font.bold: true; font.pixelSize: Config.fontSize - 4; anchors.horizontalCenter: parent.horizontalCenter }
+                            StyledText { text: modelData.label; font.pixelSize: Config.fontSize - 7; opacity: 0.5; anchors.horizontalCenter: parent.horizontalCenter }
                         }
                     }
                 }

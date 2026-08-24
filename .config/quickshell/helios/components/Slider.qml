@@ -10,19 +10,26 @@ Item {
     // maxValue goes past it) — set negative (default) to hide it.
     property real markerAt: -1
     property color fillColor: Colors.accent
+    property real trackHeight: 6
+    // Apple Music-style scrubber: thumb stays hidden until hovered/dragged
+    // instead of sitting on the track at all times.
+    property bool thumbHoverOnly: false
 
     signal moved(real value)
 
     readonly property real fraction: root.maxValue > 0 ? Math.max(0, Math.min(1, root.value / root.maxValue)) : 0
+    readonly property bool showThumb: !root.thumbHoverOnly || trackHover.hovered || dragArea.pressed
 
     implicitHeight: 20
+
+    HoverHandler { id: trackHover }
 
     Rectangle {
         id: track
         anchors.verticalCenter: parent.verticalCenter
         width: parent.width
-        height: 6
-        radius: 3
+        height: root.trackHeight
+        radius: height / 2
         color: Colors.surfaceHigh
 
         Rectangle {
@@ -48,12 +55,15 @@ Item {
             height: 14
             radius: 7
             color: Colors.text
+            opacity: root.showThumb ? 1 : 0
+            Behavior on opacity { NumberAnimation { duration: Config.animFast } }
             anchors.verticalCenter: parent.verticalCenter
             x: track.width * root.fraction - width / 2
         }
     }
 
     MouseArea {
+        id: dragArea
         anchors.fill: parent
         function posToValue(mx) {
             return Math.max(0, Math.min(1, mx / width)) * root.maxValue;

@@ -24,8 +24,8 @@ Row {
     Rectangle {
         width: 70
         height: 32
-        radius: Colors.radiusSmall
-        color: Colors.surfaceHigh
+        radius: height / 2
+        color: Colors.surface
         anchors.verticalCenter: parent.verticalCenter
 
         TextInput {

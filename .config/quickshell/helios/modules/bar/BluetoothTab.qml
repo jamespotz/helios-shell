@@ -119,9 +119,7 @@ Item {
                     width: 190
                     height: 56
                     radius: Colors.radiusLarge
-                    color: Colors.surface
-                    border.width: 1
-                    border.color: Colors.overlay
+                    color: Colors.surfaceHigh
                     x: -width / 2
                     y: -190
 
@@ -170,9 +168,7 @@ Item {
                     width: 180
                     height: 56
                     radius: Colors.radiusLarge
-                    color: Colors.surface
-                    border.width: 1
-                    border.color: Colors.overlay
+                    color: Colors.surfaceHigh
                     x: -320
                     y: -28
 
@@ -199,9 +195,7 @@ Item {
                     width: 180
                     height: 56
                     radius: Colors.radiusLarge
-                    color: Colors.surface
-                    border.width: 1
-                    border.color: Colors.overlay
+                    color: Colors.surfaceHigh
                     x: 140
                     y: -28
 
@@ -228,9 +222,7 @@ Item {
                     width: 190
                     height: 56
                     radius: Colors.radiusLarge
-                    color: Colors.surface
-                    border.width: 1
-                    border.color: Colors.overlay
+                    color: Colors.surfaceHigh
                     x: -width / 2
                     y: 130
 

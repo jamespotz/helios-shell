@@ -70,7 +70,7 @@ Item {
 
             ScrollIndicator { target: clipList }
 
-            delegate: Rectangle {
+            delegate: HoverRow {
                 id: row
                 required property var modelData
                 required property int index
@@ -80,11 +80,7 @@ Item {
 
                 width: clipList.width
                 height: 44
-                radius: Colors.radiusSmall
-                // Not animated — see IconButton.qml's comment: a fading
-                // hover color let two rows appear highlighted at once
-                // during a fast mouse sweep down the list.
-                color: mouse.containsMouse ? Colors.surfaceHigh : "transparent"
+                onClicked: { Clipboard.copy(row.modelData.line); Bridge.closeIsland(); }
 
                 Process {
                     id: thumbDecoder
@@ -95,14 +91,6 @@ Item {
                 }
 
                 Component.onCompleted: if (row.modelData.isImage) thumbDecoder.running = true
-
-                MouseArea {
-                    id: mouse
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: { Clipboard.copy(row.modelData.line); Bridge.closeIsland(); }
-                }
 
                 Row {
                     anchors.fill: parent
@@ -139,11 +127,14 @@ Item {
                         anchors.verticalCenter: parent.verticalCenter
                         icon: "close"
                         font.pixelSize: 14
+                        opacity: row.hovering ? 1 : 0
+                        Behavior on opacity { NumberAnimation { duration: Config.animFast } }
 
                         MouseArea {
                             anchors.fill: parent
                             anchors.margins: -6
                             cursorShape: Qt.PointingHandCursor
+                            enabled: row.hovering
                             onClicked: Clipboard.remove(row.modelData.line)
                         }
                     }

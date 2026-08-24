@@ -46,6 +46,7 @@ Item {
             Slider {
                 anchors.verticalCenter: parent.verticalCenter
                 width: parent.width - 28 - 44 - 24
+                trackHeight: 8
                 value: root.muted ? 0 : root.volume
                 // Output only — pushing past 100% is real gain, not just a
                 // louder-sounding UI, so it stays capped at 1.0 for input.
@@ -143,6 +144,7 @@ Item {
             Slider {
                 anchors.verticalCenter: parent.verticalCenter
                 width: parent.width - 28 - 44 - 24
+                trackHeight: 8
                 value: micRow.micMuted ? 0 : micRow.micVolume
                 onMoved: v => { if (root.source && root.source.audio) { root.source.audio.muted = false; root.source.audio.volume = v; } }
             }
