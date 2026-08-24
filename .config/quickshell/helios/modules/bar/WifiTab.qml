@@ -282,15 +282,14 @@ Item {
                         width: label.implicitWidth + 20
                         height: 28
                         radius: Colors.radiusSmall
-                        color: active ? Colors.accent : Colors.surfaceHigh
+                        color: active ? Colors.secondary : Colors.surfaceHigh
                         Behavior on color { ColorAnimation { duration: Config.animFast } }
 
                         Rectangle {
                             anchors.fill: parent
                             radius: parent.radius
-                            color: Colors.overlay
+                            color: Colors.surfaceHigh
                             opacity: chipHover.hovered && !chip.active ? 0.25 : 0
-                            Behavior on opacity { NumberAnimation { duration: Config.animFast } }
                         }
 
                         HoverHandler { id: chipHover }
@@ -300,7 +299,7 @@ Item {
                             anchors.centerIn: parent
                             text: modelData.label
                             font.pixelSize: Config.fontSize - 2
-                            color: chip.active ? Colors.accentText : Colors.text
+                            color: chip.active ? Colors.secondaryText : Colors.text
                         }
 
                         MouseArea {
@@ -353,15 +352,24 @@ Item {
                 width: parent.width
                 height: 32
                 radius: Colors.radiusSmall
-                color: Colors.accent
+                color: Colors.secondary
                 visible: root.addSecurity === "open"
 
                 StyledText {
                     anchors.centerIn: parent
                     text: "Connect"
-                    color: Colors.accentText
+                    color: Colors.secondaryText
                     font.bold: true
                 }
+
+                Rectangle {
+                    anchors.fill: parent
+                    radius: parent.radius
+                    color: Colors.surfaceHigh
+                    opacity: connectBtnHover.hovered ? 0.2 : 0
+                }
+
+                HoverHandler { id: connectBtnHover }
 
                 MouseArea {
                     anchors.fill: parent

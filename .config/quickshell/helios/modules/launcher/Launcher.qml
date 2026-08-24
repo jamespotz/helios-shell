@@ -176,6 +176,16 @@ PanelWindow {
                     height: 46
                     radius: Colors.radiusSmall
                     color: index === resultList.currentIndex ? Colors.surfaceHigh : "transparent"
+                    Behavior on color { ColorAnimation { duration: Config.animFast } }
+
+                    Rectangle {
+                        anchors.fill: parent
+                        radius: parent.radius
+                        color: Colors.surfaceHigh
+                        opacity: resultHover.hovered && index !== resultList.currentIndex ? 0.15 : 0
+                    }
+
+                    HoverHandler { id: resultHover }
 
                     Row {
                         anchors.fill: parent

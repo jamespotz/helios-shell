@@ -64,6 +64,15 @@ Item {
                 font.bold: true
             }
 
+            Rectangle {
+                anchors.fill: parent
+                radius: parent.radius
+                color: Colors.surfaceHigh
+                opacity: scanHover.hovered ? 0.2 : 0
+            }
+
+            HoverHandler { id: scanHover }
+
             MouseArea {
                 anchors.fill: parent
                 cursorShape: Qt.PointingHandCursor
@@ -100,6 +109,16 @@ Item {
                     height: 26
                     radius: Colors.radiusSmall
                     color: active ? Colors.accent : Colors.surfaceHigh
+                    Behavior on color { ColorAnimation { duration: Config.animFast } }
+
+                    Rectangle {
+                        anchors.fill: parent
+                        radius: parent.radius
+                        color: Colors.surfaceHigh
+                        opacity: styleChipHover.hovered && !styleChip.active ? 0.25 : 0
+                    }
+
+                    HoverHandler { id: styleChipHover }
 
                     StyledText {
                         id: chipText
@@ -184,6 +203,15 @@ Item {
                             border.width: thumb.borderWidth
                             border.color: Colors.accent
                         }
+
+                        Rectangle {
+                            anchors.fill: parent
+                            radius: Colors.radiusSmall
+                            color: Colors.surfaceHigh
+                            opacity: thumbHover.hovered && !thumb.selected ? 0.3 : 0
+                        }
+
+                        HoverHandler { id: thumbHover }
 
                         MouseArea {
                             anchors.fill: parent

@@ -16,6 +16,13 @@ Row {
             width: 22
             height: 22
 
+            Rectangle {
+                anchors.fill: parent
+                radius: width / 2
+                color: Colors.surfaceHigh
+                opacity: trayHover.hovered ? 1 : 0
+            }
+
             Image {
                 anchors.fill: parent
                 anchors.margins: 2
@@ -23,6 +30,8 @@ Row {
                 fillMode: Image.PreserveAspectFit
                 smooth: true
             }
+
+            HoverHandler { id: trayHover }
 
             MouseArea {
                 anchors.fill: parent

@@ -81,8 +81,10 @@ Item {
                 width: clipList.width
                 height: 44
                 radius: Colors.radiusSmall
-                color: mouse.containsMouse ? Colors.surface : "transparent"
-                Behavior on color { ColorAnimation { duration: Config.animFast } }
+                // Not animated — see IconButton.qml's comment: a fading
+                // hover color let two rows appear highlighted at once
+                // during a fast mouse sweep down the list.
+                color: mouse.containsMouse ? Colors.surfaceHigh : "transparent"
 
                 Process {
                     id: thumbDecoder

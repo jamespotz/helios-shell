@@ -337,6 +337,15 @@ Item {
                             font.pixelSize: Config.fontSize - 2
                         }
 
+                        Rectangle {
+                            anchors.fill: parent
+                            radius: parent.radius
+                            color: Colors.surfaceHigh
+                            opacity: eqChipHover.hovered && !active ? 0.25 : 0
+                        }
+
+                        HoverHandler { id: eqChipHover }
+
                         MouseArea {
                             anchors.fill: parent
                             cursorShape: Qt.PointingHandCursor

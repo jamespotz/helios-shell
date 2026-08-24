@@ -29,6 +29,18 @@ Row {
             Behavior on width { NumberAnimation { duration: Config.animFast; easing.type: Easing.OutCubic } }
             Behavior on color { ColorAnimation { duration: Config.animFast } }
 
+            Rectangle {
+                anchors.fill: parent
+                anchors.margins: -3
+                radius: height / 2
+                color: "transparent"
+                border.width: 1
+                border.color: Colors.text
+                opacity: dotHover.hovered ? 0.4 : 0
+            }
+
+            HoverHandler { id: dotHover }
+
             MouseArea {
                 anchors.fill: parent
                 cursorShape: Qt.PointingHandCursor

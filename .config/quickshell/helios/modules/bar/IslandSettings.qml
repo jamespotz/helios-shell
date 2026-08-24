@@ -174,6 +174,15 @@ Item {
                         font.bold: true
                     }
 
+                    Rectangle {
+                        anchors.fill: parent
+                        radius: parent.radius
+                        color: Colors.surfaceHigh
+                        opacity: weatherApplyHover.hovered ? 0.2 : 0
+                    }
+
+                    HoverHandler { id: weatherApplyHover }
+
                     MouseArea {
                         anchors.fill: parent
                         cursorShape: Qt.PointingHandCursor
@@ -192,6 +201,15 @@ Item {
                         anchors.centerIn: parent
                         text: "Auto-detect"
                     }
+
+                    Rectangle {
+                        anchors.fill: parent
+                        radius: parent.radius
+                        color: Colors.surfaceHigh
+                        opacity: weatherClearHover.hovered ? 0.2 : 0
+                    }
+
+                    HoverHandler { id: weatherClearHover }
 
                     MouseArea {
                         anchors.fill: parent
@@ -268,6 +286,15 @@ Item {
                         font.bold: true
                     }
 
+                    Rectangle {
+                        anchors.fill: parent
+                        radius: parent.radius
+                        color: Colors.surfaceHigh
+                        opacity: appearanceApplyHover.hovered ? 0.2 : 0
+                    }
+
+                    HoverHandler { id: appearanceApplyHover }
+
                     MouseArea {
                         anchors.fill: parent
                         cursorShape: Qt.PointingHandCursor
@@ -286,6 +313,15 @@ Item {
                         anchors.centerIn: parent
                         text: "Reset"
                     }
+
+                    Rectangle {
+                        anchors.fill: parent
+                        radius: parent.radius
+                        color: Colors.surfaceHigh
+                        opacity: appearanceResetHover.hovered ? 0.2 : 0
+                    }
+
+                    HoverHandler { id: appearanceResetHover }
 
                     MouseArea {
                         anchors.fill: parent

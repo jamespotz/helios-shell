@@ -87,11 +87,21 @@ Item {
             StyledText {
                 anchors.verticalCenter: parent.verticalCenter
                 text: "Clear all"
-                color: Colors.accent
+                color: Colors.tertiary
 
-                MouseArea {
+                Rectangle {
                     anchors.fill: parent
                     anchors.margins: -6
+                    radius: Colors.radiusSmall
+                    color: Colors.surfaceHigh
+                    opacity: clearAllHover.containsMouse ? 1 : 0
+                }
+
+                MouseArea {
+                    id: clearAllHover
+                    anchors.fill: parent
+                    anchors.margins: -6
+                    hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor
                     onClicked: Notifications.dismissAll()
                 }

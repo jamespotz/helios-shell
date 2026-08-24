@@ -35,6 +35,15 @@ PanelBackground {
         }
     }
 
+    Rectangle {
+        anchors.fill: parent
+        radius: parent.radius
+        color: Colors.surfaceHigh
+        opacity: actionHover.hovered ? 0.15 : 0
+    }
+
+    HoverHandler { id: actionHover }
+
     MouseArea {
         anchors.fill: parent
         cursorShape: Qt.PointingHandCursor

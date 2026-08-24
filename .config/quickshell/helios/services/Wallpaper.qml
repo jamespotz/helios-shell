@@ -2,6 +2,7 @@ pragma Singleton
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import "../services"
 
 // Background image, one per screen (see modules/wallpaper/Wallpaper.qml).
 // Persisted the same way as Weather's location override — FileView +
@@ -26,6 +27,10 @@ QtObject {
     function setPath(text) {
         settingsAdapter.path = text.trim();
         root.settingsFile.writeAdapter();
+        // Keeps the dynamic (matugen) theme in sync with the wallpaper
+        // automatically — Themes.applyDynamic() is itself debounced, so
+        // rapid picks/scans here don't pile up matugen processes.
+        if (Themes.mode === "dynamic") Themes.applyDynamic();
     }
 
     function setFolder(text) {

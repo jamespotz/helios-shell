@@ -86,7 +86,7 @@ Item {
                     width: 150
                     height: 150
                     radius: 75
-                    color: Colors.accent
+                    color: Colors.secondary
 
                     Column {
                         anchors.centerIn: parent
@@ -94,18 +94,18 @@ Item {
                         MaterialIcon {
                             icon: "headset"
                             font.pixelSize: 40
-                            color: Colors.accentText
+                            color: Colors.secondaryText
                             anchors.horizontalCenter: parent.horizontalCenter
                         }
                         StyledText {
                             text: root.connectedDevice ? (root.connectedDevice.name || root.connectedDevice.deviceName) : "No device"
-                            color: Colors.accentText
+                            color: Colors.secondaryText
                             font.bold: true
                             anchors.horizontalCenter: parent.horizontalCenter
                         }
                         StyledText {
                             text: root.connectedDevice ? "Connected" : "Not connected"
-                            color: Colors.accentText
+                            color: Colors.secondaryText
                             opacity: 0.75
                             font.pixelSize: Config.fontSize - 2
                             anchors.horizontalCenter: parent.horizontalCenter
@@ -138,6 +138,15 @@ Item {
                             StyledText { text: "Switch View"; opacity: 0.6; font.pixelSize: Config.fontSize - 3 }
                         }
                     }
+
+                    Rectangle {
+                        anchors.fill: parent
+                        radius: parent.radius
+                        color: Colors.surfaceHigh
+                        opacity: scanCardHover.hovered ? 0.15 : 0
+                    }
+
+                    HoverHandler { id: scanCardHover }
 
                     MouseArea {
                         anchors.fill: parent
@@ -279,6 +288,16 @@ Item {
                             MaterialIcon { icon: "wifi"; font.pixelSize: 15; anchors.verticalCenter: parent.verticalCenter }
                             StyledText { text: "Wi-Fi"; anchors.verticalCenter: parent.verticalCenter }
                         }
+
+                        Rectangle {
+                            anchors.fill: parent
+                            radius: parent.radius
+                            color: Colors.surfaceHigh
+                            opacity: wifiPillHover.hovered && Bridge.islandTab !== "wifi" ? 0.25 : 0
+                        }
+
+                        HoverHandler { id: wifiPillHover }
+
                         MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: Bridge.setIslandTab("wifi") }
                     }
 
@@ -286,7 +305,7 @@ Item {
                         width: parent.width / 2
                         height: parent.height
                         radius: 19
-                        color: Bridge.islandTab === "bluetooth" ? Colors.accent : "transparent"
+                        color: Bridge.islandTab === "bluetooth" ? Colors.secondary : "transparent"
 
                         Row {
                             anchors.centerIn: parent
@@ -294,15 +313,25 @@ Item {
                             MaterialIcon {
                                 icon: "bluetooth"
                                 font.pixelSize: 15
-                                color: Bridge.islandTab === "bluetooth" ? Colors.accentText : Colors.text
+                                color: Bridge.islandTab === "bluetooth" ? Colors.secondaryText : Colors.text
                                 anchors.verticalCenter: parent.verticalCenter
                             }
                             StyledText {
                                 text: "Bluetooth"
-                                color: Bridge.islandTab === "bluetooth" ? Colors.accentText : Colors.text
+                                color: Bridge.islandTab === "bluetooth" ? Colors.secondaryText : Colors.text
                                 anchors.verticalCenter: parent.verticalCenter
                             }
                         }
+
+                        Rectangle {
+                            anchors.fill: parent
+                            radius: parent.radius
+                            color: Colors.surfaceHigh
+                            opacity: btPillHover.hovered && Bridge.islandTab !== "bluetooth" ? 0.25 : 0
+                        }
+
+                        HoverHandler { id: btPillHover }
+
                         MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: Bridge.setIslandTab("bluetooth") }
                     }
                 }
@@ -315,6 +344,16 @@ Item {
                 color: Colors.accent
 
                 MaterialIcon { anchors.centerIn: parent; icon: "power_settings_new"; color: Colors.accentText }
+
+                Rectangle {
+                    anchors.fill: parent
+                    radius: parent.radius
+                    color: Colors.surfaceHigh
+                    opacity: powerBtnHover.hovered ? 0.25 : 0
+                }
+
+                HoverHandler { id: powerBtnHover }
+
                 MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: Bridge.togglePowerMenu() }
             }
         }
@@ -379,7 +418,7 @@ Item {
                         anchors.verticalCenter: parent.verticalCenter
                         icon: row.modelData.connected ? "link_off"
                             : row.modelData.pairing ? "bluetooth_searching" : "link"
-                        color: row.modelData.connected ? Colors.danger : Colors.accent
+                        color: row.modelData.connected ? Colors.danger : Colors.secondary
                         font.pixelSize: 18
 
                         MouseArea {
@@ -427,13 +466,16 @@ Item {
             Row {
                 id: switchRow
                 spacing: 6
-                MaterialIcon { icon: "blur_on"; font.pixelSize: 14; opacity: 0.7 }
-                StyledText { text: "Switch to orbit view"; opacity: 0.7; font.pixelSize: Config.fontSize - 2 }
+                opacity: orbitLinkHover.hovered ? 1 : 0.7
+                MaterialIcon { icon: "blur_on"; font.pixelSize: 14 }
+                StyledText { text: "Switch to orbit view"; font.pixelSize: Config.fontSize - 2 }
             }
 
             MouseArea {
+                id: orbitLinkHover
                 anchors.fill: parent
                 anchors.margins: -6
+                hoverEnabled: true
                 cursorShape: Qt.PointingHandCursor
                 onClicked: root.viewMode = "orbit"
             }

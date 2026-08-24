@@ -38,6 +38,16 @@ Item {
                     height: 26
                     radius: Colors.radiusSmall
                     color: isActive ? Colors.accent : Colors.surfaceHigh
+                    Behavior on color { ColorAnimation { duration: Config.animFast } }
+
+                    Rectangle {
+                        anchors.fill: parent
+                        radius: parent.radius
+                        color: Colors.surfaceHigh
+                        opacity: modeHover.hovered && !modeBtn.isActive ? 0.25 : 0
+                    }
+
+                    HoverHandler { id: modeHover }
 
                     Row {
                         id: modeContent
@@ -111,6 +121,15 @@ Item {
                 color: ScreenRecorder.recording ? Colors.accent : Colors.accentText
             }
 
+            Rectangle {
+                anchors.fill: parent
+                radius: parent.radius
+                color: Colors.surfaceHigh
+                opacity: recordHover.hovered ? 0.2 : 0
+            }
+
+            HoverHandler { id: recordHover }
+
             MouseArea {
                 anchors.fill: parent
                 cursorShape: Qt.PointingHandCursor
@@ -157,15 +176,19 @@ Item {
             MaterialIcon { icon: "folder_open"; font.pixelSize: 14; opacity: 0.7; anchors.verticalCenter: parent.verticalCenter }
 
             StyledText {
+                id: folderText
                 width: parent.width - 24
                 anchors.verticalCenter: parent.verticalCenter
                 elide: Text.ElideMiddle
-                opacity: 0.7
+                opacity: folderHover.hovered ? 1 : 0.7
                 font.pixelSize: Config.fontSize - 2
+                font.underline: folderHover.hovered
                 text: ScreenRecorder.lastOutputPath || ScreenRecorder.outputDir
 
                 MouseArea {
+                    id: folderHover
                     anchors.fill: parent
+                    hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor
                     onClicked: ScreenRecorder.openFolder()
                 }

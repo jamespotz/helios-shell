@@ -11,6 +11,16 @@ Item {
     implicitWidth: row.implicitWidth
     implicitHeight: row.implicitHeight
 
+    Rectangle {
+        anchors.fill: parent
+        anchors.margins: -4
+        radius: Colors.radiusSmall
+        color: Colors.surfaceHigh
+        opacity: weatherHover.hovered ? 1 : 0
+    }
+
+    HoverHandler { id: weatherHover }
+
     Row {
         id: row
         anchors.verticalCenter: parent.verticalCenter

@@ -11,6 +11,16 @@ Item {
     implicitWidth: text.implicitWidth
     implicitHeight: text.implicitHeight
 
+    Rectangle {
+        anchors.fill: parent
+        anchors.margins: -4
+        radius: Colors.radiusSmall
+        color: Colors.surfaceHigh
+        opacity: clockHover.hovered ? 1 : 0
+    }
+
+    HoverHandler { id: clockHover }
+
     StyledText {
         id: text
         anchors.fill: parent

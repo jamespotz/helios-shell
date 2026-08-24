@@ -31,9 +31,8 @@ Rectangle {
     Rectangle {
         anchors.fill: parent
         radius: parent.radius
-        color: Colors.overlay
+        color: Colors.surfaceHigh
         opacity: root.hovering ? (root.highlighted ? 0.18 : 0.28) : 0
-        Behavior on opacity { NumberAnimation { duration: Config.animFast } }
     }
 
     // HoverHandler (not a plain hoverEnabled MouseArea) tracks this row's

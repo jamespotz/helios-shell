@@ -51,9 +51,8 @@ Item {
                     Rectangle {
                         anchors.fill: parent
                         radius: parent.radius
-                        color: Colors.overlay
+                        color: Colors.surfaceHigh
                         opacity: cardHover.hovered ? 0.2 : 0
-                        Behavior on opacity { NumberAnimation { duration: Config.animFast } }
                     }
 
                     HoverHandler { id: cardHover }
@@ -102,6 +101,15 @@ Item {
                 font.bold: true
             }
 
+            Rectangle {
+                anchors.fill: parent
+                radius: parent.radius
+                color: Colors.surfaceHigh
+                opacity: dynamicHover.hovered ? 0.2 : 0
+            }
+
+            HoverHandler { id: dynamicHover }
+
             MouseArea {
                 anchors.fill: parent
                 cursorShape: Qt.PointingHandCursor
@@ -116,6 +124,100 @@ Item {
             color: Colors.danger
             font.pixelSize: Config.fontSize - 2
             text: Themes.lastError
+        }
+
+        Row {
+            width: parent.width
+            opacity: Themes.mode === "dynamic" ? 1 : 0.5
+            Behavior on opacity { NumberAnimation { duration: Config.animFast } }
+
+            StyledText {
+                width: parent.width - toggle.width
+                anchors.verticalCenter: parent.verticalCenter
+                font.bold: true
+                text: "Palette scheme"
+            }
+
+            Toggle {
+                id: toggle
+                anchors.verticalCenter: parent.verticalCenter
+                checked: Themes.dynamicDark
+                onToggled: v => Themes.setDynamicMode(v)
+            }
+        }
+
+        StyledText {
+            width: parent.width
+            opacity: Themes.mode === "dynamic" ? 0.6 : 0.4
+            font.pixelSize: Config.fontSize - 2
+            text: "Dark / Light — " + (Themes.dynamicDark ? "Dark" : "Light")
+        }
+
+        Flow {
+            width: parent.width
+            spacing: 6
+            opacity: Themes.mode === "dynamic" ? 1 : 0.5
+            Behavior on opacity { NumberAnimation { duration: Config.animFast } }
+
+            Repeater {
+                model: Themes.schemeOptions
+
+                Rectangle {
+                    id: schemeChip
+                    required property var modelData
+                    readonly property bool active: Themes.paletteScheme === modelData.value
+
+                    width: schemeChipRow.implicitWidth + 20
+                    height: 30
+                    radius: Colors.radiusSmall
+                    color: active ? Colors.accent : Colors.surfaceHigh
+                    Behavior on color { ColorAnimation { duration: Config.animFast } }
+
+                    Rectangle {
+                        anchors.fill: parent
+                        radius: parent.radius
+                        color: Colors.surfaceHigh
+                        opacity: schemeChipHover.hovered && !schemeChip.active ? 0.25 : 0
+                    }
+
+                    HoverHandler { id: schemeChipHover }
+
+                    Row {
+                        id: schemeChipRow
+                        anchors.centerIn: parent
+                        spacing: 6
+
+                        Row {
+                            anchors.verticalCenter: parent.verticalCenter
+                            spacing: 2
+                            Repeater {
+                                model: schemeChip.modelData.swatch
+                                Rectangle {
+                                    required property string modelData
+                                    width: 8
+                                    height: 8
+                                    radius: 4
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    color: modelData
+                                }
+                            }
+                        }
+
+                        StyledText {
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: schemeChip.modelData.label
+                            font.pixelSize: Config.fontSize - 2
+                            color: schemeChip.active ? Colors.accentText : Colors.text
+                        }
+                    }
+
+                    MouseArea {
+                        anchors.fill: parent
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: Themes.setPaletteScheme(schemeChip.modelData.value)
+                    }
+                }
+            }
         }
     }
 }

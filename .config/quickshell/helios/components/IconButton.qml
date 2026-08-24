@@ -13,10 +13,21 @@ Rectangle {
     implicitWidth: 28
     implicitHeight: 28
     radius: height / 2
-    color: active ? Colors.accent
-        : mouse.containsMouse ? Colors.surfaceHigh : "transparent"
+    color: active ? Colors.accent : "transparent"
 
     Behavior on color { ColorAnimation { duration: Config.animFast } }
+
+    // Hover feedback is intentionally not animated — with a Behavior here,
+    // a quick mouse sweep across adjacent icons left the outgoing icon's
+    // fade-out still visible while the next icon's fade-in started,
+    // reading as two icons highlighted (or a smeared/misshapen highlight)
+    // at once.
+    Rectangle {
+        anchors.fill: parent
+        radius: parent.radius
+        color: Colors.surfaceHigh
+        visible: !root.active && mouse.containsMouse
+    }
 
     MaterialIcon {
         anchors.centerIn: parent
