@@ -29,6 +29,18 @@ Row {
             Behavior on width { NumberAnimation { duration: Config.animFast; easing.type: Easing.OutCubic } }
             Behavior on color { ColorAnimation { duration: Config.animFast } }
 
+            // Soft halo behind the focused dot — same oversized/low-opacity
+            // trick as the calendar's "today" glow, cheaper than a real blur.
+            Rectangle {
+                visible: dot.modelData.focused
+                anchors.centerIn: parent
+                width: parent.width + 6
+                height: parent.height + 6
+                radius: height / 2
+                color: Colors.accent
+                opacity: 0.25
+            }
+
             Rectangle {
                 anchors.fill: parent
                 anchors.margins: -3

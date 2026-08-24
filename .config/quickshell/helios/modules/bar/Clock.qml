@@ -25,7 +25,6 @@ Item {
         id: text
         anchors.fill: parent
         text: Qt.formatDateTime(clock.date, "ddd d MMM  h:mm AP")
-        font.bold: true
 
         SystemClock {
             id: clock

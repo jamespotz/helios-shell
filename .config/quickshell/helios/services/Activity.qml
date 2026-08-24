@@ -3,6 +3,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 import Quickshell.Hyprland
+import Quickshell.Wayland
 
 // Real per-app focus-time tracking for modules/bar/ActivityTab.qml.
 //
@@ -67,7 +68,10 @@ QtObject {
     // focused, then resets the clock — called both periodically and on every
     // focus change so a day-boundary crossing is off by at most one tick
     // interval instead of misattributing a whole session to the wrong day.
+    // No-ops while idle (see idleMonitor below) — a focused-but-unattended
+    // window shouldn't keep racking up "usage".
     function _tick() {
+        if (idleMonitor.isIdle) return false;
         const now = Date.now();
         let changed = false;
         if (root.currentApp && root.currentSince > 0) {
@@ -109,6 +113,30 @@ QtObject {
     }
 
     // --- Derived data consumed by ActivityTab.qml -----------------------
+
+    // Public, date-parameterized versions of the "today" derivations below
+    // — ActivityTab's day nav calls these directly so paging to a past day
+    // (within the 40-day retention window) shows that day's real numbers
+    // instead of just relabeling the header.
+    function totalSecondsFor(dayKey) { return root._totalFor(dayKey); }
+    function fmtDuration(totalSeconds) { return root._fmtDuration(totalSeconds); }
+    function appsFor(dayKey) {
+        const day = root.days[dayKey] || {};
+        const total = root._totalFor(dayKey);
+        const list = Object.keys(day).map(cls => {
+            const meta = root._metaFor(cls);
+            return {
+                name: meta.label,
+                icon: meta.icon,
+                duration: root._fmtDuration(day[cls]),
+                fraction: total > 0 ? day[cls] / total : 0,
+                seconds: day[cls]
+            };
+        });
+        list.sort((a, b) => b.seconds - a.seconds);
+        return list;
+    }
+    function dayKeyFor(date) { return root._dayKey(date.getTime()); }
 
     function _totalFor(dayKey) {
         const day = root.days[dayKey];
@@ -158,22 +186,7 @@ QtObject {
     readonly property bool deltaIsDown: root.todayTotalSeconds < root.dailyAverageSeconds
     readonly property string deltaText: root._fmtDuration(Math.abs(root.todayTotalSeconds - root.dailyAverageSeconds))
 
-    readonly property var apps: {
-        const day = root.days[root._dayKey(Date.now())] || {};
-        const total = root.todayTotalSeconds;
-        const list = Object.keys(day).map(cls => {
-            const meta = root._metaFor(cls);
-            return {
-                name: meta.label,
-                icon: meta.icon,
-                duration: root._fmtDuration(day[cls]),
-                fraction: total > 0 ? day[cls] / total : 0,
-                seconds: day[cls]
-            };
-        });
-        list.sort((a, b) => b.seconds - a.seconds);
-        return list;
-    }
+    readonly property var apps: root.appsFor(root._dayKey(Date.now()))
 
     readonly property string monthLabel: Qt.formatDate(new Date(), "MMMM")
     readonly property int todayDay: new Date().getDate()
@@ -231,6 +244,37 @@ QtObject {
         running: true
         repeat: true
         onTriggered: { if (root._tick()) root._save(); }
+    }
+
+    // Native AFK detection via the real ext-idle-notify-v1 Wayland protocol
+    // (no ActivityWatch-style external daemon needed) — respectInhibitors
+    // means an active idle inhibitor (e.g. a video playing fullscreen) is
+    // still treated as "active" rather than idle, which matches what a user
+    // would consider real usage.
+    property IdleMonitor idleMonitor: IdleMonitor {
+        enabled: true
+        timeout: 60
+        respectInhibitors: true
+        onIsIdleChanged: {
+            if (isIdle) {
+                // _tick() itself now refuses to run once isIdle flips true,
+                // so credit time up to the moment the user actually went
+                // idle (now minus this monitor's own timeout window) here —
+                // not the idle gap itself.
+                const cutoff = Date.now() - timeout * 1000;
+                if (root.currentApp && root.currentSince > 0 && cutoff > root.currentSince) {
+                    const key = root._dayKey(cutoff);
+                    const day = Object.assign({}, root.days[key]);
+                    day[root.currentApp] = (day[root.currentApp] || 0) + (cutoff - root.currentSince) / 1000;
+                    root.days = Object.assign({}, root.days, { [key]: day });
+                    root._save();
+                }
+            } else {
+                // Resume the clock from now — the idle gap isn't attributed
+                // to whatever was focused when the user stepped away.
+                root.currentSince = Date.now();
+            }
+        }
     }
 
     Component.onCompleted: root._onFocusChanged()

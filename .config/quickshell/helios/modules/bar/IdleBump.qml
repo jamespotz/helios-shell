@@ -29,7 +29,7 @@ Item {
     Row {
         id: row
         anchors.centerIn: parent
-        spacing: 6
+        spacing: 5
 
         // Always shown regardless of the idle-bump widget toggles below —
         // an active recording is safety-relevant state the user should never
@@ -64,9 +64,9 @@ Item {
 
         Rectangle {
             visible: root.mediaPlaying && Config.showIdleMedia
-            width: 16
-            height: 16
-            radius: 4
+            width: 18
+            height: 18
+            radius: 6
             color: Colors.surfaceHigh
             clip: true
             anchors.verticalCenter: parent.verticalCenter
@@ -91,7 +91,7 @@ Item {
             visible: root.mediaPlaying && Config.showIdleMedia
             active: root.mediaPlaying && Config.showIdleMedia
             levels: active ? Cava.bars.map(v => v / Cava.maxRange) : []
-            barColor: Colors.text
+            barColor: Colors.accent
             maxHeight: 10
             anchors.verticalCenter: parent.verticalCenter
         }
@@ -106,6 +106,7 @@ Item {
         MaterialIcon {
             visible: Weather.available && Config.showIdleWeather
             icon: Weather.icon
+            color: Colors.accent
             font.pixelSize: 12
             anchors.verticalCenter: parent.verticalCenter
         }

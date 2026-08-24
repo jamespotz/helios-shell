@@ -200,6 +200,7 @@ PanelWindow {
             IslandShape {
                 anchors.fill: parent
                 liquidGlassEnabled: Bridge.liquidGlassEnabled
+                fillColor: bar.mode === "idle" ? Colors.background : Colors.surface
             }
 
             // A plain Item's clip is a hard rectangle — if content ever runs
