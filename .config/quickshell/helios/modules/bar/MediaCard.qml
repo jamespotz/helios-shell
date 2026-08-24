@@ -3,6 +3,7 @@ import Quickshell
 import Quickshell.Io
 import Quickshell.Bluetooth
 import Quickshell.Services.Mpris
+import Qt5Compat.GraphicalEffects
 import "../../services"
 import "../../components"
 
@@ -103,30 +104,52 @@ Item {
             width: parent.width
             spacing: 16
 
-            Rectangle {
+            // Album art — circular using OpacityMask
+            Item {
                 width: 96
                 height: 96
-                radius: 26
-                color: Colors.surfaceHigh
-                border.width: 1
-                border.color: Colors.overlay
-                clip: true
                 anchors.verticalCenter: parent.verticalCenter
 
-                Image {
+                Rectangle {
+                    id: artBg
                     anchors.fill: parent
-                    visible: !!(root.player && root.player.trackArtUrl)
+                    radius: width / 2
+                    color: Colors.surfaceHigh
+                    border.width: 1
+                    border.color: Colors.overlay
+
+                    MaterialIcon {
+                        anchors.centerIn: parent
+                        visible: !(root.player && root.player.trackArtUrl)
+                        icon: "music_note"
+                        font.pixelSize: 34
+                        opacity: 0.7
+                    }
+                }
+
+                Rectangle {
+                    id: artCircleMask
+                    anchors.fill: parent
+                    anchors.margins: 1
+                    radius: width / 2
+                    visible: false
+                }
+
+                Image {
+                    id: artImage
+                    anchors.fill: parent
+                    anchors.margins: 1
+                    visible: false
                     source: root.player && root.player.trackArtUrl ? root.player.trackArtUrl : ""
                     fillMode: Image.PreserveAspectCrop
                     asynchronous: true
                 }
 
-                MaterialIcon {
-                    anchors.centerIn: parent
-                    visible: !(root.player && root.player.trackArtUrl)
-                    icon: "music_note"
-                    font.pixelSize: 34
-                    opacity: 0.7
+                OpacityMask {
+                    anchors.fill: artCircleMask
+                    source: artImage
+                    maskSource: artCircleMask
+                    visible: !!(root.player && root.player.trackArtUrl)
                 }
             }
 

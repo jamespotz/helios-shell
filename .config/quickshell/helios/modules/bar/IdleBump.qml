@@ -1,6 +1,7 @@
 import QtQuick
 import Quickshell
 import Quickshell.Services.Mpris
+import Qt5Compat.GraphicalEffects
 import "../../services"
 import "../../components"
 
@@ -63,31 +64,48 @@ Item {
             width: Math.min(implicitWidth, 120)
         }
 
-        // Now-playing: album art thumbnail in a rounded rect — Apple-style
-        // with slightly larger art and softer radius.
-        Rectangle {
+        // Now-playing: album art thumbnail in a circle
+        Item {
             visible: root.mediaPlaying && Config.showIdleMedia
             width: 20
             height: 20
-            radius: 5
-            color: Colors.surfaceHigh
-            clip: true
             anchors.verticalCenter: parent.verticalCenter
 
-            Image {
+            Rectangle {
                 anchors.fill: parent
-                visible: !!(root.player && root.player.trackArtUrl)
+                radius: width / 2
+                color: Colors.surfaceHigh
+
+                MaterialIcon {
+                    anchors.centerIn: parent
+                    visible: !(root.player && root.player.trackArtUrl)
+                    icon: "music_note"
+                    font.pixelSize: 11
+                    color: Colors.subtext
+                }
+            }
+
+            Rectangle {
+                id: idleArtMask
+                anchors.fill: parent
+                radius: width / 2
+                visible: false
+            }
+
+            Image {
+                id: idleArtImg
+                anchors.fill: parent
+                visible: false
                 source: root.player && root.player.trackArtUrl ? root.player.trackArtUrl : ""
                 fillMode: Image.PreserveAspectCrop
                 asynchronous: true
             }
 
-            MaterialIcon {
-                anchors.centerIn: parent
-                visible: !(root.player && root.player.trackArtUrl)
-                icon: "music_note"
-                font.pixelSize: 11
-                color: Colors.subtext
+            OpacityMask {
+                anchors.fill: idleArtMask
+                source: idleArtImg
+                maskSource: idleArtMask
+                visible: !!(root.player && root.player.trackArtUrl)
             }
         }
 
