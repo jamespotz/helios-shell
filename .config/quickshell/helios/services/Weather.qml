@@ -3,9 +3,10 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 
-// Free, no-API-key current-conditions lookup via wttr.in. With no override
-// set it geolocates by the requester's IP; setLocation() pins it to a city
-// name or "lat,long" instead, persisted in Quickshell's state directory.
+// Free, no-API-key current-conditions lookup via Open-Meteo. With no
+// override set it geolocates via ipapi.co; setLocation() pins it to a city
+// name (geocoded via Open-Meteo's geocoding API) or "lat,long" instead,
+// persisted in Quickshell's state directory.
 QtObject {
     id: root
 
@@ -22,14 +23,12 @@ QtObject {
     property int uvIndex: 0
     property string sunrise: ""
     property string sunset: ""
-    // Today's remaining forecast (wttr.in reports in 3-hour blocks):
-    // [{ label: "15:00", tempC, condition, icon, chanceOfRain }, ...]
+    // Today's remaining forecast, next 8 hours: [{ label, tempC, condition,
+    // icon, chanceOfRain }, ...]
     property var hourly: []
     // Per-day summaries for the day-nav in WeatherPanel — index 0 is today
-    // (mirrors the flat properties above, so day-nav offset 0 always matches
-    // "current conditions" exactly), 1/2 are tomorrow/day-after built from
-    // that day's midday (12:00) block, since wttr.in's free tier only ever
-    // returns 3 days and has no single "current" reading for future days.
+    // (mirrors the flat properties above), 1/2 are tomorrow/day-after built
+    // from that day's daily max/min + midday hourly block.
     // [{ date, tempC, feelsLikeC, condition, icon, humidity, windKmph,
     //    chanceOfRain, minTempC, maxTempC }, ...]
     property var daily: []
@@ -50,6 +49,25 @@ QtObject {
     }
     readonly property string icon: root.iconFor(root.condition)
 
+    // WMO weather-code -> human condition text (Open-Meteo returns a numeric
+    // code, not a description). Kept as plain keyworded text so iconFor()
+    // above needs no changes.
+    function conditionFor(code) {
+        const map = {
+            0: "Clear sky", 1: "Mainly clear", 2: "Partly cloudy", 3: "Overcast",
+            45: "Fog", 48: "Depositing rime fog",
+            51: "Light drizzle", 53: "Drizzle", 55: "Dense drizzle",
+            56: "Freezing drizzle", 57: "Dense freezing drizzle",
+            61: "Slight rain", 63: "Rain", 65: "Heavy rain",
+            66: "Freezing rain", 67: "Heavy freezing rain",
+            71: "Slight snow fall", 73: "Snow fall", 75: "Heavy snow fall", 77: "Snow grains",
+            80: "Slight rain showers", 81: "Rain showers", 82: "Violent rain showers",
+            85: "Slight snow showers", 86: "Heavy snow showers",
+            95: "Thunderstorm", 96: "Thunderstorm with hail", 99: "Thunderstorm with heavy hail"
+        };
+        return map[code] || "Cloudy";
+    }
+
     function setLocation(text) {
         settingsAdapter.locationOverride = text.trim();
         root.settingsFile.writeAdapter();
@@ -61,7 +79,67 @@ QtObject {
         root.loading = true;
 
         const override = settingsAdapter.locationOverride;
-        const url = "https://wttr.in/" + (override ? encodeURIComponent(override) : "") + "?format=j1";
+        if (!override) {
+            root._geolocate();
+            return;
+        }
+
+        const m = override.match(/^\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*$/);
+        if (m) {
+            root.location = override;
+            root._fetchForecast(parseFloat(m[1]), parseFloat(m[2]));
+        } else {
+            root._geocode(override);
+        }
+    }
+
+    // No override set — resolve the requester's IP to a lat/long.
+    function _geolocate() {
+        const xhr = new XMLHttpRequest();
+        xhr.onreadystatechange = () => {
+            if (xhr.readyState !== XMLHttpRequest.DONE) return;
+            if (xhr.status !== 200) { root.loading = false; root.available = false; return; }
+            try {
+                const ip = JSON.parse(xhr.responseText);
+                root.location = ip.city || "";
+                root._fetchForecast(ip.latitude, ip.longitude);
+            } catch (e) {
+                root.loading = false;
+                root.available = false;
+            }
+        };
+        xhr.open("GET", "https://ipapi.co/json/");
+        xhr.send();
+    }
+
+    // City-name override — resolve to a lat/long via Open-Meteo's own
+    // geocoding endpoint.
+    function _geocode(text) {
+        const xhr = new XMLHttpRequest();
+        xhr.onreadystatechange = () => {
+            if (xhr.readyState !== XMLHttpRequest.DONE) return;
+            if (xhr.status !== 200) { root.loading = false; root.available = false; return; }
+            try {
+                const data = JSON.parse(xhr.responseText);
+                const first = data.results && data.results[0];
+                if (!first) { root.loading = false; root.available = false; return; }
+                root.location = first.name;
+                root._fetchForecast(first.latitude, first.longitude);
+            } catch (e) {
+                root.loading = false;
+                root.available = false;
+            }
+        };
+        xhr.open("GET", "https://geocoding-api.open-meteo.com/v1/search?count=1&name=" + encodeURIComponent(text));
+        xhr.send();
+    }
+
+    function _fetchForecast(lat, lon) {
+        const url = "https://api.open-meteo.com/v1/forecast?latitude=" + lat + "&longitude=" + lon
+            + "&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m"
+            + "&hourly=temperature_2m,weather_code,precipitation_probability"
+            + "&daily=temperature_2m_max,temperature_2m_min,weather_code,uv_index_max,sunrise,sunset"
+            + "&timezone=auto&forecast_days=3";
 
         const xhr = new XMLHttpRequest();
         xhr.onreadystatechange = () => {
@@ -71,96 +149,87 @@ QtObject {
 
             try {
                 const data = JSON.parse(xhr.responseText);
-                const current = data.current_condition[0];
-                root.tempC = parseFloat(current.temp_C);
-                root.feelsLikeC = parseFloat(current.FeelsLikeC);
-                root.condition = current.weatherDesc[0].value;
-                root.location = data.nearest_area && data.nearest_area[0]
-                    ? data.nearest_area[0].areaName[0].value : "";
-                root.humidity = parseInt(current.humidity, 10) || 0;
-                root.windKmph = parseFloat(current.windspeedKmph) || 0;
-                root.uvIndex = parseInt(current.uvIndex, 10) || 0;
+                const cur = data.current;
+                root.tempC = cur.temperature_2m;
+                root.feelsLikeC = cur.apparent_temperature;
+                root.condition = root.conditionFor(cur.weather_code);
+                root.humidity = Math.round(cur.relative_humidity_2m);
+                root.windKmph = cur.wind_speed_10m;
 
-                const today = data.weather && data.weather[0];
-                if (today) {
-                    root.minTempC = parseFloat(today.mintempC);
-                    root.maxTempC = parseFloat(today.maxtempC);
-                    const astro = today.astronomy && today.astronomy[0];
-                    root.sunrise = astro ? astro.sunrise : "";
-                    root.sunset = astro ? astro.sunset : "";
-
-                    // "time" is the hour*100 as a string ("0", "300", ...,
-                    // "2100") in 3-hour blocks, not literal minutes — only
-                    // keep blocks still ahead of now so this reads as
-                    // "coming up", not the whole day from midnight.
-                    const nowHour = new Date().getHours();
-                    const blocks = [];
-                    for (const day of [data.weather[0], data.weather[1]]) {
-                        if (!day || !day.hourly) continue;
-                        for (const h of day.hourly) {
-                            const hour = Math.floor(parseInt(h.time, 10) / 100);
-                            if (day === data.weather[0] && hour < nowHour) continue;
-                            const hh = String(hour).padStart(2, "0");
-                            blocks.push({
-                                label: hh + ":00",
-                                tempC: parseFloat(h.tempC),
-                                condition: h.weatherDesc[0].value,
-                                icon: root.iconFor(h.weatherDesc[0].value),
-                                chanceOfRain: parseInt(h.chanceofrain, 10) || 0
-                            });
-                            if (blocks.length >= 8) break;
-                        }
-                        if (blocks.length >= 8) break;
-                    }
-                    root.hourly = blocks;
+                const daily = data.daily;
+                if (daily && daily.time && daily.time.length > 0) {
+                    root.minTempC = daily.temperature_2m_min[0];
+                    root.maxTempC = daily.temperature_2m_max[0];
+                    root.uvIndex = Math.round(daily.uv_index_max ? daily.uv_index_max[0] : 0);
+                    root.sunrise = (daily.sunrise && daily.sunrise[0]) ? daily.sunrise[0].split("T")[1] : "";
+                    root.sunset = (daily.sunset && daily.sunset[0]) ? daily.sunset[0].split("T")[1] : "";
                 }
 
-                const days = [];
-                for (let i = 0; i < (data.weather ? data.weather.length : 0); i++) {
-                    const day = data.weather[i];
-                    if (!day) continue;
+                // Next 8 hours, starting from now.
+                const hourly = data.hourly;
+                const blocks = [];
+                if (hourly && hourly.time) {
+                    const nowMs = Date.now();
+                    for (let i = 0; i < hourly.time.length && blocks.length < 8; i++) {
+                        if (new Date(hourly.time[i]).getTime() < nowMs) continue;
+                        const hh = hourly.time[i].split("T")[1].slice(0, 5);
+                        blocks.push({
+                            label: hh,
+                            tempC: hourly.temperature_2m[i],
+                            condition: root.conditionFor(hourly.weather_code[i]),
+                            icon: root.iconFor(root.conditionFor(hourly.weather_code[i])),
+                            chanceOfRain: hourly.precipitation_probability ? hourly.precipitation_probability[i] : 0
+                        });
+                    }
+                }
+                root.hourly = blocks;
 
-                    if (i === 0) {
-                        // Today: reuse the real "right now" reading rather than
-                        // a midday estimate, so day-nav offset 0 exactly matches
-                        // the current-conditions display above it.
+                const days = [];
+                if (daily && daily.time) {
+                    for (let i = 0; i < daily.time.length; i++) {
+                        if (i === 0) {
+                            // Today: reuse the real "right now" reading rather
+                            // than a midday estimate, so day-nav offset 0
+                            // exactly matches the current-conditions display.
+                            days.push({
+                                date: daily.time[0],
+                                tempC: root.tempC,
+                                feelsLikeC: root.feelsLikeC,
+                                condition: root.condition,
+                                icon: root.iconFor(root.condition),
+                                humidity: root.humidity,
+                                windKmph: root.windKmph,
+                                chanceOfRain: blocks.length > 0 ? blocks[0].chanceOfRain : 0,
+                                minTempC: daily.temperature_2m_min[i],
+                                maxTempC: daily.temperature_2m_max[i]
+                            });
+                            continue;
+                        }
+
+                        // Future day: use that day's midday hourly block as a
+                        // representative snapshot (no "current" reading exists).
+                        let midday = null;
+                        if (hourly && hourly.time) {
+                            for (let h = 0; h < hourly.time.length; h++) {
+                                if (!hourly.time[h].startsWith(daily.time[i])) continue;
+                                if (hourly.time[h].endsWith("T12:00")) { midday = h; break; }
+                                if (midday === null) midday = h;
+                            }
+                        }
+                        const condCode = midday !== null ? hourly.weather_code[midday] : daily.weather_code[i];
                         days.push({
-                            date: day.date,
-                            tempC: root.tempC,
-                            feelsLikeC: root.feelsLikeC,
-                            condition: root.condition,
-                            icon: root.iconFor(root.condition),
+                            date: daily.time[i],
+                            tempC: midday !== null ? hourly.temperature_2m[midday] : (daily.temperature_2m_max[i] + daily.temperature_2m_min[i]) / 2,
+                            feelsLikeC: midday !== null ? hourly.temperature_2m[midday] : daily.temperature_2m_max[i],
+                            condition: root.conditionFor(condCode),
+                            icon: root.iconFor(root.conditionFor(condCode)),
                             humidity: root.humidity,
                             windKmph: root.windKmph,
-                            chanceOfRain: root.hourly.length > 0 ? root.hourly[0].chanceOfRain : 0,
-                            minTempC: parseFloat(day.mintempC),
-                            maxTempC: parseFloat(day.maxtempC)
+                            chanceOfRain: (midday !== null && hourly.precipitation_probability) ? hourly.precipitation_probability[midday] : 0,
+                            minTempC: daily.temperature_2m_min[i],
+                            maxTempC: daily.temperature_2m_max[i]
                         });
-                        continue;
                     }
-
-                    // Future day: no "current" reading exists, so fall back to
-                    // the block closest to midday as a representative snapshot.
-                    let midday = day.hourly && day.hourly[0];
-                    for (const h of (day.hourly || [])) {
-                        if (Math.abs(parseInt(h.time, 10) - 1200) < Math.abs(parseInt(midday.time, 10) - 1200)) {
-                            midday = h;
-                        }
-                    }
-                    if (!midday) continue;
-
-                    days.push({
-                        date: day.date,
-                        tempC: parseFloat(midday.tempC),
-                        feelsLikeC: parseFloat(midday.FeelsLikeC),
-                        condition: midday.weatherDesc[0].value,
-                        icon: root.iconFor(midday.weatherDesc[0].value),
-                        humidity: parseInt(midday.humidity, 10) || 0,
-                        windKmph: parseFloat(midday.windspeedKmph) || 0,
-                        chanceOfRain: parseInt(midday.chanceofrain, 10) || 0,
-                        minTempC: parseFloat(day.mintempC),
-                        maxTempC: parseFloat(day.maxtempC)
-                    });
                 }
                 root.daily = days;
 
