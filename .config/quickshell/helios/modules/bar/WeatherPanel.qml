@@ -2,16 +2,17 @@ import QtQuick
 import "../../services"
 import "../../components"
 
-// Merged calendar + live clock + weather panel — replaces the old separate
-// WeatherInfo (weather tab) and Calendar (opened from Clock.qml) panels.
-// Current temp/condition/humidity/wind/feels-like and the hourly strip come
-// from the real Weather service; the day-nav on the right indexes into
-// Weather.daily (today + the next two days — wttr.in's free-tier limit) so
-// it actually shows that day's forecast, not just a relabeled today.
+// Apple Weather widget-inspired panel — three distinct card-like zones:
+// 1. Calendar (left) — clean grid with today highlight
+// 2. Clock + Hourly forecast (center) — large time, scrolling conditions
+// 3. Current conditions (right) — hero temperature + stat tiles
+//
+// Design principles: generous whitespace, clear typographic hierarchy,
+// rounded card containers for stat groups, muted secondary text.
 Item {
     id: root
 
-    // --- Calendar month grid (same algorithm as the old Calendar.qml) --------
+    // --- Calendar month grid ---
     property date viewDate: new Date()
     readonly property date today: new Date()
 
@@ -22,9 +23,6 @@ Item {
         root.viewDate = d;
     }
 
-    // Whole calendar days between (viewYear, viewMonth, day) and today —
-    // used to tell whether a calendar cell falls inside the forecast's
-    // 3-day window and, if so, which dayOffset it maps to.
     function daysFromToday(year, month, day) {
         const cellDate = new Date(year, month, day);
         const t = new Date(root.today.getFullYear(), root.today.getMonth(), root.today.getDate());
@@ -47,18 +45,12 @@ Item {
     readonly property bool viewingCurrentMonth: viewDate.getFullYear() === today.getFullYear()
         && viewDate.getMonth() === today.getMonth()
 
-    // --- Day nav on the right — indexes Weather.daily, clamped to what's
-    // actually available (0 = today, up to Weather.daily.length - 1). A
-    // calendar cell within this same window is clickable and jumps the
-    // forecast straight to it, so the two columns read as one widget
-    // instead of two glued-together panels. --------
+    // --- Day navigator for forecast ---
     property int dayOffset: 0
     readonly property int maxDayOffset: Math.max(0, Weather.daily.length - 1)
     onMaxDayOffsetChanged: dayOffset = Math.min(dayOffset, maxDayOffset)
     readonly property var selectedDay: Weather.daily.length > dayOffset ? Weather.daily[dayOffset] : null
     readonly property date selectedDate: {
-        // Parse "yyyy-MM-dd" as a local date, not UTC — new Date(string) would
-        // parse it as UTC midnight and can land on the wrong local day.
         if (selectedDay) {
             const parts = selectedDay.date.split("-").map(Number);
             return new Date(parts[0], parts[1] - 1, parts[2]);
@@ -66,58 +58,77 @@ Item {
         return new Date(Date.now() + dayOffset * 86400000);
     }
 
-    // --- Live clock ------------------------------------------------------------
+    // --- Live clock ---
     property date now: new Date()
     Timer { interval: 1000; running: true; repeat: true; onTriggered: root.now = new Date() }
 
-    implicitWidth: 900
+    implicitWidth: 880
     implicitHeight: mainRow.implicitHeight
 
     Row {
         id: mainRow
         width: parent.width
-        spacing: 24
+        spacing: 16
 
-        // --- Calendar --------------------------------------------------------
-        Item {
-            width: 230
-            height: calCol.implicitHeight
+        // ═══════════════════════════════════════════════════════════════════
+        // CALENDAR CARD
+        // ═══════════════════════════════════════════════════════════════════
+        Rectangle {
+            width: 240
+            height: calCol.implicitHeight + 24
+            radius: Colors.radiusLarge
+            color: Colors.surfaceHigh
+            opacity: 0.6
 
             Column {
                 id: calCol
-                width: parent.width
-                spacing: 12
+                anchors.fill: parent
+                anchors.margins: 12
+                spacing: 10
 
+                // Month header with navigation
                 Item {
                     width: parent.width
-                    height: 26
+                    height: 28
 
-                    IconButton { icon: "chevron_left"; anchors.left: parent.left; anchors.verticalCenter: parent.verticalCenter; onClicked: root.shiftMonth(-1) }
+                    IconButton {
+                        icon: "chevron_left"
+                        anchors.left: parent.left
+                        anchors.verticalCenter: parent.verticalCenter
+                        onClicked: root.shiftMonth(-1)
+                    }
                     StyledText {
                         anchors.centerIn: parent
-                        font.bold: true
+                        font.weight: Font.DemiBold
                         text: Qt.formatDate(root.viewDate, "MMMM yyyy")
-                        font.pixelSize: Config.fontSize + 1
+                        font.pixelSize: Config.fontSize
                     }
-                    IconButton { icon: "chevron_right"; anchors.right: parent.right; anchors.verticalCenter: parent.verticalCenter; onClicked: root.shiftMonth(1) }
+                    IconButton {
+                        icon: "chevron_right"
+                        anchors.right: parent.right
+                        anchors.verticalCenter: parent.verticalCenter
+                        onClicked: root.shiftMonth(1)
+                    }
                 }
 
+                // Day-of-week headers
                 Row {
                     width: parent.width
                     Repeater {
                         model: ["S", "M", "T", "W", "T", "F", "S"]
                         StyledText {
                             required property string modelData
-                            width: 230 / 7
+                            width: (calCol.width - 24) / 7
                             horizontalAlignment: Text.AlignHCenter
                             text: modelData
-                            font.bold: true
-                            opacity: 0.4
-                            font.pixelSize: Config.fontSize - 4
+                            font.pixelSize: Config.fontSize - 3
+                            font.weight: Font.Medium
+                            color: Colors.subtext
                         }
                     }
                 }
 
+                // Day grid
                 Column {
                     width: parent.width
                     spacing: 2
@@ -127,7 +138,7 @@ Item {
 
                         Row {
                             required property var modelData
-                            width: calCol.width
+                            width: calCol.width - 24
 
                             Repeater {
                                 model: parent.modelData
@@ -140,44 +151,41 @@ Item {
                                     readonly property bool isForecastLinkable: !cell.isToday && cell.diffFromToday >= 0 && cell.diffFromToday <= root.maxDayOffset
                                     readonly property bool isSelectedForecastDay: !cell.isToday && cell.diffFromToday === root.dayOffset
 
-                                    width: 230 / 7
+                                    width: (calCol.width - 24) / 7
                                     height: width
                                     visible: modelData > 0
 
-                                    // Soft halo behind today — an oversized, low-opacity
-                                    // fill reads as a glow without pulling in a real blur
-                                    // effect the rest of this codebase doesn't use.
+                                    // Today: solid accent circle
                                     Rectangle {
                                         visible: cell.isToday
-                                        anchors.centerIn: parent
-                                        width: Math.min(parent.width, parent.height) + 4
-                                        height: width
-                                        radius: width / 2
-                                        color: Colors.accent
-                                        opacity: 0.18
-                                    }
-
-                                    Rectangle {
                                         anchors.centerIn: parent
                                         width: Math.min(parent.width, parent.height) - 6
                                         height: width
                                         radius: width / 2
-                                        color: cell.isToday ? Colors.accent : (dayHover.hovered ? Colors.overlay : "transparent")
-                                        opacity: cell.isToday ? 1 : (dayHover.hovered ? 0.3 : 1)
-                                        Behavior on opacity { NumberAnimation { duration: Config.animFast } }
+                                        color: Colors.accent
+                                    }
 
-                                        // Thin ring marks which day the forecast column on
-                                        // the right is currently showing, when that isn't
-                                        // today (today's own fill already makes that obvious).
-                                        Rectangle {
-                                            visible: cell.isSelectedForecastDay
-                                            anchors.fill: parent
-                                            anchors.margins: -3
-                                            radius: width / 2
-                                            color: "transparent"
-                                            border.width: 1.5
-                                            border.color: Colors.accent
-                                        }
+                                    // Selected forecast day: outline ring
+                                    Rectangle {
+                                        visible: cell.isSelectedForecastDay
+                                        anchors.centerIn: parent
+                                        width: Math.min(parent.width, parent.height) - 4
+                                        height: width
+                                        radius: width / 2
+                                        color: "transparent"
+                                        border.width: 1.5
+                                        border.color: Colors.accent
+                                    }
+
+                                    // Hover state
+                                    Rectangle {
+                                        visible: !cell.isToday && dayHover.hovered
+                                        anchors.centerIn: parent
+                                        width: Math.min(parent.width, parent.height) - 6
+                                        height: width
+                                        radius: width / 2
+                                        color: Colors.overlay
+                                        opacity: 0.2
                                     }
 
                                     HoverHandler { id: dayHover }
@@ -192,7 +200,8 @@ Item {
                                     StyledText {
                                         anchors.centerIn: parent
                                         text: cell.modelData
-                                        font.bold: cell.isToday
+                                        font.pixelSize: Config.fontSize - 2
+                                        font.weight: cell.isToday ? Font.Bold : Font.Normal
                                         color: cell.isToday ? Colors.accentText : Colors.text
                                     }
                                 }
@@ -203,63 +212,86 @@ Item {
             }
         }
 
-        // --- Clock + hourly forecast -------------------------------------------
+        // ═══════════════════════════════════════════════════════════════════
+        // CLOCK + HOURLY FORECAST
+        // ═══════════════════════════════════════════════════════════════════
         Column {
-            width: 380
-            spacing: 10
+            width: 360
+            spacing: 14
 
-            Row {
-                spacing: 6
+            // Large clock — Apple Weather style: clean, prominent
+            Column {
+                spacing: 2
                 StyledText {
-                    text: Qt.formatTime(root.now, "hh:mm")
+                    text: Qt.formatTime(root.now, "h:mm")
                     font.family: Config.monoFontFamily
-                    font.pixelSize: Config.fontSize + 30
+                    font.pixelSize: Config.fontSize + 32
+                    font.weight: Font.Light
                 }
                 StyledText {
-                    text: ":" + Qt.formatTime(root.now, "ss")
-                    font.family: Config.monoFontFamily
-                    font.pixelSize: Config.fontSize + 14
-                    opacity: 0.4
-                    anchors.bottom: parent.bottom
-                    anchors.bottomMargin: 8
+                    text: Qt.formatDate(root.now, "dddd, MMMM d")
+                    font.pixelSize: Config.fontSize
+                    color: Colors.subtext
                 }
             }
-            StyledText {
-                text: Qt.formatDate(root.now, "dddd, MMM d")
-                opacity: 0.6
-            }
 
-            StyledText {
-                text: "Coming up"
-                font.bold: true
-                visible: Weather.hourly.length > 0
-                topPadding: 10
-            }
-
-            ListView {
+            // Hourly forecast — horizontal scrolling pills
+            Column {
                 width: parent.width
-                height: 84
-                visible: Weather.hourly.length > 0
-                orientation: ListView.Horizontal
                 spacing: 8
-                clip: true
-                model: Weather.hourly
-                boundsBehavior: Flickable.StopAtBounds
+                visible: Weather.hourly.length > 0
 
-                delegate: Rectangle {
-                    required property var modelData
-                    required property int index
-                    width: 64
-                    height: 80
-                    radius: 32
-                    color: index === 0 ? Colors.surfaceHigh : Colors.surface
+                StyledText {
+                    text: "Hourly Forecast"
+                    font.pixelSize: Config.fontSize - 1
+                    font.weight: Font.DemiBold
+                    color: Colors.subtext
+                    font.capitalization: Font.AllUppercase
+                    // Apple uses uppercase small labels for section headers
+                }
 
-                    Column {
-                        anchors.centerIn: parent
-                        spacing: 4
-                        StyledText { text: modelData.label; font.pixelSize: Config.fontSize - 4; opacity: 0.6; anchors.horizontalCenter: parent.horizontalCenter }
-                        MaterialIcon { icon: modelData.icon; font.pixelSize: 16; color: Colors.accent; anchors.horizontalCenter: parent.horizontalCenter }
-                        StyledText { text: Math.round(modelData.tempC) + "°"; font.bold: true; font.pixelSize: Config.fontSize - 2; anchors.horizontalCenter: parent.horizontalCenter }
+                ListView {
+                    width: parent.width
+                    height: 90
+                    orientation: ListView.Horizontal
+                    spacing: 8
+                    clip: true
+                    model: Weather.hourly
+                    boundsBehavior: Flickable.StopAtBounds
+
+                    delegate: Rectangle {
+                        required property var modelData
+                        required property int index
+                        width: 60
+                        height: 86
+                        radius: 30
+                        color: index === 0 ? Colors.accent : Colors.surfaceHigh
+                        opacity: index === 0 ? 1 : 0.6
+
+                        Column {
+                            anchors.centerIn: parent
+                            spacing: 6
+                            StyledText {
+                                text: modelData.label
+                                font.pixelSize: Config.fontSize - 3
+                                font.weight: Font.Medium
+                                color: index === 0 ? Colors.accentText : Colors.subtext
+                                anchors.horizontalCenter: parent.horizontalCenter
+                            }
+                            MaterialIcon {
+                                icon: modelData.icon
+                                font.pixelSize: 18
+                                color: index === 0 ? Colors.accentText : Colors.accent
+                                anchors.horizontalCenter: parent.horizontalCenter
+                            }
+                            StyledText {
+                                text: Math.round(modelData.tempC) + "°"
+                                font.pixelSize: Config.fontSize - 1
+                                font.weight: Font.DemiBold
+                                color: index === 0 ? Colors.accentText : Colors.text
+                                anchors.horizontalCenter: parent.horizontalCenter
+                            }
+                        }
                     }
                 }
             }
@@ -268,19 +300,22 @@ Item {
                 visible: !Weather.available
                 width: parent.width
                 wrapMode: Text.WordWrap
-                opacity: 0.6
-                text: Weather.loading ? "Loading…" : "No weather data — set a location in Settings."
+                color: Colors.subtext
+                text: Weather.loading ? "Loading weather data…" : "No weather data — set a location in Settings."
             }
         }
 
-        // --- Current conditions -------------------------------------------------
+        // ═══════════════════════════════════════════════════════════════════
+        // CURRENT CONDITIONS CARD
+        // ═══════════════════════════════════════════════════════════════════
         Column {
-            width: 230
-            spacing: 12
+            width: 220
+            spacing: 14
 
+            // Day navigator
             Item {
                 width: parent.width
-                height: 26
+                height: 28
 
                 IconButton {
                     icon: "chevron_left"
@@ -292,11 +327,12 @@ Item {
                 }
                 StyledText {
                     anchors.centerIn: parent
-                    font.bold: true
-                    text: root.dayOffset === 0 ? "TODAY"
-                        : root.dayOffset === 1 ? "TOMORROW"
-                        : Qt.formatDate(root.selectedDate, "dddd").toUpperCase()
-                    font.pixelSize: Config.fontSize - 2
+                    font.weight: Font.DemiBold
+                    font.pixelSize: Config.fontSize - 1
+                    font.capitalization: Font.AllUppercase
+                    text: root.dayOffset === 0 ? "Today"
+                        : root.dayOffset === 1 ? "Tomorrow"
+                        : Qt.formatDate(root.selectedDate, "dddd")
                 }
                 IconButton {
                     icon: "chevron_right"
@@ -308,50 +344,71 @@ Item {
                 }
             }
 
+            // Hero temperature — Apple Weather's huge centered temp
             Column {
                 anchors.horizontalCenter: parent.horizontalCenter
-                spacing: 0
+                spacing: 2
                 visible: Weather.available && root.selectedDay !== null
 
                 StyledText {
                     text: root.selectedDay ? Math.round(root.selectedDay.tempC) + "°" : ""
-                    font.pixelSize: Config.fontSize + 34
+                    font.pixelSize: Config.fontSize + 38
+                    font.weight: Font.Thin
                     anchors.horizontalCenter: parent.horizontalCenter
                 }
                 StyledText {
                     text: root.selectedDay ? root.selectedDay.condition : ""
-                    opacity: 0.7
+                    font.pixelSize: Config.fontSize
+                    color: Colors.subtext
                     anchors.horizontalCenter: parent.horizontalCenter
                 }
             }
 
+            // Stat tiles — 2x2 grid of rounded cards (Apple Weather detail style)
             Grid {
                 width: parent.width
-                columns: 4
-                columnSpacing: 6
-                rowSpacing: 6
+                columns: 2
+                columnSpacing: 8
+                rowSpacing: 8
 
                 Repeater {
                     model: root.selectedDay ? [
-                        { icon: "air", label: "WIND", value: Math.round(root.selectedDay.windKmph) + "km/h" },
-                        { icon: "water_drop", label: "HUMID", value: root.selectedDay.humidity + "%" },
-                        { icon: "rainy", label: "RAIN", value: root.selectedDay.chanceOfRain + "%" },
-                        { icon: "device_thermostat", label: "FEELS", value: Math.round(root.selectedDay.feelsLikeC) + "°" }
+                        { icon: "air", label: "Wind", value: Math.round(root.selectedDay.windKmph) + " km/h" },
+                        { icon: "water_drop", label: "Humidity", value: root.selectedDay.humidity + "%" },
+                        { icon: "rainy", label: "Rain", value: root.selectedDay.chanceOfRain + "%" },
+                        { icon: "device_thermostat", label: "Feels Like", value: Math.round(root.selectedDay.feelsLikeC) + "°" }
                     ] : []
 
                     Rectangle {
                         required property var modelData
-                        width: (parent.width - 3 * 6) / 4
-                        height: width
+                        width: (parent.width - 8) / 2
+                        height: 72
                         radius: Colors.radiusSmall
-                        color: Colors.surface
+                        color: Colors.surfaceHigh
+                        opacity: 0.5
 
                         Column {
                             anchors.centerIn: parent
-                            spacing: 2
-                            MaterialIcon { icon: modelData.icon; font.pixelSize: 13; color: Colors.accent; anchors.horizontalCenter: parent.horizontalCenter }
-                            StyledText { text: modelData.value; font.bold: true; font.pixelSize: Config.fontSize - 4; anchors.horizontalCenter: parent.horizontalCenter }
-                            StyledText { text: modelData.label; font.pixelSize: Config.fontSize - 7; opacity: 0.5; anchors.horizontalCenter: parent.horizontalCenter }
+                            spacing: 4
+
+                            MaterialIcon {
+                                icon: modelData.icon
+                                font.pixelSize: 16
+                                color: Colors.accent
+                                anchors.horizontalCenter: parent.horizontalCenter
+                            }
+                            StyledText {
+                                text: modelData.value
+                                font.pixelSize: Config.fontSize
+                                font.weight: Font.DemiBold
+                                anchors.horizontalCenter: parent.horizontalCenter
+                            }
+                            StyledText {
+                                text: modelData.label
+                                font.pixelSize: Config.fontSize - 3
+                                color: Colors.subtext
+                                anchors.horizontalCenter: parent.horizontalCenter
+                            }
                         }
                     }
                 }

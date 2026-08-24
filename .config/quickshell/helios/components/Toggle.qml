@@ -1,6 +1,10 @@
 import QtQuick
 import "../services"
 
+// iOS-style toggle switch — matches Apple's dimensions (51x31 logical pt
+// scaled down slightly for a desktop panel context). Uses accent green
+// when on, neutral gray when off. The knob is pure white with a subtle
+// shadow for depth.
 Rectangle {
     id: root
 
@@ -8,20 +12,34 @@ Rectangle {
 
     signal toggled(bool checked)
 
-    implicitWidth: 38
-    implicitHeight: 22
+    implicitWidth: 42
+    implicitHeight: 24
     radius: height / 2
-    color: checked ? Colors.accent : Colors.surfaceHigh
-    Behavior on color { ColorAnimation { duration: Config.animFast } }
+    color: checked ? Colors.success : Colors.surfaceHigh
 
+    Behavior on color { ColorAnimation { duration: Config.animMedium; easing.type: Easing.OutCubic } }
+
+    // Knob with subtle shadow
     Rectangle {
-        width: 16
-        height: 16
-        radius: 8
-        color: root.checked ? Colors.accentText : Colors.text
+        width: 18
+        height: 18
+        radius: 9
+        color: "#ffffff"
         anchors.verticalCenter: parent.verticalCenter
         x: root.checked ? parent.width - width - 3 : 3
-        Behavior on x { NumberAnimation { duration: Config.animFast; easing.type: Easing.OutCubic } }
+
+        Behavior on x { NumberAnimation { duration: Config.animMedium; easing.type: Easing.OutCubic } }
+
+        // Knob shadow
+        Rectangle {
+            anchors.fill: parent
+            anchors.margins: -1
+            radius: parent.radius + 1
+            color: "transparent"
+            border.width: 1
+            border.color: Qt.rgba(0, 0, 0, 0.1)
+            z: -1
+        }
     }
 
     MouseArea {

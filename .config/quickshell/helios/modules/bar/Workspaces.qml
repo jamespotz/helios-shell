@@ -2,6 +2,8 @@ import QtQuick
 import Quickshell.Hyprland
 import "../../services"
 
+// Apple-style workspace indicators — rounded pill for active workspace,
+// small dots for others. Clean, minimal, with smooth transitions.
 Row {
     id: root
 
@@ -18,47 +20,38 @@ Row {
             required property var modelData
 
             visible: root.monitor === null || modelData.monitor === root.monitor
-            width: modelData.focused ? 20 : 8
-            height: 8
-            radius: 4
+            width: modelData.focused ? 22 : 7
+            height: 7
+            radius: height / 2
             anchors.verticalCenter: parent ? parent.verticalCenter : undefined
             color: modelData.focused ? Colors.accent
                 : modelData.urgent ? Colors.danger
                 : Colors.overlay
 
+            opacity: modelData.focused ? 1 : 0.6
+
             Behavior on width { NumberAnimation { duration: Config.animFast; easing.type: Easing.OutCubic } }
             Behavior on color { ColorAnimation { duration: Config.animFast } }
+            Behavior on opacity { NumberAnimation { duration: Config.animFast } }
 
-            // Soft halo behind the focused dot — same oversized/low-opacity
-            // trick as the calendar's "today" glow, cheaper than a real blur.
-            Rectangle {
-                visible: dot.modelData.focused
-                anchors.centerIn: parent
-                width: parent.width + 6
-                height: parent.height + 6
-                radius: height / 2
-                color: Colors.accent
-                opacity: 0.25
-            }
-
+            // Hover ring — subtle outline on non-focused dots
             Rectangle {
                 anchors.fill: parent
-                anchors.margins: -3
+                anchors.margins: -2
                 radius: height / 2
                 color: "transparent"
                 border.width: 1
                 border.color: Colors.text
-                opacity: dotHover.hovered ? 0.4 : 0
+                opacity: dotHover.hovered && !dot.modelData.focused ? 0.3 : 0
+                Behavior on opacity { NumberAnimation { duration: Config.animFast } }
             }
 
             HoverHandler { id: dotHover }
 
             MouseArea {
                 anchors.fill: parent
+                anchors.margins: -3
                 cursorShape: Qt.PointingHandCursor
-                // This fork's Hyprland requires dispatches as Lua calls
-                // (hl.dsp.<name>(...)), not plain "workspace <id>" strings —
-                // the latter fails to parse over the IPC socket.
                 onClicked: Hyprland.dispatch("hl.dsp.focus({ workspace = " + dot.modelData.id + " })")
             }
         }

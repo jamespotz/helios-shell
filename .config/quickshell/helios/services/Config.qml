@@ -6,26 +6,27 @@ import Quickshell.Io
 QtObject {
     id: root
 
-    readonly property string fontFamily: "Adwaita Sans"
-    readonly property string monoFontFamily: "GeistMono Nerd Font"
+    // Apple uses SF Pro — on Linux, Inter is the closest match with its
+    // tight metrics, open apertures, and tabular figures. JetBrains Mono
+    // for monospace (geometric, clear at small sizes like SF Mono).
+    readonly property string fontFamily: "Inter"
+    readonly property string monoFontFamily: "JetBrains Mono"
     readonly property string iconFontFamily: "Material Symbols Rounded"
 
     readonly property string terminal: "ghostty"
     readonly property string pamService: "system-auth"
 
-    readonly property int animFast: 120
-    readonly property int animMedium: 200
+    // Apple HIG uses ~250ms for standard transitions, 350ms for larger
+    // surface changes — slightly slower than before for a calmer feel.
+    readonly property int animFast: 160
+    readonly property int animMedium: 280
 
-    // Dynamic island (modules/bar) — the whole bar collapses to a small idle
-    // bump and morphs open per mode instead of staying a fixed full-width
-    // pill. These four are user-tunable from the island's own "Island"
-    // settings tab (modules/bar/IslandSettings.qml) — persisted, so edits
-    // survive restarts; the numbers below are just the shipped defaults.
+    // Dynamic island — Apple-style: slightly taller idle bump for better
+    // readability, more breathing room from the screen edge. These are the
+    // shipped defaults; user-tunable from IslandSettings.
     readonly property int fontSize: settingsAdapter.fontSize
     readonly property int idleBumpWidth: settingsAdapter.idleBumpWidth
     readonly property int idleBumpHeight: settingsAdapter.idleBumpHeight
-    // margins.top: gap from the true screen edge to the pill itself, just
-    // enough for the top-corner rounding to read as rounded.
     readonly property int islandTopGap: settingsAdapter.islandTopGap
 
     // exclusiveZone: how much top space Hyprland reserves for *every* window
@@ -41,8 +42,10 @@ QtObject {
     // overlap windows rather than growing the reservation, so the gap stays
     // put whether the island is idle or expanded.
     readonly property int islandExclusiveZone: islandTopGap + idleBumpHeight
-    readonly property int peekHeight: 40
-    readonly property int mediaWidth: 340
+    // Apple's peek/hover state is slightly taller for better touch/click
+    // targets and more breathing room around text.
+    readonly property int peekHeight: 44
+    readonly property int mediaWidth: 360
     readonly property int notifyWidth: 380
 
     // The island's real layer-shell surface stays this size the whole time —
@@ -53,10 +56,11 @@ QtObject {
     readonly property int islandMaxWidth: 1000
     readonly property int islandMaxHeight: 480
 
-    // Tuned for a snappy but non-oscillating morph; width/height must share
-    // identical spring params or the two axes visibly desync mid-animation.
-    readonly property real islandSpringStiffness: 3.6
-    readonly property real islandSpringDamping: 0.65
+    // Apple-style spring: critically damped (no overshoot) with moderate
+    // stiffness for a smooth, decisive morph. Both axes must share params
+    // or they desync mid-animation.
+    readonly property real islandSpringStiffness: 4.0
+    readonly property real islandSpringDamping: 1.0
 
     function setIslandAppearance(width, height, gap, size) {
         settingsAdapter.idleBumpWidth = width;
@@ -67,7 +71,7 @@ QtObject {
     }
 
     function resetIslandAppearance() {
-        root.setIslandAppearance(132, 26, 8, 13);
+        root.setIslandAppearance(140, 32, 10, 13);
     }
 
     // Which widgets the expanded/peek island shows — user-tunable from the
@@ -117,9 +121,9 @@ QtObject {
         JsonAdapter {
             id: settingsAdapter
             property int fontSize: 13
-            property int idleBumpWidth: 132
-            property int idleBumpHeight: 26
-            property int islandTopGap: 8
+            property int idleBumpWidth: 140
+            property int idleBumpHeight: 32
+            property int islandTopGap: 10
 
             property bool showWorkspaces: true
             property bool showActiveWindow: true

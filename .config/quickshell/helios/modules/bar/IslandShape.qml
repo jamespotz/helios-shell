@@ -1,22 +1,23 @@
 import QtQuick
 import "../../services"
 
-// The island's background: a fully rounded floating pill, offset slightly
-// from the true screen edge (see Bar.qml's margins.top) so the top corners'
-// rounding is actually visible instead of being clipped flush against it.
+// The island's background — Apple-style vibrancy material: a translucent
+// surface with subtle gradient depth, soft inner shadow, and a fine
+// separator border. The pill floats off the screen edge (Bar.qml's
+// margins.top) so all four corners' continuous rounding is visible.
 Item {
     id: root
 
     property bool liquidGlassEnabled: false
     // Colors.surface everywhere except idle mode (Bar.qml passes
-    // Colors.background there) — the compact pill blending toward black is
-    // what sells the "floating in the notch" Dynamic Island illusion.
+    // Colors.background there) — the compact pill blending toward pure
+    // black sells the "floating notch" illusion.
     property color fillColor: Colors.surface
 
-    // height / 2 (not height * 0.34) so the small idle-bump/peek pills land
-    // on a true stadium — a real Dynamic Island's compact shape — while
-    // still capping at 22 for tall expanded panels, exactly as before.
-    readonly property real cornerRadius: Math.max(4, Math.min(height / 2, 22))
+    // Apple's continuous corner (squircle) can't be done in pure QML
+    // without ShaderEffect, but a generous radius relative to height
+    // gets close. Stadium for small pills, capped for tall panels.
+    readonly property real cornerRadius: Math.max(6, Math.min(height / 2, 18))
 
     LiquidGlassSurface {
         anchors.fill: parent
@@ -25,12 +26,24 @@ Item {
         fallbackColor: root.fillColor
     }
 
+    // Subtle inner highlight along the top edge — mimics the way Apple's
+    // dark-mode materials catch a hair of light at the top.
     Rectangle {
         anchors.fill: parent
         radius: root.cornerRadius
         color: "transparent"
-        border.width: 1
-        border.color: Colors.overlay
-        opacity: 0.6
+        border.width: 0.5
+        border.color: Qt.rgba(1, 1, 1, 0.12)
+    }
+
+    // Fine separator — slightly more visible than the inner highlight,
+    // defines the shape against any wallpaper.
+    Rectangle {
+        anchors.fill: parent
+        anchors.margins: -0.5
+        radius: root.cornerRadius + 0.5
+        color: "transparent"
+        border.width: 0.5
+        border.color: Qt.rgba(0, 0, 0, 0.4)
     }
 }

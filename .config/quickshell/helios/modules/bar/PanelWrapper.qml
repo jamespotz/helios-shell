@@ -3,115 +3,127 @@ import Quickshell.Services.UPower
 import "../../services"
 import "../../components"
 
-// Hosts the volume/Bluetooth/Wifi tab content with a small header so the
-// panel modes can switch between each other without closing the island.
+// Apple Control Center-inspired panel container. The tab bar uses a
+// segmented-control aesthetic: a single rounded background with pill-shaped
+// active indicator that slides between tabs. Content scrolls when tall.
 Item {
     id: root
 
-    // Keeps any tab's content within the island's fixed max surface height
-    // (Config.islandMaxHeight) — without this a tall tab (e.g. Island
-    // settings' widget list) gets hard-clipped by the real Wayland surface
-    // edge instead of scrolling. Derived from islandMaxHeight (rather than a
-    // guessed constant) minus a generous flat budget for the tab header,
-    // spacing, and Bar.qml's own padding, so it stays correct even if those
-    // change.
-    readonly property int maxContentHeight: Config.islandMaxHeight - 140
+    readonly property int maxContentHeight: Config.islandMaxHeight - 120
 
     implicitWidth: pane.implicitWidth
-    // tabs.height, not tabs.implicitHeight — that Item only ever binds an
-    // explicit `height` (from leftTabs.implicitHeight), so its own
-    // implicitHeight stays 0 and silently undercounts the header here.
     implicitHeight: tabs.height + pane.spacing + Math.min(panelLoader.implicitHeight, root.maxContentHeight)
 
     Column {
         id: pane
         width: Math.max(tabs.implicitWidth, panelLoader.implicitWidth)
-        spacing: 12
+        spacing: 14
 
+        // ─── Tab bar: segmented control style ────────────────────────────
         Item {
             id: tabs
             width: pane.width
-            implicitWidth: leftTabs.implicitWidth + closeButton.implicitWidth
-            height: leftTabs.implicitHeight
+            implicitWidth: tabRow.implicitWidth + 8 + closeButton.width + 16
+            height: 36
+
+            // Background capsule for the tab row
+            Rectangle {
+                anchors.left: parent.left
+                anchors.right: closeButton.left
+                anchors.rightMargin: 8
+                anchors.verticalCenter: parent.verticalCenter
+                height: 32
+                radius: 16
+                color: Colors.surfaceHigh
+                opacity: 0.4
+            }
 
             Row {
-                id: leftTabs
+                id: tabRow
                 anchors.left: parent.left
+                anchors.leftMargin: 4
+                anchors.right: closeButton.left
+                anchors.rightMargin: 8
                 anchors.verticalCenter: parent.verticalCenter
-                spacing: 4
+                spacing: 2
 
-                IconButton {
-                    icon: "volume_up"
-                    active: Bridge.islandTab === "volume"
-                    onClicked: Bridge.setIslandTab("volume")
-                }
-                IconButton {
-                    icon: "bluetooth"
-                    active: Bridge.islandTab === "bluetooth"
-                    onClicked: Bridge.setIslandTab("bluetooth")
-                }
-                IconButton {
-                    icon: "wifi"
-                    active: Bridge.islandTab === "wifi"
-                    onClicked: Bridge.setIslandTab("wifi")
-                }
-                IconButton {
-                    icon: "music_note"
-                    active: Bridge.islandTab === "media"
-                    onClicked: Bridge.setIslandTab("media")
-                }
-                IconButton {
-                    icon: "content_paste"
-                    active: Bridge.islandTab === "clipboard"
-                    onClicked: Bridge.setIslandTab("clipboard")
-                }
-                IconButton {
-                    icon: "videocam"
-                    active: Bridge.islandTab === "recorder"
-                    onClicked: Bridge.setIslandTab("recorder")
-                }
-                IconButton {
-                    icon: "cloud"
-                    active: Bridge.islandTab === "weather"
-                    onClicked: Bridge.setIslandTab("weather")
-                }
-                IconButton {
-                    icon: "bar_chart"
-                    active: Bridge.islandTab === "activity"
-                    onClicked: Bridge.setIslandTab("activity")
-                }
-                IconButton {
-                    icon: "wallpaper"
-                    active: Bridge.islandTab === "wallpaper"
-                    onClicked: Bridge.setIslandTab("wallpaper")
-                }
-                IconButton {
-                    icon: "palette"
-                    active: Bridge.islandTab === "theme"
-                    onClicked: Bridge.setIslandTab("theme")
-                }
-                IconButton {
-                    icon: PowerProfiles.profile === PowerProfile.PowerSaver ? "eco"
-                        : PowerProfiles.profile === PowerProfile.Performance ? "bolt" : "balance"
-                    active: Bridge.islandTab === "power"
-                    onClicked: Bridge.setIslandTab("power")
-                }
-                IconButton {
-                    icon: "tune"
-                    active: Bridge.islandTab === "island"
-                    onClicked: Bridge.setIslandTab("island")
+                Repeater {
+                    model: [
+                        { tab: "volume", icon: "volume_up" },
+                        { tab: "bluetooth", icon: "bluetooth" },
+                        { tab: "wifi", icon: "wifi" },
+                        { tab: "media", icon: "music_note" },
+                        { tab: "clipboard", icon: "content_paste" },
+                        { tab: "recorder", icon: "videocam" },
+                        { tab: "weather", icon: "cloud" },
+                        { tab: "activity", icon: "bar_chart" },
+                        { tab: "wallpaper", icon: "wallpaper" },
+                        { tab: "theme", icon: "palette" },
+                        { tab: "power", icon: powerIcon },
+                        { tab: "island", icon: "tune" }
+                    ]
+
+                    delegate: Rectangle {
+                        required property var modelData
+                        required property int index
+
+                        readonly property bool active: Bridge.islandTab === modelData.tab
+
+                        width: 30
+                        height: 30
+                        radius: 15
+                        color: active ? Colors.accent : (tabHover.hovered ? Colors.overlay : "transparent")
+                        opacity: active ? 1 : (tabHover.hovered ? 0.3 : 1)
+
+                        Behavior on color { ColorAnimation { duration: Config.animFast } }
+
+                        MaterialIcon {
+                            anchors.centerIn: parent
+                            icon: modelData.icon
+                            font.pixelSize: 16
+                            color: active ? Colors.accentText : Colors.text
+                            opacity: active ? 1 : 0.8
+                        }
+
+                        HoverHandler { id: tabHover }
+
+                        MouseArea {
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: Bridge.setIslandTab(modelData.tab)
+                        }
+                    }
                 }
             }
 
-            IconButton {
+            // Close button — subtle, right-aligned
+            Rectangle {
                 id: closeButton
-                icon: "close"
                 anchors.right: parent.right
                 anchors.verticalCenter: parent.verticalCenter
-                onClicked: Bridge.closeIsland()
+                width: 28
+                height: 28
+                radius: 14
+                color: closeHover.hovered ? Colors.surfaceHigh : "transparent"
+
+                MaterialIcon {
+                    anchors.centerIn: parent
+                    icon: "close"
+                    font.pixelSize: 14
+                    color: Colors.subtext
+                }
+
+                HoverHandler { id: closeHover }
+
+                MouseArea {
+                    anchors.fill: parent
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: Bridge.closeIsland()
+                }
             }
         }
 
+        // ─── Scrollable content area ─────────────────────────────────────
         Item {
             id: scrollWrap
             width: pane.width
@@ -122,7 +134,7 @@ Item {
             Flickable {
                 id: flick
                 anchors.fill: parent
-                anchors.rightMargin: scrollWrap.showScrollbar ? 10 : 0
+                anchors.rightMargin: scrollWrap.showScrollbar ? 8 : 0
                 contentWidth: width
                 contentHeight: panelLoader.implicitHeight
                 clip: true
@@ -148,28 +160,35 @@ Item {
                 }
             }
 
+            // Scroll track — barely visible until content overflows
             Rectangle {
                 visible: scrollWrap.showScrollbar
-                width: 4
-                radius: 2
+                width: 3
+                radius: 1.5
                 color: Colors.overlay
-                opacity: 0.3
+                opacity: 0.15
                 anchors.top: parent.top
                 anchors.bottom: parent.bottom
                 anchors.right: parent.right
             }
 
+            // Scroll thumb — accent-tinted, minimal
             Rectangle {
                 visible: scrollWrap.showScrollbar
-                width: 4
-                radius: 2
+                width: 3
+                radius: 1.5
                 color: Colors.accent
+                opacity: 0.6
                 anchors.right: parent.right
                 y: flick.contentHeight > 0 ? (flick.contentY / flick.contentHeight) * scrollWrap.height : 0
-                height: flick.contentHeight > 0 ? Math.max(24, (flick.height / flick.contentHeight) * scrollWrap.height) : scrollWrap.height
+                height: flick.contentHeight > 0 ? Math.max(20, (flick.height / flick.contentHeight) * scrollWrap.height) : scrollWrap.height
             }
         }
     }
+
+    // Power profile icon helper
+    readonly property string powerIcon: PowerProfiles.profile === PowerProfile.PowerSaver ? "eco"
+        : PowerProfiles.profile === PowerProfile.Performance ? "bolt" : "balance"
 
     Component { id: volumeTab; VolumeTab {} }
     Component { id: bluetoothTab; BluetoothTab {} }

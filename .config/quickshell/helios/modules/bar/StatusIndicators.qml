@@ -7,9 +7,12 @@ import Quickshell.Services.Mpris
 import "../../services"
 import "../../components"
 
+// Apple-style status indicators row — tighter spacing (4px), consistent
+// icon sizing, and clean active states. Icons use a slightly reduced
+// opacity when inactive for visual hierarchy.
 Row {
     id: root
-    spacing: 2
+    spacing: 4
 
     required property var targetScreen
 
@@ -118,6 +121,16 @@ Row {
         icon: "auto_awesome"
         active: Bridge.liquidGlassEnabled
         onClicked: Bridge.toggleLiquidGlass()
+    }
+
+    // Thin separator before system actions
+    Rectangle {
+        width: 1
+        height: 14
+        radius: 0.5
+        color: Colors.overlay
+        opacity: 0.3
+        anchors.verticalCenter: parent.verticalCenter
     }
 
     IconButton {

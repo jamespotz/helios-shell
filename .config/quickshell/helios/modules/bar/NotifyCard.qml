@@ -3,14 +3,16 @@ import Quickshell
 import "../../services"
 import "../../components"
 
+// Apple-style notification banner — clean card layout with app icon,
+// title/body hierarchy, and subtle action buttons. Single notifications
+// show full detail; multiple collapse into a compact scrollable list
+// with a "Clear All" action.
 Item {
     id: root
 
     readonly property var list: Notifications.list
     readonly property int count: list.length
 
-    // Hovering pauses the auto-dismiss timer in Bar.qml (only relevant for
-    // the single-notification view — a group stays until cleared).
     readonly property bool hovering: hoverTracker.hovered
 
     implicitWidth: Config.notifyWidth
@@ -21,31 +23,43 @@ Item {
     Column {
         id: col
         width: parent.width
-        spacing: 10
+        spacing: 12
 
+        // ─── Single notification: full detail ────────────────────────────
         Row {
             width: parent.width
             visible: root.count === 1
-            spacing: 10
+            spacing: 12
 
-            Image {
-                width: 40
-                height: 40
+            // App icon — rounded square (Apple notification style)
+            Rectangle {
+                width: 36
+                height: 36
+                radius: 8
+                color: Colors.surfaceHigh
                 anchors.verticalCenter: parent.verticalCenter
-                visible: root.count === 1 && source !== ""
-                source: root.count === 1 ? (root.list[0].image || Quickshell.iconPath(root.list[0].appIcon, true)) : ""
-                fillMode: Image.PreserveAspectFit
+                clip: true
+
+                Image {
+                    anchors.fill: parent
+                    anchors.margins: 2
+                    visible: root.count === 1 && source !== ""
+                    source: root.count === 1 ? (root.list[0].image || Quickshell.iconPath(root.list[0].appIcon, true)) : ""
+                    fillMode: Image.PreserveAspectFit
+                }
             }
 
+            // Title + body
             Column {
-                width: parent.width - 40 - 10 - 28 - 10 - 28 - 10
+                width: parent.width - 36 - 12 - actionRow.width - 12
                 anchors.verticalCenter: parent.verticalCenter
                 spacing: 2
 
                 StyledText {
                     width: parent.width
                     elide: Text.ElideRight
-                    font.bold: true
+                    font.weight: Font.DemiBold
+                    font.pixelSize: Config.fontSize
                     text: root.count === 1 ? root.list[0].summary : ""
                 }
                 StyledText {
@@ -53,27 +67,33 @@ Item {
                     elide: Text.ElideRight
                     wrapMode: Text.WordWrap
                     maximumLineCount: 2
-                    opacity: 0.75
+                    color: Colors.subtext
                     font.pixelSize: Config.fontSize - 1
                     text: root.count === 1 ? root.list[0].body : ""
                 }
             }
 
-            IconButton {
-                icon: "open_in_new"
-                iconSize: 14
+            // Action buttons
+            Row {
+                id: actionRow
                 anchors.verticalCenter: parent.verticalCenter
-                onClicked: if (root.count === 1) Notifications.focusApp(root.list[0])
-            }
+                spacing: 4
 
-            IconButton {
-                icon: "close"
-                iconSize: 14
-                anchors.verticalCenter: parent.verticalCenter
-                onClicked: if (root.count === 1) Notifications.dismiss(root.list[0])
+                IconButton {
+                    icon: "open_in_new"
+                    iconSize: 14
+                    onClicked: if (root.count === 1) Notifications.focusApp(root.list[0])
+                }
+
+                IconButton {
+                    icon: "close"
+                    iconSize: 14
+                    onClicked: if (root.count === 1) Notifications.dismiss(root.list[0])
+                }
             }
         }
 
+        // ─── Multiple notifications: header + list ───────────────────────
         Row {
             width: parent.width
             visible: root.count > 1
@@ -81,33 +101,41 @@ Item {
 
             MaterialIcon {
                 icon: "notifications"
+                font.pixelSize: 18
+                color: Colors.accent
                 anchors.verticalCenter: parent.verticalCenter
             }
 
             StyledText {
                 anchors.verticalCenter: parent.verticalCenter
-                width: parent.width - 22 - 70 - 20
-                font.bold: true
-                text: root.count + " notifications"
+                width: parent.width - 18 - 10 - clearAll.width - 10
+                font.weight: Font.DemiBold
+                text: root.count + " Notifications"
             }
 
-            StyledText {
+            // Clear all — pill-shaped text button (Apple style)
+            Rectangle {
+                id: clearAll
                 anchors.verticalCenter: parent.verticalCenter
-                text: "Clear all"
-                color: Colors.tertiary
+                width: clearText.implicitWidth + 16
+                height: 24
+                radius: 12
+                color: clearHover.containsMouse ? Colors.surfaceHigh : "transparent"
 
-                Rectangle {
-                    anchors.fill: parent
-                    anchors.margins: -6
-                    radius: Colors.radiusSmall
-                    color: Colors.surfaceHigh
-                    opacity: clearAllHover.containsMouse ? 1 : 0
+                Behavior on color { ColorAnimation { duration: Config.animFast } }
+
+                StyledText {
+                    id: clearText
+                    anchors.centerIn: parent
+                    text: "Clear All"
+                    font.pixelSize: Config.fontSize - 1
+                    font.weight: Font.Medium
+                    color: Colors.accent
                 }
 
                 MouseArea {
-                    id: clearAllHover
+                    id: clearHover
                     anchors.fill: parent
-                    anchors.margins: -6
                     hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor
                     onClicked: Notifications.dismissAll()
@@ -115,13 +143,14 @@ Item {
             }
         }
 
+        // Notification list
         ListView {
             id: groupList
-            width: parent.width - 8
+            width: parent.width
             visible: root.count > 1
-            height: visible ? Math.min(220, Math.max(0, root.count * 44)) : 0
+            height: visible ? Math.min(220, Math.max(0, root.count * 48)) : 0
             clip: true
-            spacing: 2
+            spacing: 4
             model: root.list
             boundsBehavior: Flickable.StopAtBounds
 
@@ -133,9 +162,11 @@ Item {
                 required property int index
 
                 width: groupList.width
-                height: 40
+                height: 44
                 radius: Colors.radiusSmall
-                color: mouse.containsMouse ? Colors.surface : "transparent"
+                color: mouse.containsMouse ? Colors.surfaceHigh : "transparent"
+                opacity: mouse.containsMouse ? 0.6 : 1
+
                 Behavior on color { ColorAnimation { duration: Config.animFast } }
 
                 MouseArea {
@@ -146,49 +177,48 @@ Item {
 
                 Row {
                     anchors.fill: parent
-                    anchors.margins: 6
-                    spacing: 8
+                    anchors.leftMargin: 8
+                    anchors.rightMargin: 8
+                    spacing: 10
 
-                    Image {
-                        width: 22
-                        height: 22
+                    // App icon — small rounded square
+                    Rectangle {
+                        width: 24
+                        height: 24
+                        radius: 6
+                        color: Colors.surfaceHigh
                         anchors.verticalCenter: parent.verticalCenter
-                        visible: source !== ""
-                        source: row.modelData.image || Quickshell.iconPath(row.modelData.appIcon, true)
-                        fillMode: Image.PreserveAspectFit
+                        clip: true
+
+                        Image {
+                            anchors.fill: parent
+                            anchors.margins: 1
+                            visible: source !== ""
+                            source: row.modelData.image || Quickshell.iconPath(row.modelData.appIcon, true)
+                            fillMode: Image.PreserveAspectFit
+                        }
                     }
 
                     StyledText {
                         anchors.verticalCenter: parent.verticalCenter
-                        width: row.width - 22 - 16 - 22 - 24 - 16 - 22
+                        width: row.width - 24 - 10 - 16 - 28 - 28 - 30
                         elide: Text.ElideRight
+                        font.pixelSize: Config.fontSize - 1
                         text: row.modelData.summary
                     }
 
-                    MaterialIcon {
+                    IconButton {
                         anchors.verticalCenter: parent.verticalCenter
                         icon: "open_in_new"
-                        font.pixelSize: 14
-
-                        MouseArea {
-                            anchors.fill: parent
-                            anchors.margins: -6
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: Notifications.focusApp(row.modelData)
-                        }
+                        iconSize: 13
+                        onClicked: Notifications.focusApp(row.modelData)
                     }
 
-                    MaterialIcon {
+                    IconButton {
                         anchors.verticalCenter: parent.verticalCenter
                         icon: "close"
-                        font.pixelSize: 14
-
-                        MouseArea {
-                            anchors.fill: parent
-                            anchors.margins: -6
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: Notifications.dismiss(row.modelData)
-                        }
+                        iconSize: 13
+                        onClicked: Notifications.dismiss(row.modelData)
                     }
                 }
             }

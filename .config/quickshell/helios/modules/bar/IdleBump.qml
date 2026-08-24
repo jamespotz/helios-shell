@@ -4,6 +4,9 @@ import Quickshell.Services.Mpris
 import "../../services"
 import "../../components"
 
+// The collapsed idle pill — Apple Dynamic Island style: minimal, clean,
+// with generous internal spacing and refined typography. Shows only
+// essential glanceable info: time, weather, and now-playing art.
 Item {
     id: root
 
@@ -15,10 +18,9 @@ Item {
         return players.find(p => p.isPlaying) || null;
     }
 
-    // Content-driven so the bump doesn't clip or look lopsided once weather
-    // joins the clock — Config.idleBumpWidth is just the floor for when
-    // there's nothing extra to show yet (e.g. weather hasn't loaded).
-    implicitWidth: Math.max(Config.idleBumpWidth, row.implicitWidth + 24)
+    // Content-driven width with a comfortable floor — Apple's idle pill
+    // never looks cramped; generous horizontal padding (28px total).
+    implicitWidth: Math.max(Config.idleBumpWidth, row.implicitWidth + 28)
     implicitHeight: Config.idleBumpHeight
 
     SystemClock {
@@ -29,11 +31,10 @@ Item {
     Row {
         id: row
         anchors.centerIn: parent
-        spacing: 5
+        spacing: 8
 
-        // Always shown regardless of the idle-bump widget toggles below —
-        // an active recording is safety-relevant state the user should never
-        // have to hover/expand the island to discover.
+        // Recording indicator — safety-critical, always visible regardless
+        // of widget toggles. Slightly larger than before for visibility.
         Rectangle {
             visible: ScreenRecorder.recording
             width: 8
@@ -45,8 +46,8 @@ Item {
             SequentialAnimation on opacity {
                 running: ScreenRecorder.recording
                 loops: Animation.Infinite
-                NumberAnimation { from: 1; to: 0.25; duration: 600 }
-                NumberAnimation { from: 0.25; to: 1; duration: 600 }
+                NumberAnimation { from: 1; to: 0.3; duration: 800; easing.type: Easing.InOutSine }
+                NumberAnimation { from: 0.3; to: 1; duration: 800; easing.type: Easing.InOutSine }
             }
         }
 
@@ -62,11 +63,13 @@ Item {
             width: Math.min(implicitWidth, 120)
         }
 
+        // Now-playing: album art thumbnail in a rounded rect — Apple-style
+        // with slightly larger art and softer radius.
         Rectangle {
             visible: root.mediaPlaying && Config.showIdleMedia
-            width: 18
-            height: 18
-            radius: 6
+            width: 20
+            height: 20
+            radius: 5
             color: Colors.surfaceHigh
             clip: true
             anchors.verticalCenter: parent.verticalCenter
@@ -83,39 +86,60 @@ Item {
                 anchors.centerIn: parent
                 visible: !(root.player && root.player.trackArtUrl)
                 icon: "music_note"
-                font.pixelSize: 10
+                font.pixelSize: 11
+                color: Colors.subtext
             }
         }
 
+        // Audio visualizer — kept compact, Apple-style minimal bars
         MiniVisualizer {
             visible: root.mediaPlaying && Config.showIdleMedia
             active: root.mediaPlaying && Config.showIdleMedia
             levels: active ? Cava.bars.map(v => v / Cava.maxRange) : []
             barColor: Colors.accent
-            maxHeight: 10
+            maxHeight: 12
             anchors.verticalCenter: parent.verticalCenter
         }
 
+        // Time — clean, medium weight, slightly larger than before for
+        // the idle state to be readable at a glance.
         StyledText {
             visible: Config.showIdleClock
             anchors.verticalCenter: parent.verticalCenter
-            font.pixelSize: Config.fontSize - 2
-            text: Qt.formatDateTime(clock.date, "h:mm AP")
+            font.pixelSize: Config.fontSize
+            font.weight: Font.Medium
+            text: Qt.formatDateTime(clock.date, "h:mm")
+            opacity: 0.95
         }
 
+        // Thin separator between time and weather — Apple uses these
+        // sparingly for visual grouping without adding a gap.
+        Rectangle {
+            visible: Config.showIdleClock && Weather.available && Config.showIdleWeather
+            width: 1
+            height: 12
+            radius: 0.5
+            color: Colors.overlay
+            opacity: 0.4
+            anchors.verticalCenter: parent.verticalCenter
+        }
+
+        // Weather: icon + temp, compact
         MaterialIcon {
             visible: Weather.available && Config.showIdleWeather
             icon: Weather.icon
             color: Colors.accent
-            font.pixelSize: 12
+            font.pixelSize: 13
             anchors.verticalCenter: parent.verticalCenter
         }
 
         StyledText {
             visible: Weather.available && Config.showIdleWeather
             anchors.verticalCenter: parent.verticalCenter
-            font.pixelSize: Config.fontSize - 2
+            font.pixelSize: Config.fontSize - 1
+            font.weight: Font.Medium
             text: Math.round(Weather.tempC) + "°"
+            opacity: 0.85
         }
 
         Tray { visible: Config.showIdleTray; anchors.verticalCenter: parent.verticalCenter }

@@ -3,6 +3,8 @@ import Quickshell
 import "../../services"
 import "../../components"
 
+// Apple menu bar clock — clean, medium weight text with subtle hover
+// state. Shows abbreviated day, date, and time without seconds.
 Item {
     id: root
 
@@ -11,12 +13,15 @@ Item {
     implicitWidth: text.implicitWidth
     implicitHeight: text.implicitHeight
 
+    // Hover background — rounded pill, very subtle
     Rectangle {
         anchors.fill: parent
-        anchors.margins: -4
-        radius: Colors.radiusSmall
+        anchors.margins: -6
+        radius: 8
         color: Colors.surfaceHigh
-        opacity: clockHover.hovered ? 1 : 0
+        opacity: clockHover.hovered ? 0.5 : 0
+
+        Behavior on opacity { NumberAnimation { duration: Config.animFast; easing.type: Easing.OutCubic } }
     }
 
     HoverHandler { id: clockHover }
@@ -24,7 +29,8 @@ Item {
     StyledText {
         id: text
         anchors.fill: parent
-        text: Qt.formatDateTime(clock.date, "ddd d MMM  h:mm AP")
+        font.weight: Font.Medium
+        text: Qt.formatDateTime(clock.date, "ddd d MMM  h:mm")
 
         SystemClock {
             id: clock
@@ -34,7 +40,7 @@ Item {
 
     MouseArea {
         anchors.fill: parent
-        anchors.margins: -4
+        anchors.margins: -6
         cursorShape: Qt.PointingHandCursor
         onClicked: Bridge.toggleIsland(root.targetScreen.name, "calendar")
     }

@@ -1,65 +1,54 @@
 pragma Singleton
 import QtQuick
 
-// Live theme palette. Values here are just the "Helios" default — Themes.qml
-// owns persistence/presets/dynamic-from-wallpaper generation and pushes a new
-// palette in via apply() on startup and whenever the user switches themes.
+// Live theme palette — Apple-inspired dark mode with neutral grays, high
+// contrast text, and a cool blue accent. Themes.qml can still override
+// everything via apply().
 QtObject {
     id: root
 
-    property color background: "#14121a"
-    property color surface: "#282331"
-    property color surfaceHigh: "#3a3342"
-    property color overlay: "#6f6580"
-    property color text: "#eae6f0"
-    property color subtext: "#b3a9c4"
+    property color background: "#1c1c1e"
+    property color surface: "#2c2c2e"
+    property color surfaceHigh: "#3a3a3c"
+    property color overlay: "#636366"
+    property color text: "#f5f5f7"
+    property color subtext: "#98989d"
 
-    property color accent: "#f0a868"
-    property color accentText: "#2c1c0f"
-    property color danger: "#e5707e"
-    property color warning: "#eec172"
-    property color success: "#8fd08a"
+    property color accent: "#0a84ff"
+    property color accentText: "#ffffff"
+    property color danger: "#ff453a"
+    property color warning: "#ffd60a"
+    property color success: "#30d158"
 
-    // Full Material/matugen role set — additive to the legacy properties
-    // above (which every existing component still binds to). Populated by
-    // Themes.qml's apply() alongside the legacy roles, either straight from
-    // matugen (dynamic mode) or derived from a preset's legacy colors (see
-    // Themes.deriveFullPalette). New components should prefer these names;
-    // old ones are untouched.
-    //
-    // Material's "on<Role>" naming (onBackground, onPrimary, ...) can't be
-    // used verbatim here — QML reserves any property name starting with
-    // "on" + a capital letter for signal handlers (`property color onError`
-    // fails to even load, "Cannot assign a value to a signal"), regardless
-    // of whether a matching signal exists. These use a "<role>Text" suffix
-    // instead, matching the "accentText" convention the legacy properties
-    // above already use for the same reason.
-    property color backgroundText: "#eae6f0"
-    property color surfaceText: "#eae6f0"
-    property color surfaceVariant: "#3a3342"
-    property color surfaceVariantText: "#b3a9c4"
-    property color surfaceContainer: "#282331"
-    property color surfaceContainerLow: "#14121a"
-    property color surfaceContainerHigh: "#3a3342"
+    // Full role set — Apple's semantic palette translated into the same
+    // property structure Themes.qml expects. Neutral, desaturated grays with
+    // generous contrast separation between layers.
+    property color backgroundText: "#f5f5f7"
+    property color surfaceText: "#f5f5f7"
+    property color surfaceVariant: "#3a3a3c"
+    property color surfaceVariantText: "#98989d"
+    property color surfaceContainer: "#2c2c2e"
+    property color surfaceContainerLow: "#1c1c1e"
+    property color surfaceContainerHigh: "#3a3a3c"
 
-    property color primary: "#f0a868"
-    property color primaryText: "#2c1c0f"
-    property color primaryContainer: "#f0a868"
-    property color primaryContainerText: "#2c1c0f"
+    property color primary: "#0a84ff"
+    property color primaryText: "#ffffff"
+    property color primaryContainer: "#1a3a5c"
+    property color primaryContainerText: "#64b5f6"
 
-    property color secondary: "#f0a868"
-    property color secondaryText: "#2c1c0f"
-    property color secondaryContainer: "#f0a868"
-    property color secondaryContainerText: "#2c1c0f"
+    property color secondary: "#5e5ce6"
+    property color secondaryText: "#ffffff"
+    property color secondaryContainer: "#2d2b5e"
+    property color secondaryContainerText: "#a5a4f3"
 
-    property color tertiary: "#f0a868"
-    property color tertiaryText: "#2c1c0f"
-    property color tertiaryContainer: "#f0a868"
-    property color tertiaryContainerText: "#2c1c0f"
+    property color tertiary: "#bf5af2"
+    property color tertiaryText: "#ffffff"
+    property color tertiaryContainer: "#3d2052"
+    property color tertiaryContainerText: "#d9a1f7"
 
-    property color error: "#e5707e"
-    property color errorText: "#2c1c0f"
-    property color outline: "#6f6580"
+    property color error: "#ff453a"
+    property color errorText: "#ffffff"
+    property color outline: "#48484a"
     property color shadow: "#000000"
 
     // Every UI element binds straight to these properties, so animating the
@@ -102,8 +91,10 @@ QtObject {
     Behavior on outline { ColorAnimation { duration: 380; easing.type: Easing.OutCubic } }
     Behavior on shadow { ColorAnimation { duration: 380; easing.type: Easing.OutCubic } }
 
-    readonly property real panelOpacity: 0.96
-    readonly property int radiusLarge: 20
+    // Apple-style material: more translucent to let vibrancy through
+    readonly property real panelOpacity: 0.82
+    // Apple uses larger radii — continuous (squircle-like) corners
+    readonly property int radiusLarge: 16
     readonly property int radiusSmall: 10
 
     function apply(palette) {

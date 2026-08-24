@@ -1,18 +1,17 @@
 import QtQuick
 import "../services"
 
+// Apple-style slider — taller track (8px) with generous rounded ends,
+// accent fill, and a hover-only thumb (Apple Music scrubber behavior).
+// The thumb is slightly larger (16px) with a white fill for visibility.
 Item {
     id: root
 
-    property real value: 0 // 0..maxValue
+    property real value: 0
     property real maxValue: 1
-    // Draws a tick at this value (e.g. 1.0 to mark "100%" on a slider whose
-    // maxValue goes past it) — set negative (default) to hide it.
     property real markerAt: -1
     property color fillColor: Colors.accent
-    property real trackHeight: 6
-    // Apple Music-style scrubber: thumb stays hidden until hovered/dragged
-    // instead of sitting on the track at all times.
+    property real trackHeight: 8
     property bool thumbHoverOnly: false
 
     signal moved(real value)
@@ -20,7 +19,7 @@ Item {
     readonly property real fraction: root.maxValue > 0 ? Math.max(0, Math.min(1, root.value / root.maxValue)) : 0
     readonly property bool showThumb: !root.thumbHoverOnly || trackHover.hovered || dragArea.pressed
 
-    implicitHeight: 20
+    implicitHeight: 24
 
     HoverHandler { id: trackHover }
 
@@ -32,6 +31,7 @@ Item {
         radius: height / 2
         color: Colors.surfaceHigh
 
+        // Fill
         Rectangle {
             width: track.width * root.fraction
             height: parent.height
@@ -39,26 +39,40 @@ Item {
             color: root.fillColor
         }
 
+        // Tick marker
         Rectangle {
             visible: root.markerAt >= 0 && root.markerAt <= root.maxValue
             width: 2
-            height: parent.height + 6
+            height: parent.height + 4
             radius: 1
             color: Colors.background
-            opacity: 0.6
+            opacity: 0.5
             anchors.verticalCenter: parent.verticalCenter
             x: track.width * (root.maxValue > 0 ? root.markerAt / root.maxValue : 0) - width / 2
         }
 
+        // Thumb — white circle, appears on hover/drag
         Rectangle {
-            width: 14
-            height: 14
-            radius: 7
-            color: Colors.text
+            width: 16
+            height: 16
+            radius: 8
+            color: "#ffffff"
             opacity: root.showThumb ? 1 : 0
-            Behavior on opacity { NumberAnimation { duration: Config.animFast } }
             anchors.verticalCenter: parent.verticalCenter
             x: track.width * root.fraction - width / 2
+
+            Behavior on opacity { NumberAnimation { duration: Config.animFast; easing.type: Easing.OutCubic } }
+
+            // Shadow ring
+            Rectangle {
+                anchors.fill: parent
+                anchors.margins: -1
+                radius: parent.radius + 1
+                color: "transparent"
+                border.width: 1
+                border.color: Qt.rgba(0, 0, 0, 0.15)
+                z: -1
+            }
         }
     }
 
