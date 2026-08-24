@@ -70,7 +70,18 @@ PanelWindow {
     Timer {
         id: hoverCollapseTimer
         interval: 260
-        onTriggered: bar.hovering = false
+        // Tray icons only ever render in the peek (hover-expanded) row —
+        // see PeekContent.qml/IdleBump.qml — so a tray right-click's native
+        // menu stealing focus/pointer here is exactly what makes hover
+        // reporting end and this timer fire, collapsing the island out from
+        // under the menu the user is still looking at. Poll instead of
+        // collapsing outright while that menu's cooldown is running; a
+        // genuine hover return during that window still cancels this timer
+        // normally (see hoverTracker.onHoveredChanged below).
+        onTriggered: {
+            if (trayMenuCooldown.running) { hoverCollapseTimer.restart(); return; }
+            bar.hovering = false;
+        }
     }
 
     Timer {
@@ -128,9 +139,21 @@ PanelWindow {
 
     // Cooldown after a tray right-click — prevents the focus grab's
     // onCleared from closing the island when a platform menu steals focus.
+    // The real Hyprland-side grab is already gone the instant the menu
+    // steals focus (that's what fired onCleared in the first place) even
+    // though skipping closeIsland() there leaves focusGrab.active reporting
+    // stale as true — so once this cooldown elapses (the platform menu
+    // should be closed by then), re-arm it the same way a fresh open does,
+    // otherwise a genuine outside click afterward would silently do nothing.
     Timer {
         id: trayMenuCooldown
         interval: 1500
+        onTriggered: {
+            if (bar.panelOpen) {
+                focusGrab.active = false;
+                focusGrabDelay.restart();
+            }
+        }
     }
 
     Connections {

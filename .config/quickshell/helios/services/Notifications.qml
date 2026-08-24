@@ -59,11 +59,20 @@ QtObject {
     }
 
     // Raises and focuses the window of the app that sent a notification.
-    // Also tries to invoke the notification's "default" action for deep-
-    // linking (e.g., Slack thread navigation) before focusing the window.
+    // First invokes the notification's "default" action if it has one —
+    // per the freedesktop notification spec, that's what a real desktop
+    // environment triggers when you click a notification's body, and it's
+    // what makes apps like Slack navigate to the actual channel/thread that
+    // triggered it rather than just opening to whatever was last visible.
+    // Window-focus-by-appId still runs afterward regardless, since invoking
+    // the action isn't guaranteed to raise the window on its own, and not
+    // every app registers a default action in the first place.
     function focusApp(notification) {
+        const defaultAction = notification.actions ? notification.actions.find(a => a.identifier === "default") : null;
+        if (defaultAction) defaultAction.invoke();
+
         const needle = (notification.desktopEntry || notification.appName || "").toLowerCase();
-        if (!needle) return false;
+        if (!needle) return !!defaultAction;
         for (const top of Hyprland.toplevels.values) {
             const appId = (top.wayland && top.wayland.appId || "").toLowerCase();
             if (appId && (appId === needle || appId.includes(needle) || needle.includes(appId))) {
@@ -71,6 +80,6 @@ QtObject {
                 return true;
             }
         }
-        return false;
+        return !!defaultAction;
     }
 }
