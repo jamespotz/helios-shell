@@ -16,12 +16,17 @@ import "./modules/wallpaper"
 ShellRoot {
     // Themes is otherwise only referenced from IpcHandler function bodies and
     // from the (Loader-deferred) theme settings panel, so without this touch
-    // the singleton never gets instantiated at startup — its
-    // Component.onCompleted (which restores the saved palette into Colors)
-    // would simply never run, leaving Colors on its hardcoded defaults until
-    // the settings panel is opened once.
+    // Force-instantiate lazy singletons at startup so their data is cached
+    // and ready before the user first opens the corresponding panel.
+    // Cost: negligible — each is one async subprocess (~50ms) that returns a
+    // small list. None block the UI thread.
     QtObject {
-        Component.onCompleted: Themes.currentLabel()
+        Component.onCompleted: {
+            Themes.currentLabel();
+            WifiNetworks.loaded;   // triggers Component.onCompleted → refreshNetworks()
+            NightLight.enabled;    // restores persisted state + spawns wlsunset if needed
+            IdleInhibit.enabled;   // restores persisted state + spawns hypridle if needed
+        }
     }
 
     Variants {
