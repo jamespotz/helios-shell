@@ -55,8 +55,13 @@ Item {
                         { tab: "media", icon: "music_note" },
                         { tab: "clipboard", icon: "content_paste" },
                         { tab: "recorder", icon: "videocam" },
+                        { tab: "screenshot", icon: "screenshot_monitor" },
                         { tab: "weather", icon: "cloud" },
                         { tab: "activity", icon: "bar_chart" },
+                        { tab: "notifications", icon: "history" },
+                        { tab: "nightlight", icon: "nightlight" },
+                        { tab: "display", icon: "monitor" },
+                        { tab: "idle", icon: "bedtime" },
                         { tab: "wallpaper", icon: "wallpaper" },
                         { tab: "theme", icon: "palette" },
                         { tab: "power", icon: powerIcon },
@@ -149,9 +154,14 @@ Item {
                         : Bridge.islandTab === "media" ? mediaTab
                         : Bridge.islandTab === "clipboard" ? clipboardTab
                         : Bridge.islandTab === "recorder" ? recorderTab
+                        : Bridge.islandTab === "screenshot" ? screenshotTab
                         : Bridge.islandTab === "weather" ? weatherTab
                         : Bridge.islandTab === "calendar" ? weatherTab
                         : Bridge.islandTab === "activity" ? activityTab
+                        : Bridge.islandTab === "notifications" ? notificationsTab
+                        : Bridge.islandTab === "nightlight" ? nightlightTab
+                        : Bridge.islandTab === "display" ? displayTab
+                        : Bridge.islandTab === "idle" ? idleTab
                         : Bridge.islandTab === "wallpaper" ? wallpaperTab
                         : Bridge.islandTab === "theme" ? themeTab
                         : Bridge.islandTab === "island" ? islandTab
@@ -196,8 +206,13 @@ Item {
     Component { id: mediaTab; MediaCard {} }
     Component { id: clipboardTab; ClipboardTab {} }
     Component { id: recorderTab; ScreenRecorderTab {} }
+    Component { id: screenshotTab; ScreenshotTab {} }
     Component { id: weatherTab; WeatherPanel {} }
     Component { id: activityTab; ActivityTab {} }
+    Component { id: notificationsTab; NotificationHistoryTab {} }
+    Component { id: nightlightTab; NightLightTab {} }
+    Component { id: displayTab; DisplayTab {} }
+    Component { id: idleTab; IdleTab {} }
     Component { id: wallpaperTab; WallpaperSettings {} }
     Component { id: themeTab; ThemeSettings {} }
     Component { id: islandTab; IslandSettings {} }

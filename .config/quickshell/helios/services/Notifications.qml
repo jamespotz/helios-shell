@@ -12,6 +12,14 @@ QtObject {
     // notify-mode card. Newest first; NotifyCard groups when there's more
     // than one pending.
     property var list: []
+    // Notification history — persists dismissed notifications so the user
+    // can review missed ones. Capped at 50 entries.
+    property var history: []
+    readonly property int historyMax: 50
+
+    // When DND is active, notifications still arrive and go to history but
+    // don't appear in `list` (which drives the popup notify-mode in Bar.qml).
+    readonly property bool dndActive: Bridge.dndEnabled
 
     readonly property NotificationServer server: NotificationServer {
         keepOnReload: true
@@ -22,11 +30,15 @@ QtObject {
 
         onNotification: notification => {
             notification.tracked = true;
-            // Catches expiry/close from the sender side too, not just our own
-            // dismiss() — otherwise a notification closed elsewhere would
-            // linger in the list forever.
             notification.closed.connect(() => root.remove(notification));
-            root.list = [notification].concat(root.list);
+            // Always add to history regardless of DND state
+            root.history = [{ summary: notification.summary, body: notification.body,
+                appName: notification.appName, appIcon: notification.appIcon,
+                time: new Date() }].concat(root.history).slice(0, root.historyMax);
+            // Only show popup if DND is off
+            if (!root.dndActive) {
+                root.list = [notification].concat(root.list);
+            }
         }
     }
 
@@ -40,6 +52,10 @@ QtObject {
 
     function dismissAll() {
         for (const n of root.list) n.dismiss();
+    }
+
+    function clearHistory() {
+        root.history = [];
     }
 
     // Raises and focuses the window of the app that sent a notification.

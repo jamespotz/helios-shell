@@ -13,3 +13,7 @@ singleton Clipboard 1.0 Clipboard.qml
 singleton WifiNetworks 1.0 WifiNetworks.qml
 singleton ScreenRecorder 1.0 ScreenRecorder.qml
 singleton MicActivity 1.0 MicActivity.qml
+singleton Screenshot 1.0 Screenshot.qml
+singleton NightLight 1.0 NightLight.qml
+singleton DisplaySettings 1.0 DisplaySettings.qml
+singleton IdleInhibit 1.0 IdleInhibit.qml

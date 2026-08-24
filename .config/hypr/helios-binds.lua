@@ -94,3 +94,30 @@ hl.bind(mainMod .. " + SHIFT + C", hl.dsp.exec_cmd(helios .. " recorder toggle")
 hl.bind(mainMod .. " + SHIFT + R",
   hl.dsp.exec_cmd("sh ~/.config/hypr/helios-reload.sh"),
   { description = "Reload/relaunch helios" })
+
+
+-- Screenshot (SUPER + SHIFT + S for region, SUPER + Print for fullscreen, SUPER + ALT + S for window)
+hl.bind(mainMod .. " + SHIFT + S", hl.dsp.exec_cmd(helios .. " screenshot region"),
+  { description = "Screenshot region (helios)" })
+hl.bind(mainMod .. " + Print", hl.dsp.exec_cmd(helios .. " screenshot full"),
+  { description = "Screenshot fullscreen (helios)" })
+hl.bind(mainMod .. " + ALT + S", hl.dsp.exec_cmd(helios .. " screenshot window"),
+  { description = "Screenshot active window (helios)" })
+
+-- Night light / Do Not Disturb / Caffeine toggles
+hl.bind(mainMod .. " + SHIFT + N", hl.dsp.exec_cmd(helios .. " nightlight toggle"),
+  { description = "Toggle night light (helios)" })
+hl.bind(mainMod .. " + SHIFT + D", hl.dsp.exec_cmd(helios .. " dnd toggle"),
+  { description = "Toggle Do Not Disturb (helios)" })
+hl.bind(mainMod .. " + SHIFT + F", hl.dsp.exec_cmd(helios .. " idle caffeine"),
+  { description = "Toggle caffeine mode (helios)" })
+
+-- New island tabs
+hl.bind(mainMod .. " + ALT + D", hl.dsp.exec_cmd(helios .. " island toggle display"),
+  { description = "Toggle display settings island" })
+hl.bind(mainMod .. " + ALT + H", hl.dsp.exec_cmd(helios .. " island toggle notifications"),
+  { description = "Toggle notification history island" })
+hl.bind(mainMod .. " + ALT + L", hl.dsp.exec_cmd(helios .. " island toggle nightlight"),
+  { description = "Toggle night light island" })
+hl.bind(mainMod .. " + ALT + B", hl.dsp.exec_cmd(helios .. " island toggle idle"),
+  { description = "Toggle idle/lock settings island" })

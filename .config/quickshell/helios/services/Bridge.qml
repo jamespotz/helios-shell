@@ -15,8 +15,11 @@ QtObject {
     property string islandTab: "volume"
 
     property bool liquidGlassEnabled: false
+    property bool dndEnabled: false
 
     signal lockRequested()
+
+    function toggleDnd() { dndEnabled = !dndEnabled }
 
     function toggleLauncher() { launcherOpen = !launcherOpen }
     function toggleLauncherOff() { launcherOpen = false }

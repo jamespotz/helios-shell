@@ -118,6 +118,12 @@ Row {
     }
 
     IconButton {
+        icon: Bridge.dndEnabled ? "do_not_disturb_on" : "notifications"
+        active: Bridge.dndEnabled
+        onClicked: Bridge.toggleDnd()
+    }
+
+    IconButton {
         icon: "auto_awesome"
         active: Bridge.liquidGlassEnabled
         onClicked: Bridge.toggleLiquidGlass()

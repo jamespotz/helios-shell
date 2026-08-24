@@ -12,3 +12,4 @@ README.md
 ^unlink\.sh$
 ^\.linkignore$
 \docs
+\.claude

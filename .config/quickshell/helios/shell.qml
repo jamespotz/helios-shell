@@ -130,4 +130,34 @@ ShellRoot {
         function stop() { ScreenRecorder.stop() }
         function mode(name: string) { ScreenRecorder.setMode(name) }
     }
+
+    IpcHandler {
+        target: "screenshot"
+        function full() { Screenshot.captureFullscreen() }
+        function region() { Screenshot.captureRegion() }
+        function window() { Screenshot.captureWindow() }
+    }
+
+    IpcHandler {
+        target: "dnd"
+        function toggle() { Bridge.toggleDnd() }
+        function on() { Bridge.dndEnabled = true }
+        function off() { Bridge.dndEnabled = false }
+    }
+
+    IpcHandler {
+        target: "nightlight"
+        function toggle() { NightLight.toggle() }
+        function on() { NightLight.setEnabled(true) }
+        function off() { NightLight.setEnabled(false) }
+        function temp(value: int) { NightLight.setTemperature(value) }
+        function location(lat: real, lon: real) { NightLight.setScheduled(true, lat, lon) }
+    }
+
+    IpcHandler {
+        target: "idle"
+        function caffeine() { IdleInhibit.toggleInhibit() }
+        function enable() { IdleInhibit.setEnabled(true) }
+        function disable() { IdleInhibit.setEnabled(false) }
+    }
 }
