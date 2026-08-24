@@ -49,6 +49,13 @@ Row {
     }
 
     IconButton {
+        visible: MicActivity.isSystemMicActive
+        icon: "mic"
+        active: root.isIslandTab("volume")
+        onClicked: root.openIslandTab("volume")
+    }
+
+    IconButton {
         icon: root.muted ? "volume_off"
             : root.volume > 0.5 ? "volume_up"
             : root.volume > 0 ? "volume_down" : "volume_mute"
