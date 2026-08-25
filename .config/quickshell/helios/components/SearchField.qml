@@ -8,6 +8,7 @@ Rectangle {
     id: root
 
     property alias text: input.text
+    property alias cursorPosition: input.cursorPosition
     property string placeholder: "Search…"
     property int inputPixelSize: Config.fontSize
 

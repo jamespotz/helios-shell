@@ -33,6 +33,10 @@ PanelWindow {
     }
 
     property var results: []
+    // Set by refresh() whenever the query is a "/em[oji] <term>" search —
+    // switches the results delegate from app rows to emoji rows and the
+    // accept/click action from launching to copying.
+    property bool emojiMode: false
 
     function matchesKeywords(entry, query) {
         const kw = entry.keywords;
@@ -42,7 +46,17 @@ PanelWindow {
     }
 
     function refresh() {
-        const query = searchField.text.trim().toLowerCase();
+        const raw = searchField.text.trim();
+        // "/em" or "/emoji", optionally followed by a search term.
+        const emojiPrefix = raw.match(/^\/em(?:oji)?(?:\s+(.*))?$/i);
+        if (emojiPrefix) {
+            launcher.emojiMode = true;
+            results = Emoji.search(emojiPrefix[1] || "", 9);
+            return;
+        }
+        launcher.emojiMode = false;
+
+        const query = raw.toLowerCase();
         const seen = new Set();
         const all = DesktopEntries.applications.values.filter(e => !e.noDisplay)
             .concat(ExtraApps.list)
@@ -82,6 +96,18 @@ PanelWindow {
             entry.execute();
         }
     }
+
+    // Copies the emoji glyph to the clipboard — Wayland has no portable way
+    // to inject keystrokes into whatever was focused before the launcher
+    // (that's what typing would require), so copy-then-paste is the actual
+    // reliable path, same as every other emoji picker.
+    function copyEmoji(entry) {
+        emojiCopier.command = ["sh", "-c", "printf '%s' \"$1\" | wl-copy", "_", entry.emoji];
+        emojiCopier.running = false;
+        emojiCopier.running = true;
+    }
+
+    Process { id: emojiCopier }
 
     onVisibleChanged: {
         if (visible) {
@@ -130,21 +156,42 @@ PanelWindow {
             anchors.margins: 16
             spacing: 12
 
-            // Search field — prominent, Apple-style
-            SearchField {
-                id: searchField
+            // Search field — prominent, Apple-style — plus a trigger button
+            // that pre-fills the "/em " prefix for anyone who won't remember
+            // to type it themselves.
+            Row {
                 width: parent.width
-                placeholder: "Search apps…"
-                inputPixelSize: Config.fontSize + 2
+                spacing: 8
 
-                onTextChanged: launcher.refresh()
-                onEscapePressed: Bridge.launcherOpen = false
-                onDownPressed: resultList.currentIndex = Math.min(resultList.currentIndex + 1, results.length - 1)
-                onUpPressed: resultList.currentIndex = Math.max(resultList.currentIndex - 1, 0)
-                onAccepted: {
-                    if (results.length > 0) {
-                        launcher.launchApp(results[resultList.currentIndex]);
+                SearchField {
+                    id: searchField
+                    width: parent.width - emojiButton.width - parent.spacing
+                    placeholder: "Search apps…"
+                    inputPixelSize: Config.fontSize + 2
+
+                    onTextChanged: launcher.refresh()
+                    onEscapePressed: Bridge.launcherOpen = false
+                    onDownPressed: resultList.currentIndex = Math.min(resultList.currentIndex + 1, results.length - 1)
+                    onUpPressed: resultList.currentIndex = Math.max(resultList.currentIndex - 1, 0)
+                    onAccepted: {
+                        if (results.length === 0) return;
+                        const entry = results[resultList.currentIndex];
+                        if (launcher.emojiMode) launcher.copyEmoji(entry);
+                        else launcher.launchApp(entry);
                         Bridge.launcherOpen = false;
+                    }
+                }
+
+                IconButton {
+                    id: emojiButton
+                    icon: "add_reaction"
+                    iconSize: 18
+                    anchors.verticalCenter: parent.verticalCenter
+                    active: launcher.emojiMode
+                    onClicked: {
+                        searchField.text = "/em ";
+                        searchField.cursorPosition = searchField.text.length;
+                        searchField.focusInput();
                     }
                 }
             }
@@ -201,13 +248,21 @@ PanelWindow {
                             Image {
                                 anchors.fill: parent
                                 anchors.margins: 3
-                                source: Quickshell.iconPath(modelData.icon, true)
+                                visible: !launcher.emojiMode
+                                source: launcher.emojiMode ? "" : Quickshell.iconPath(modelData.icon, true)
                                 fillMode: Image.PreserveAspectFit
                                 asynchronous: true
                             }
+
+                            StyledText {
+                                anchors.centerIn: parent
+                                visible: launcher.emojiMode
+                                text: launcher.emojiMode ? modelData.emoji : ""
+                                font.pixelSize: 19
+                            }
                         }
 
-                        // Name + description
+                        // Name + description (apps: generic name; emoji: category)
                         Column {
                             anchors.verticalCenter: parent.verticalCenter
                             width: parent.width - 36 - 12 - 10 - termBadge.width - 10
@@ -221,8 +276,9 @@ PanelWindow {
                                 elide: Text.ElideRight
                             }
                             StyledText {
-                                visible: !!modelData.genericName
-                                text: modelData.genericName
+                                readonly property string subtitle: modelData.genericName || modelData.category || ""
+                                visible: !!subtitle
+                                text: subtitle
                                 font.pixelSize: Config.fontSize - 2
                                 color: index === resultList.currentIndex ? Qt.rgba(Colors.accentText.r, Colors.accentText.g, Colors.accentText.b, 0.7) : Colors.subtext
                                 width: parent.width
@@ -265,7 +321,8 @@ PanelWindow {
                         anchors.fill: parent
                         cursorShape: Qt.PointingHandCursor
                         onClicked: {
-                            launcher.launchApp(modelData);
+                            if (launcher.emojiMode) launcher.copyEmoji(modelData);
+                            else launcher.launchApp(modelData);
                             Bridge.launcherOpen = false;
                         }
                     }
@@ -282,7 +339,7 @@ PanelWindow {
                     anchors.centerIn: parent
                     spacing: 4
                     MaterialIcon { icon: "search_off"; font.pixelSize: 24; color: Colors.overlay; anchors.horizontalCenter: parent.horizontalCenter }
-                    StyledText { text: "No results"; color: Colors.subtext; anchors.horizontalCenter: parent.horizontalCenter }
+                    StyledText { text: launcher.emojiMode ? "No matching emoji" : "No results"; color: Colors.subtext; anchors.horizontalCenter: parent.horizontalCenter }
                 }
             }
         }
