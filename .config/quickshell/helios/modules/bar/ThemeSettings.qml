@@ -48,10 +48,10 @@ Item {
                 color: Colors.subtext
             }
 
-            // Theme grid — 2 columns of rounded cards with color preview
+            // Theme grid — 3 columns of rounded cards with color preview
             Grid {
                 width: parent.width
-                columns: 2
+                columns: 3
                 spacing: 8
 
                 Repeater {
@@ -63,12 +63,25 @@ Item {
                         readonly property var palette: Themes.presets[modelData]
                         readonly property bool active: Themes.mode === "preset" && Themes.presetName === modelData
 
-                        width: (parent.width - 8) / 2
-                        height: 52
+                        width: (parent.width - 16) / 3
+                        height: 64
                         radius: 12
                         color: card.palette.surface
                         border.width: active ? 2 : 0
                         border.color: Colors.accent
+                        clip: true
+
+                        // Swatch strip — background/surfaceHigh/accent, a real
+                        // preview instead of a single dot, pinned to the card edge
+                        Row {
+                            anchors.top: parent.top
+                            anchors.left: parent.left
+                            anchors.right: parent.right
+                            height: 5
+                            Rectangle { width: parent.width / 3; height: parent.height; color: card.palette.background }
+                            Rectangle { width: parent.width / 3; height: parent.height; color: card.palette.surfaceHigh }
+                            Rectangle { width: parent.width / 3; height: parent.height; color: card.palette.accent }
+                        }
 
                         // Subtle inner highlight when active
                         Rectangle {
@@ -93,37 +106,28 @@ Item {
 
                         HoverHandler { id: cardHover }
 
-                        Row {
-                            anchors.left: parent.left
-                            anchors.verticalCenter: parent.verticalCenter
-                            anchors.leftMargin: 12
-                            spacing: 10
+                        Column {
+                            anchors.centerIn: parent
+                            anchors.verticalCenterOffset: 3
+                            spacing: 4
 
-                            // Color swatch — accent dot with background ring
                             Rectangle {
-                                width: 22
-                                height: 22
-                                radius: 11
-                                color: card.palette.background
-                                border.width: 1.5
-                                border.color: card.palette.accent
-                                anchors.verticalCenter: parent.verticalCenter
-
-                                Rectangle {
-                                    anchors.centerIn: parent
-                                    width: 12
-                                    height: 12
-                                    radius: 6
-                                    color: card.palette.accent
-                                }
+                                width: 14
+                                height: 14
+                                radius: 7
+                                color: card.palette.accent
+                                anchors.horizontalCenter: parent.horizontalCenter
                             }
 
                             StyledText {
-                                anchors.verticalCenter: parent.verticalCenter
                                 text: card.palette.label
                                 color: card.palette.text
-                                font.pixelSize: Config.fontSize - 1
+                                font.pixelSize: Config.fontSize - 3
                                 font.weight: Font.Medium
+                                horizontalAlignment: Text.AlignHCenter
+                                elide: Text.ElideRight
+                                width: card.width - 10
+                                anchors.horizontalCenter: parent.horizontalCenter
                             }
                         }
 
@@ -132,16 +136,16 @@ Item {
                             visible: card.active
                             anchors.top: parent.top
                             anchors.right: parent.right
-                            anchors.margins: 6
-                            width: 18
-                            height: 18
-                            radius: 9
+                            anchors.margins: 4
+                            width: 15
+                            height: 15
+                            radius: 7.5
                             color: Colors.accent
 
                             MaterialIcon {
                                 anchors.centerIn: parent
                                 icon: "check"
-                                font.pixelSize: 12
+                                font.pixelSize: 10
                                 color: Colors.accentText
                             }
                         }
