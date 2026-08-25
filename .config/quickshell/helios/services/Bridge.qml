@@ -17,14 +17,28 @@ QtObject {
     property bool liquidGlassEnabled: false
     property bool dndEnabled: false
 
-    // Fired every time a tray icon opens its native context menu — a signal,
-    // not a bool, because there's no "menu closed" event to reset a flag
-    // with, and a plain bool toggled on each right-click misses every other
-    // click (QML only fires onXChanged on an actual value change, so
-    // toggling true->false->true->... silently no-ops half the time, and
-    // any click that would toggle true->true because a previous cycle never
-    // got reset does too).
-    signal trayMenuOpened()
+    // Custom tray right-click menu — replaces the native QMenu display()
+    // with our own styled QML popup. Tray.qml sets these on right-click;
+    // TrayMenu.qml (a top-level PanelWindow) reads them to show/position
+    // itself. trayMenuOpen is the single source of truth for whether the
+    // menu is visible — Bar.qml uses it instead of the old cooldown hack.
+    property bool trayMenuOpen: false
+    property var trayMenuHandle: null
+    property string trayMenuScreen: ""
+    property real trayMenuX: 0
+    property real trayMenuY: 0
+
+    function openTrayMenu(menuHandle, screenName, globalX, globalY) {
+        trayMenuHandle = menuHandle;
+        trayMenuScreen = screenName;
+        trayMenuX = globalX;
+        trayMenuY = globalY;
+        trayMenuOpen = true;
+    }
+    function closeTrayMenu() {
+        trayMenuOpen = false;
+        trayMenuHandle = null;
+    }
 
     signal lockRequested()
 

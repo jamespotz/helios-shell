@@ -44,6 +44,7 @@ ShellRoot {
     PowerMenu {}
     Keybinds {}
     Lock {}
+    TrayMenu {}
 
     // Lets the (experimental) Liquid Glass surface read real desktop pixels
     // through Hyprland's compositor blur instead of faking translucency.

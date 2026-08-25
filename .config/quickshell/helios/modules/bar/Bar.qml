@@ -71,15 +71,13 @@ PanelWindow {
         id: hoverCollapseTimer
         interval: 260
         // Tray icons only ever render in the peek (hover-expanded) row —
-        // see PeekContent.qml/IdleBump.qml — so a tray right-click's native
-        // menu stealing focus/pointer here is exactly what makes hover
-        // reporting end and this timer fire, collapsing the island out from
-        // under the menu the user is still looking at. Poll instead of
-        // collapsing outright while that menu's cooldown is running; a
-        // genuine hover return during that window still cancels this timer
-        // normally (see hoverTracker.onHoveredChanged below).
+        // see PeekContent.qml/IdleBump.qml — so while our custom tray menu
+        // is open, the cursor leaves the island (it's on the overlay menu
+        // surface now), which fires this timer. Poll instead of collapsing
+        // while the menu is still visible; a genuine hover return still
+        // cancels this timer normally (see hoverTracker.onHoveredChanged).
         onTriggered: {
-            if (trayMenuCooldown.running) { hoverCollapseTimer.restart(); return; }
+            if (Bridge.trayMenuOpen) { hoverCollapseTimer.restart(); return; }
             bar.hovering = false;
         }
     }
@@ -132,33 +130,23 @@ PanelWindow {
         windows: [bar]
         active: false
         onCleared: {
-            if (trayMenuCooldown.running) return;
+            if (Bridge.trayMenuOpen) return;
             if (bar.panelOpen) Bridge.closeIsland();
         }
     }
 
-    // Cooldown after a tray right-click — prevents the focus grab's
-    // onCleared from closing the island when a platform menu steals focus.
-    // The real Hyprland-side grab is already gone the instant the menu
-    // steals focus (that's what fired onCleared in the first place) even
-    // though skipping closeIsland() there leaves focusGrab.active reporting
-    // stale as true — so once this cooldown elapses (the platform menu
-    // should be closed by then), re-arm it the same way a fresh open does,
-    // otherwise a genuine outside click afterward would silently do nothing.
-    Timer {
-        id: trayMenuCooldown
-        interval: 1500
-        onTriggered: {
-            if (bar.panelOpen) {
+    // Re-arm the focus grab when the tray menu closes — the grab was
+    // already lost the instant the overlay stole focus, so if the island
+    // is still open after the menu closes, we need to re-establish it so
+    // a genuine outside click afterward still dismisses the island.
+    Connections {
+        target: Bridge
+        function onTrayMenuOpenChanged() {
+            if (!Bridge.trayMenuOpen && bar.panelOpen) {
                 focusGrab.active = false;
                 focusGrabDelay.restart();
             }
         }
-    }
-
-    Connections {
-        target: Bridge
-        function onTrayMenuOpened() { trayMenuCooldown.restart(); }
     }
 
     // hitArea snaps to its target size *instantly* — no Behavior — and owns

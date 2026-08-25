@@ -42,11 +42,25 @@ Row {
                 onClicked: mouse => {
                     if (mouse.button === Qt.RightButton) {
                         if (trayItem.modelData.hasMenu) {
-                            // Tell the bar to start its cooldown timer before
-                            // the platform menu steals focus.
-                            Bridge.trayMenuOpened();
-                            const pos = trayItem.mapToItem(QsWindow.contentItem, mouse.x, mouse.y);
-                            trayItem.modelData.display(QsWindow.window, pos.x, pos.y);
+                            // The TrayMenu is a full-screen overlay on this
+                            // screen, so we need screen-relative coordinates.
+                            // mapToItem(null) gives position in the Bar's own
+                            // window space; the Bar is a centered layer-shell
+                            // surface of fixed width (islandMaxWidth), so its
+                            // origin in screen space is offset horizontally by
+                            // (screenWidth - surfaceWidth) / 2. Vertically the
+                            // compositor places it at margins.top.
+                            const posInWindow = trayItem.mapToItem(null, mouse.x, mouse.y);
+                            const screenW = QsWindow.window.screen.width;
+                            const barSurfaceW = Config.islandMaxWidth;
+                            const offsetX = (screenW - barSurfaceW) / 2;
+                            const offsetY = Config.islandTopGap;
+                            Bridge.openTrayMenu(
+                                trayItem.modelData.menu,
+                                QsWindow.window.screen.name,
+                                offsetX + posInWindow.x,
+                                offsetY + posInWindow.y
+                            );
                         } else {
                             trayItem.modelData.secondaryActivate();
                         }

@@ -19,6 +19,7 @@ Rectangle {
 
     MouseArea {
         anchors.fill: parent
+        enabled: root.active
         onClicked: root.dismissed()
     }
 }

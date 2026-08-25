@@ -38,6 +38,13 @@ PanelWindow {
     // accept/click action from launching to copying.
     property bool emojiMode: false
 
+    // Right-click context menu — freedesktop "Desktop Actions" for the app
+    // under contextMenuEntry (e.g. Ghostty's "New Window"), positioned at
+    // contextMenuPos in the launcher window's own coordinate space. null
+    // entry means no menu is open.
+    property var contextMenuEntry: null
+    property point contextMenuPos: Qt.point(0, 0)
+
     function matchesKeywords(entry, query) {
         const kw = entry.keywords;
         if (!kw || kw.length === 0) return false;
@@ -97,6 +104,21 @@ PanelWindow {
         }
     }
 
+    // Runs a Desktop Action (the context menu's entries, e.g. Ghostty's
+    // "New Window") the same defensive way launchApp() runs the main entry
+    // — DesktopAction.execute() silently did nothing when tested live here
+    // (same gap as DesktopEntry.execute() noted above), while manually
+    // spawning its parsed command works.
+    function runAction(action) {
+        const cmd = action.command || [];
+        if (cmd.length > 0) {
+            Quickshell.execDetached(cmd);
+        } else {
+            const exec = (action.execString || "").replace(/%[fFuUdDnNickvm]/g, "").trim();
+            if (exec) Quickshell.execDetached(["sh", "-c", exec]);
+        }
+    }
+
     // Copies the emoji glyph to the clipboard — Wayland has no portable way
     // to inject keystrokes into whatever was focused before the launcher
     // (that's what typing would require), so copy-then-paste is the actual
@@ -115,6 +137,8 @@ PanelWindow {
             refresh();
             searchField.focusInput();
             resultList.currentIndex = 0;
+        } else {
+            contextMenuEntry = null;
         }
     }
 
@@ -170,7 +194,10 @@ PanelWindow {
                     inputPixelSize: Config.fontSize + 2
 
                     onTextChanged: launcher.refresh()
-                    onEscapePressed: Bridge.launcherOpen = false
+                    onEscapePressed: {
+                        if (launcher.contextMenuEntry) launcher.contextMenuEntry = null;
+                        else Bridge.launcherOpen = false;
+                    }
                     onDownPressed: resultList.currentIndex = Math.min(resultList.currentIndex + 1, results.length - 1)
                     onUpPressed: resultList.currentIndex = Math.max(resultList.currentIndex - 1, 0)
                     onAccepted: {
@@ -318,9 +345,18 @@ PanelWindow {
                     }
 
                     MouseArea {
+                        id: resultMouseArea
                         anchors.fill: parent
+                        acceptedButtons: Qt.LeftButton | Qt.RightButton
                         cursorShape: Qt.PointingHandCursor
-                        onClicked: {
+                        onClicked: mouse => {
+                            if (mouse.button === Qt.RightButton) {
+                                if (launcher.emojiMode || !modelData.actions || modelData.actions.length === 0) return;
+                                const pos = resultMouseArea.mapToItem(QsWindow.contentItem, mouse.x, mouse.y);
+                                launcher.contextMenuPos = pos;
+                                launcher.contextMenuEntry = modelData;
+                                return;
+                            }
                             if (launcher.emojiMode) launcher.copyEmoji(modelData);
                             else launcher.launchApp(modelData);
                             Bridge.launcherOpen = false;
@@ -340,6 +376,75 @@ PanelWindow {
                     spacing: 4
                     MaterialIcon { icon: "search_off"; font.pixelSize: 24; color: Colors.overlay; anchors.horizontalCenter: parent.horizontalCenter }
                     StyledText { text: launcher.emojiMode ? "No matching emoji" : "No results"; color: Colors.subtext; anchors.horizontalCenter: parent.horizontalCenter }
+                }
+            }
+        }
+    }
+
+    // Right-click context menu — freedesktop Desktop Actions for the app
+    // under contextMenuEntry. Kept as its own top-level popup (not nested
+    // in the result delegate) so it isn't clipped by the ListView/card and
+    // can be positioned at the click point in window coordinates.
+    Scrim {
+        active: launcher.contextMenuEntry !== null
+        dimOpacity: 0
+        onDismissed: launcher.contextMenuEntry = null
+    }
+
+    Item {
+        id: contextMenu
+        visible: launcher.contextMenuEntry !== null
+        readonly property var actions: launcher.contextMenuEntry ? launcher.contextMenuEntry.actions : []
+        width: 200
+        height: visible ? menuColumn.implicitHeight + 8 : 0
+        // Clamp so the menu never renders past the right/bottom screen edge.
+        x: Math.min(launcher.contextMenuPos.x, launcher.width - width - 8)
+        y: Math.min(launcher.contextMenuPos.y, launcher.height - height - 8)
+
+        PanelBackground {
+            anchors.fill: parent
+        }
+
+        Column {
+            id: menuColumn
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.top: parent.top
+            anchors.margins: 4
+            spacing: 2
+
+            Repeater {
+                model: contextMenu.actions
+
+                delegate: Rectangle {
+                    required property var modelData
+
+                    width: menuColumn.width
+                    height: 32
+                    radius: 8
+                    color: actionHover.hovered ? Colors.surfaceHigh : "transparent"
+
+                    HoverHandler { id: actionHover }
+
+                    StyledText {
+                        anchors.left: parent.left
+                        anchors.right: parent.right
+                        anchors.leftMargin: 10
+                        anchors.rightMargin: 10
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: modelData.name
+                        elide: Text.ElideRight
+                    }
+
+                    MouseArea {
+                        anchors.fill: parent
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: {
+                            launcher.runAction(modelData);
+                            launcher.contextMenuEntry = null;
+                            Bridge.launcherOpen = false;
+                        }
+                    }
                 }
             }
         }
