@@ -56,8 +56,12 @@ QtObject {
     // only an inner item animates (see Bar.qml) — so the morph is plain GPU
     // compositing instead of a real Wayland resize every frame. Must comfortably
     // fit the widest/tallest panel content plus padding, including whatever
-    // idleBumpWidth/Height the user dials in above.
-    readonly property int islandMaxWidth: 1000
+    // idleBumpWidth/Height the user dials in above. Sized with real slack
+    // beyond typical content (rather than a tight fit) since a long focused-
+    // window title (ActiveWindow.qml) can push the idle/peek row wider than
+    // usual — the surface is transparent and click-through outside the
+    // visible pill (see Bar.qml's `mask`), so extra headroom here is free.
+    readonly property int islandMaxWidth: 1300
     readonly property int islandMaxHeight: 480
 
     // Apple-style spring: critically damped (no overshoot) with moderate

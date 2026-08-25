@@ -188,9 +188,16 @@ PanelWindow {
         // size instead (while expanded) means the mask is never smaller
         // than the real content, so a stray click at worst hits inert
         // padding instead of missing the window entirely.
-        width: content.item ? content.item.implicitWidth + bar.padH * 2
+        // Clamped to islandMaxWidth/Height — the real layer-shell surface
+        // (bar's implicitWidth/implicitHeight, below) never grows past that
+        // fixed size, so an unclamped content size here (e.g. a long window
+        // title pushing the idle/peek row past the surface's fixed width)
+        // would get hard-cut by the surface edge itself: square, no
+        // rounding, past the mask entirely. Clamping keeps overflow inside
+        // the visual's own rounded-corner clip below instead.
+        width: content.item ? Math.min(content.item.implicitWidth + bar.padH * 2, Config.islandMaxWidth)
             : bar.expanded ? Config.islandMaxWidth : Config.idleBumpWidth
-        height: content.item ? content.item.implicitHeight + bar.padV * 2
+        height: content.item ? Math.min(content.item.implicitHeight + bar.padV * 2, Config.islandMaxHeight)
             : bar.expanded ? Config.islandMaxHeight : Config.idleBumpHeight
 
         // A plain MouseArea here would lose hover the instant the cursor moves
@@ -234,22 +241,24 @@ PanelWindow {
             }
 
             IslandShape {
+                id: islandShape
                 anchors.fill: parent
                 liquidGlassEnabled: Bridge.liquidGlassEnabled
                 fillColor: bar.mode === "idle" ? Colors.background : Colors.surface
             }
 
             // A plain Item's clip is a hard rectangle — if content ever runs
-            // taller than expected (a tab whose height estimate was off), it
-            // sliced straight through the pill's rounded bottom corners
-            // instead of just cutting content off with the shape intact.
-            // Matching IslandShape's own corner radius here means an
-            // overflow now degrades to "cut off, still a rounded pill"
-            // instead of "cut off with two flat square corners".
+            // wider or taller than expected (a long window title, or a tab
+            // whose height estimate was off), it sliced straight through the
+            // pill's rounded corners instead of just cutting content off
+            // with the shape intact. Reusing IslandShape's own cornerRadius
+            // here (rather than a separately-tuned formula that could drift
+            // from it) means an overflow now degrades to "cut off, still a
+            // rounded pill" instead of "cut off with flat square corners".
             Rectangle {
                 anchors.fill: parent
                 color: "transparent"
-                radius: Math.max(4, Math.min(height * 0.34, 22))
+                radius: islandShape.cornerRadius
                 clip: true
 
                 Loader {
