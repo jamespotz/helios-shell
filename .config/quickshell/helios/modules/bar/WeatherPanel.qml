@@ -223,7 +223,7 @@ Item {
             Column {
                 spacing: 2
                 StyledText {
-                    text: Qt.formatTime(root.now, "h:mm")
+                    text: Qt.formatTime(root.now, Config.timeFormat)
                     font.family: Config.monoFontFamily
                     font.pixelSize: Config.fontSize + 32
                     font.weight: Font.Light

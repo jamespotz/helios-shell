@@ -93,12 +93,31 @@ QtObject {
         }
     }
 
+    // A cold start (shell/network just came up) can hit a geolocation/
+    // geocoding/forecast request before DNS or the network is fully ready,
+    // or a provider can blip — with no retry, that single failure used to
+    // stick until the next scheduled refresh 20 minutes later, so the
+    // widget could go dark for most of that window over a purely transient
+    // hiccup. A few short, bounded retries smooth that over without
+    // hammering the API if something's genuinely down.
+    property int _retryCount: 0
+    property Timer retryTimer: Timer {
+        interval: 15000
+        repeat: false
+        onTriggered: root.refresh()
+    }
+    function _scheduleRetry() {
+        if (root._retryCount >= 3) { root._retryCount = 0; return; }
+        root._retryCount++;
+        root.retryTimer.restart();
+    }
+
     // No override set — resolve the requester's IP to a lat/long.
     function _geolocate() {
         const xhr = new XMLHttpRequest();
         xhr.onreadystatechange = () => {
             if (xhr.readyState !== XMLHttpRequest.DONE) return;
-            if (xhr.status !== 200) { root.loading = false; root.available = false; return; }
+            if (xhr.status !== 200) { root.loading = false; root.available = false; root._scheduleRetry(); return; }
             try {
                 const ip = JSON.parse(xhr.responseText);
                 root.location = ip.city || "";
@@ -106,6 +125,7 @@ QtObject {
             } catch (e) {
                 root.loading = false;
                 root.available = false;
+                root._scheduleRetry();
             }
         };
         xhr.open("GET", "https://ipapi.co/json/");
@@ -118,7 +138,7 @@ QtObject {
         const xhr = new XMLHttpRequest();
         xhr.onreadystatechange = () => {
             if (xhr.readyState !== XMLHttpRequest.DONE) return;
-            if (xhr.status !== 200) { root.loading = false; root.available = false; return; }
+            if (xhr.status !== 200) { root.loading = false; root.available = false; root._scheduleRetry(); return; }
             try {
                 const data = JSON.parse(xhr.responseText);
                 const first = data.results && data.results[0];
@@ -128,6 +148,7 @@ QtObject {
             } catch (e) {
                 root.loading = false;
                 root.available = false;
+                root._scheduleRetry();
             }
         };
         xhr.open("GET", "https://geocoding-api.open-meteo.com/v1/search?count=1&name=" + encodeURIComponent(text));
@@ -145,7 +166,7 @@ QtObject {
         xhr.onreadystatechange = () => {
             if (xhr.readyState !== XMLHttpRequest.DONE) return;
             root.loading = false;
-            if (xhr.status !== 200) { root.available = false; return; }
+            if (xhr.status !== 200) { root.available = false; root._scheduleRetry(); return; }
 
             try {
                 const data = JSON.parse(xhr.responseText);
@@ -234,8 +255,10 @@ QtObject {
                 root.daily = days;
 
                 root.available = true;
+                root._retryCount = 0;
             } catch (e) {
                 root.available = false;
+                root._scheduleRetry();
             }
         };
         xhr.open("GET", url);

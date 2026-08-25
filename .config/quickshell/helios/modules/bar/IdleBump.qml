@@ -112,7 +112,7 @@ Item {
             anchors.verticalCenter: parent.verticalCenter
             font.pixelSize: Config.fontSize
             font.weight: Font.Medium
-            text: Qt.formatDateTime(clock.date, "h:mm")
+            text: Qt.formatDateTime(clock.date, Config.timeFormat)
             opacity: 0.95
         }
 

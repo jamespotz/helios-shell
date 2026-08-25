@@ -222,9 +222,9 @@ Item {
                 width: parent.width - 24
                 anchors.verticalCenter: parent.verticalCenter
                 elide: Text.ElideMiddle
-                opacity: pathHover.hovered ? 1 : 0.6
+                opacity: pathHover.containsMouse ? 1 : 0.6
                 font.pixelSize: Config.fontSize - 2
-                font.underline: pathHover.hovered
+                font.underline: pathHover.containsMouse
                 text: Screenshot.lastPath || Screenshot.outputDir
                 Behavior on opacity { NumberAnimation { duration: Config.animFast } }
 

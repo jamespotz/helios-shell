@@ -20,6 +20,10 @@ QtObject {
     // surface changes — slightly slower than before for a calmer feel.
     readonly property int animFast: 160
     readonly property int animMedium: 280
+    // Theme crossfade duration — Colors.qml's own ColorAnimation Behaviors
+    // reference this so there's one source of truth for animation timing
+    // instead of two singletons independently claiming to own it.
+    readonly property int animSlow: 380
 
     // Dynamic island — Apple-style: slightly taller idle bump for better
     // readability, more breathing room from the screen edge. These are the
@@ -104,6 +108,16 @@ QtObject {
         root.settingsFile.writeAdapter();
     }
 
+    // Clock format — user-tunable from IslandSettings' "Clock format"
+    // section. clockAmPmUppercase only matters in 12-hour mode; every clock
+    // in the shell (Clock, IdleBump, WeatherPanel, Lock) reads timeFormat
+    // rather than each hardcoding its own format string, so they always
+    // agree with each other and with this setting.
+    readonly property bool use24HourClock: settingsAdapter.use24HourClock
+    readonly property bool clockAmPmUppercase: settingsAdapter.clockAmPmUppercase
+    readonly property string timeFormat: root.use24HourClock ? "HH:mm"
+        : root.clockAmPmUppercase ? "h:mm AP" : "h:mm ap"
+
     // Which reveal animation modules/wallpaper/Wallpaper.qml plays when the
     // wallpaper changes — "random" cycles through all of them, or pin one.
     readonly property string wallpaperRevealStyle: settingsAdapter.wallpaperRevealStyle
@@ -143,6 +157,9 @@ QtObject {
             property bool showIdleClipboard: false
 
             property string wallpaperRevealStyle: "random"
+
+            property bool use24HourClock: false
+            property bool clockAmPmUppercase: true
         }
     }
 }

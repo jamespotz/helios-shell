@@ -447,7 +447,7 @@ Item {
             Row {
                 id: switchRow
                 spacing: 6
-                opacity: orbitLinkHover.hovered ? 1 : 0.7
+                opacity: orbitLinkHover.containsMouse ? 1 : 0.7
                 MaterialIcon { icon: "blur_on"; font.pixelSize: 14 }
                 StyledText { text: "Switch to orbit view"; font.pixelSize: Config.fontSize - 2 }
             }

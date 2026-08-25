@@ -55,7 +55,7 @@ Loader {
                             id: clock
                             precision: SystemClock.Minutes
                         }
-                        text: Qt.formatDateTime(clock.date, "h:mm AP")
+                        text: Qt.formatDateTime(clock.date, Config.timeFormat)
                     }
 
                     Rectangle {

@@ -30,7 +30,7 @@ Item {
         id: text
         anchors.fill: parent
         font.weight: Font.Medium
-        text: Qt.formatDateTime(clock.date, "ddd d MMM  h:mm")
+        text: Qt.formatDateTime(clock.date, "ddd d MMM  " + Config.timeFormat)
 
         SystemClock {
             id: clock

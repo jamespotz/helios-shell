@@ -148,9 +148,9 @@ Item {
                 width: parent.width - 24
                 anchors.verticalCenter: parent.verticalCenter
                 elide: Text.ElideMiddle
-                opacity: folderHover.hovered ? 1 : 0.7
+                opacity: folderHover.containsMouse ? 1 : 0.7
                 font.pixelSize: Config.fontSize - 2
-                font.underline: folderHover.hovered
+                font.underline: folderHover.containsMouse
                 text: ScreenRecorder.lastOutputPath || ScreenRecorder.outputDir
 
                 MouseArea {

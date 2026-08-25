@@ -187,6 +187,86 @@ Item {
             }
         }
 
+        // --- Clock format ----------------------------------------------
+        Column {
+            width: parent.width
+            spacing: 10
+
+            Column {
+                width: parent.width
+                spacing: 2
+
+                StyledText { font.bold: true; text: "Clock format" }
+                StyledText {
+                    width: parent.width
+                    wrapMode: Text.WordWrap
+                    opacity: 0.6
+                    font.pixelSize: Config.fontSize - 2
+                    text: "Applies to every clock in the shell, including the lock screen."
+                }
+            }
+
+            SettingsCard {
+                Item {
+                    width: parent.width
+                    height: 40
+
+                    Row {
+                        anchors.left: parent.left
+                        anchors.leftMargin: 14
+                        anchors.verticalCenter: parent.verticalCenter
+                        spacing: 10
+
+                        MaterialIcon { icon: "schedule"; font.pixelSize: 16; opacity: 0.8; anchors.verticalCenter: parent.verticalCenter }
+                        StyledText { text: "24-hour time"; anchors.verticalCenter: parent.verticalCenter }
+                    }
+
+                    Toggle {
+                        anchors.right: parent.right
+                        anchors.rightMargin: 14
+                        anchors.verticalCenter: parent.verticalCenter
+                        checked: Config.use24HourClock
+                        onToggled: v => Config.setWidgetVisible("use24HourClock", v)
+                    }
+
+                    Rectangle {
+                        anchors.left: parent.left
+                        anchors.right: parent.right
+                        anchors.leftMargin: 14
+                        anchors.bottom: parent.bottom
+                        height: 1
+                        color: Colors.overlay
+                        opacity: 0.15
+                    }
+                }
+
+                Item {
+                    width: parent.width
+                    height: 40
+                    enabled: !Config.use24HourClock
+                    opacity: enabled ? 1 : 0.4
+
+                    Row {
+                        anchors.left: parent.left
+                        anchors.leftMargin: 14
+                        anchors.verticalCenter: parent.verticalCenter
+                        spacing: 10
+
+                        MaterialIcon { icon: "text_fields"; font.pixelSize: 16; opacity: 0.8; anchors.verticalCenter: parent.verticalCenter }
+                        StyledText { text: "Uppercase AM/PM"; anchors.verticalCenter: parent.verticalCenter }
+                    }
+
+                    Toggle {
+                        anchors.right: parent.right
+                        anchors.rightMargin: 14
+                        anchors.verticalCenter: parent.verticalCenter
+                        checked: Config.clockAmPmUppercase
+                        onToggled: v => Config.setWidgetVisible("clockAmPmUppercase", v)
+                    }
+                }
+            }
+        }
+
         // --- Weather -------------------------------------------------------
         Column {
             width: parent.width

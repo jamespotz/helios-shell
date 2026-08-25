@@ -1,5 +1,6 @@
 pragma Singleton
 import QtQuick
+import "../services"
 
 // Live theme palette — Apple-inspired dark mode with neutral grays, high
 // contrast text, and a cool blue accent. Themes.qml can still override
@@ -55,41 +56,41 @@ QtObject {
     // properties themselves (rather than each individual binding site) is
     // what makes switching themes read as a smooth crossfade instead of an
     // instant, jarring flip.
-    Behavior on background { ColorAnimation { duration: 380; easing.type: Easing.OutCubic } }
-    Behavior on surface { ColorAnimation { duration: 380; easing.type: Easing.OutCubic } }
-    Behavior on surfaceHigh { ColorAnimation { duration: 380; easing.type: Easing.OutCubic } }
-    Behavior on overlay { ColorAnimation { duration: 380; easing.type: Easing.OutCubic } }
-    Behavior on text { ColorAnimation { duration: 380; easing.type: Easing.OutCubic } }
-    Behavior on subtext { ColorAnimation { duration: 380; easing.type: Easing.OutCubic } }
-    Behavior on accent { ColorAnimation { duration: 380; easing.type: Easing.OutCubic } }
-    Behavior on accentText { ColorAnimation { duration: 380; easing.type: Easing.OutCubic } }
-    Behavior on danger { ColorAnimation { duration: 380; easing.type: Easing.OutCubic } }
-    Behavior on warning { ColorAnimation { duration: 380; easing.type: Easing.OutCubic } }
-    Behavior on success { ColorAnimation { duration: 380; easing.type: Easing.OutCubic } }
+    Behavior on background { ColorAnimation { duration: Config.animSlow; easing.type: Easing.OutCubic } }
+    Behavior on surface { ColorAnimation { duration: Config.animSlow; easing.type: Easing.OutCubic } }
+    Behavior on surfaceHigh { ColorAnimation { duration: Config.animSlow; easing.type: Easing.OutCubic } }
+    Behavior on overlay { ColorAnimation { duration: Config.animSlow; easing.type: Easing.OutCubic } }
+    Behavior on text { ColorAnimation { duration: Config.animSlow; easing.type: Easing.OutCubic } }
+    Behavior on subtext { ColorAnimation { duration: Config.animSlow; easing.type: Easing.OutCubic } }
+    Behavior on accent { ColorAnimation { duration: Config.animSlow; easing.type: Easing.OutCubic } }
+    Behavior on accentText { ColorAnimation { duration: Config.animSlow; easing.type: Easing.OutCubic } }
+    Behavior on danger { ColorAnimation { duration: Config.animSlow; easing.type: Easing.OutCubic } }
+    Behavior on warning { ColorAnimation { duration: Config.animSlow; easing.type: Easing.OutCubic } }
+    Behavior on success { ColorAnimation { duration: Config.animSlow; easing.type: Easing.OutCubic } }
 
-    Behavior on backgroundText { ColorAnimation { duration: 380; easing.type: Easing.OutCubic } }
-    Behavior on surfaceText { ColorAnimation { duration: 380; easing.type: Easing.OutCubic } }
-    Behavior on surfaceVariant { ColorAnimation { duration: 380; easing.type: Easing.OutCubic } }
-    Behavior on surfaceVariantText { ColorAnimation { duration: 380; easing.type: Easing.OutCubic } }
-    Behavior on surfaceContainer { ColorAnimation { duration: 380; easing.type: Easing.OutCubic } }
-    Behavior on surfaceContainerLow { ColorAnimation { duration: 380; easing.type: Easing.OutCubic } }
-    Behavior on surfaceContainerHigh { ColorAnimation { duration: 380; easing.type: Easing.OutCubic } }
-    Behavior on primary { ColorAnimation { duration: 380; easing.type: Easing.OutCubic } }
-    Behavior on primaryText { ColorAnimation { duration: 380; easing.type: Easing.OutCubic } }
-    Behavior on primaryContainer { ColorAnimation { duration: 380; easing.type: Easing.OutCubic } }
-    Behavior on primaryContainerText { ColorAnimation { duration: 380; easing.type: Easing.OutCubic } }
-    Behavior on secondary { ColorAnimation { duration: 380; easing.type: Easing.OutCubic } }
-    Behavior on secondaryText { ColorAnimation { duration: 380; easing.type: Easing.OutCubic } }
-    Behavior on secondaryContainer { ColorAnimation { duration: 380; easing.type: Easing.OutCubic } }
-    Behavior on secondaryContainerText { ColorAnimation { duration: 380; easing.type: Easing.OutCubic } }
-    Behavior on tertiary { ColorAnimation { duration: 380; easing.type: Easing.OutCubic } }
-    Behavior on tertiaryText { ColorAnimation { duration: 380; easing.type: Easing.OutCubic } }
-    Behavior on tertiaryContainer { ColorAnimation { duration: 380; easing.type: Easing.OutCubic } }
-    Behavior on tertiaryContainerText { ColorAnimation { duration: 380; easing.type: Easing.OutCubic } }
-    Behavior on error { ColorAnimation { duration: 380; easing.type: Easing.OutCubic } }
-    Behavior on errorText { ColorAnimation { duration: 380; easing.type: Easing.OutCubic } }
-    Behavior on outline { ColorAnimation { duration: 380; easing.type: Easing.OutCubic } }
-    Behavior on shadow { ColorAnimation { duration: 380; easing.type: Easing.OutCubic } }
+    Behavior on backgroundText { ColorAnimation { duration: Config.animSlow; easing.type: Easing.OutCubic } }
+    Behavior on surfaceText { ColorAnimation { duration: Config.animSlow; easing.type: Easing.OutCubic } }
+    Behavior on surfaceVariant { ColorAnimation { duration: Config.animSlow; easing.type: Easing.OutCubic } }
+    Behavior on surfaceVariantText { ColorAnimation { duration: Config.animSlow; easing.type: Easing.OutCubic } }
+    Behavior on surfaceContainer { ColorAnimation { duration: Config.animSlow; easing.type: Easing.OutCubic } }
+    Behavior on surfaceContainerLow { ColorAnimation { duration: Config.animSlow; easing.type: Easing.OutCubic } }
+    Behavior on surfaceContainerHigh { ColorAnimation { duration: Config.animSlow; easing.type: Easing.OutCubic } }
+    Behavior on primary { ColorAnimation { duration: Config.animSlow; easing.type: Easing.OutCubic } }
+    Behavior on primaryText { ColorAnimation { duration: Config.animSlow; easing.type: Easing.OutCubic } }
+    Behavior on primaryContainer { ColorAnimation { duration: Config.animSlow; easing.type: Easing.OutCubic } }
+    Behavior on primaryContainerText { ColorAnimation { duration: Config.animSlow; easing.type: Easing.OutCubic } }
+    Behavior on secondary { ColorAnimation { duration: Config.animSlow; easing.type: Easing.OutCubic } }
+    Behavior on secondaryText { ColorAnimation { duration: Config.animSlow; easing.type: Easing.OutCubic } }
+    Behavior on secondaryContainer { ColorAnimation { duration: Config.animSlow; easing.type: Easing.OutCubic } }
+    Behavior on secondaryContainerText { ColorAnimation { duration: Config.animSlow; easing.type: Easing.OutCubic } }
+    Behavior on tertiary { ColorAnimation { duration: Config.animSlow; easing.type: Easing.OutCubic } }
+    Behavior on tertiaryText { ColorAnimation { duration: Config.animSlow; easing.type: Easing.OutCubic } }
+    Behavior on tertiaryContainer { ColorAnimation { duration: Config.animSlow; easing.type: Easing.OutCubic } }
+    Behavior on tertiaryContainerText { ColorAnimation { duration: Config.animSlow; easing.type: Easing.OutCubic } }
+    Behavior on error { ColorAnimation { duration: Config.animSlow; easing.type: Easing.OutCubic } }
+    Behavior on errorText { ColorAnimation { duration: Config.animSlow; easing.type: Easing.OutCubic } }
+    Behavior on outline { ColorAnimation { duration: Config.animSlow; easing.type: Easing.OutCubic } }
+    Behavior on shadow { ColorAnimation { duration: Config.animSlow; easing.type: Easing.OutCubic } }
 
     // Apple-style material: more translucent to let vibrancy through
     readonly property real panelOpacity: 0.82
