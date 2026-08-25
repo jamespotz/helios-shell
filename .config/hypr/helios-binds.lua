@@ -58,7 +58,7 @@ hl.bind(mainMod .. " + ALT + T", hl.dsp.exec_cmd(helios .. " island toggle theme
   { description = "Toggle theme picker island" })
 hl.bind(mainMod .. " + ALT + I", hl.dsp.exec_cmd(helios .. " island toggle island"),
   { description = "Toggle island settings island" })
-hl.bind(mainMod .. " + R", hl.dsp.exec_cmd(helios .. " island toggle recorder"),
+hl.bind(mainMod .. " + F", hl.dsp.exec_cmd(helios .. " island toggle recorder"),
   { description = "Toggle screen recorder island" })
 hl.bind(mainMod .. " + ALT + ESCAPE", hl.dsp.exec_cmd(helios .. " island close"),
   { description = "Close island panel, whatever tab is open" })
