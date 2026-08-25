@@ -149,7 +149,81 @@ Item {
         }
     }
 
-    // --- Lightning flash (storm only) ---------------------------------------
+    // --- Lightning bolt + ambient flash (storm only) -------------------------
+    // A jagged forked bolt drawn from a random point along the top edge down
+    // to the bottom, plus a dim ambient flash behind it so the strike reads
+    // against the backdrop rather than just a flat white wash.
+    Canvas {
+        id: boltCanvas
+        anchors.fill: parent
+        visible: root.effect === "storm"
+        opacity: 0
+
+        property var mainPath: []
+        property var branchPath: []
+
+        function jaggedPath(startX, startY, endY, waviness) {
+            const pts = [{ x: startX, y: startY }];
+            const segments = 5 + Math.floor(Math.random() * 3);
+            const segH = (endY - startY) / segments;
+            let x = startX;
+            for (let i = 1; i <= segments; i++) {
+                x += (Math.random() - 0.5) * width * waviness;
+                pts.push({ x: x, y: startY + i * segH });
+            }
+            return pts;
+        }
+
+        function generateBolt() {
+            const startX = width * (0.25 + Math.random() * 0.5);
+            mainPath = jaggedPath(startX, 0, height, 0.16);
+
+            // Occasional shorter branch forking off partway down the bolt
+            if (mainPath.length > 3 && Math.random() < 0.7) {
+                const forkIndex = 1 + Math.floor(Math.random() * (mainPath.length - 3));
+                const fork = mainPath[forkIndex];
+                branchPath = jaggedPath(fork.x, fork.y, fork.y + (height - fork.y) * (0.4 + Math.random() * 0.3), 0.22);
+            } else {
+                branchPath = [];
+            }
+            requestPaint();
+        }
+
+        function strokePath(ctx, path) {
+            if (path.length < 2) return;
+            ctx.beginPath();
+            ctx.moveTo(path[0].x, path[0].y);
+            for (let i = 1; i < path.length; i++) ctx.lineTo(path[i].x, path[i].y);
+            ctx.stroke();
+        }
+
+        onPaint: {
+            const ctx = getContext("2d");
+            ctx.clearRect(0, 0, width, height);
+            ctx.lineCap = "round";
+            ctx.lineJoin = "round";
+
+            // Outer glow pass
+            ctx.strokeStyle = Qt.rgba(0.75, 0.85, 1, 0.55);
+            ctx.lineWidth = 5;
+            strokePath(ctx, mainPath);
+            strokePath(ctx, branchPath);
+
+            // Bright core pass
+            ctx.strokeStyle = Qt.rgba(1, 1, 1, 0.95);
+            ctx.lineWidth = 1.4;
+            strokePath(ctx, mainPath);
+            strokePath(ctx, branchPath);
+        }
+
+        SequentialAnimation {
+            id: boltAnim
+            NumberAnimation { target: boltCanvas; property: "opacity"; to: 1; duration: 25 }
+            PauseAnimation { duration: 50 }
+            NumberAnimation { target: boltCanvas; property: "opacity"; to: 0; duration: 200 }
+        }
+    }
+
     Rectangle {
         id: flash
         anchors.fill: parent
@@ -159,8 +233,8 @@ Item {
 
         SequentialAnimation {
             id: flashAnim
-            NumberAnimation { target: flash; property: "opacity"; to: 0.4; duration: 40 }
-            NumberAnimation { target: flash; property: "opacity"; to: 0; duration: 100 }
+            NumberAnimation { target: flash; property: "opacity"; to: 0.22; duration: 40 }
+            NumberAnimation { target: flash; property: "opacity"; to: 0; duration: 140 }
         }
 
         Timer {
@@ -169,6 +243,8 @@ Item {
             interval: 5000 + Math.random() * 7000
             onTriggered: {
                 interval = 5000 + Math.random() * 7000;
+                boltCanvas.generateBolt();
+                boltAnim.restart();
                 flashAnim.restart();
             }
         }
