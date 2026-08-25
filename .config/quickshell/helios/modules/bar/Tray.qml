@@ -42,14 +42,11 @@ Row {
                 onClicked: mouse => {
                     if (mouse.button === Qt.RightButton) {
                         if (trayItem.modelData.hasMenu) {
-                            // The TrayMenu is a full-screen overlay on this
-                            // screen, so we need screen-relative coordinates.
-                            // mapToItem(null) gives position in the Bar's own
-                            // window space; the Bar is a centered layer-shell
-                            // surface of fixed width (islandMaxWidth), so its
-                            // origin in screen space is offset horizontally by
-                            // (screenWidth - surfaceWidth) / 2. Vertically the
-                            // compositor places it at margins.top.
+                            // Map to screen-relative coordinates for the
+                            // TrayMenu's positioning within its full-screen
+                            // surface. mapToItem(null) gives coords in the
+                            // Bar's surface space. The Bar is a top-anchored,
+                            // horizontally-centered layer-shell surface.
                             const posInWindow = trayItem.mapToItem(null, mouse.x, mouse.y);
                             const screenW = QsWindow.window.screen.width;
                             const barSurfaceW = Config.islandMaxWidth;

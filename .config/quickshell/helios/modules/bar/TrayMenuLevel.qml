@@ -26,10 +26,18 @@ Item {
     property var submenuHandle: null
     property Item submenuAnchorItem: null
 
+    // Keyboard navigation
+    property int focusedIndex: -1
+
     onMenuHandleChanged: {
         submenuHandle = null;
         submenuAnchorItem = null;
+        focusedIndex = -1;
     }
+
+    // Subtle entry animation — explains the transition
+    opacity: visible ? 1 : 0
+    Behavior on opacity { NumberAnimation { duration: Config.animFast; easing.type: Easing.OutCubic } }
 
     QsMenuOpener {
         id: opener
@@ -39,6 +47,48 @@ Item {
     PanelBackground {
         anchors.fill: parent
         visible: level.visible
+    }
+
+    // Keyboard handling
+    Keys.onUpPressed: {
+        if (!opener.children || opener.children.count === 0) return;
+        // Skip separators going up
+        let idx = level.focusedIndex - 1;
+        while (idx >= 0 && opener.children.get(idx).isSeparator) idx--;
+        if (idx >= 0) level.focusedIndex = idx;
+    }
+    Keys.onDownPressed: {
+        if (!opener.children || opener.children.count === 0) return;
+        let idx = level.focusedIndex + 1;
+        while (idx < opener.children.count && opener.children.get(idx).isSeparator) idx++;
+        if (idx < opener.children.count) level.focusedIndex = idx;
+    }
+    Keys.onReturnPressed: activateFocused()
+    Keys.onEnterPressed: activateFocused()
+    Keys.onRightPressed: {
+        // Open submenu if focused row has children
+        if (focusedIndex >= 0 && focusedIndex < opener.children.count) {
+            const entry = opener.children.get(focusedIndex);
+            if (entry.hasChildren) {
+                level.submenuHandle = entry;
+            }
+        }
+    }
+    Keys.onLeftPressed: {
+        // Close this submenu level (parent will handle)
+        level.menuHandle = null;
+    }
+
+    function activateFocused() {
+        if (focusedIndex < 0 || focusedIndex >= opener.children.count) return;
+        const entry = opener.children.get(focusedIndex);
+        if (!entry.enabled || entry.isSeparator) return;
+        if (entry.hasChildren) {
+            level.submenuHandle = entry;
+        } else {
+            entry.triggered();
+            level.leafTriggered();
+        }
     }
 
     Column {
@@ -55,10 +105,10 @@ Item {
             delegate: Item {
                 id: delegateRoot
                 required property var modelData
+                required property int index
 
                 width: menuColumn.width
                 height: modelData.isSeparator ? separatorRect.height : rowRect.height
-                visible: true
 
                 // Separator
                 Rectangle {
@@ -76,10 +126,16 @@ Item {
                     visible: !delegateRoot.modelData.isSeparator
                     width: parent.width
                     height: visible ? 32 : 0
-                    radius: 8
-                    color: rowHover.hovered && delegateRoot.modelData.enabled
-                        ? Colors.surfaceHigh : "transparent"
+                    radius: Colors.radiusSmall
                     opacity: delegateRoot.modelData.enabled ? 1 : 0.4
+
+                    readonly property bool isFocused: level.focusedIndex === delegateRoot.index
+                    readonly property bool isHovered: rowHover.hovered && delegateRoot.modelData.enabled
+                    readonly property bool isPressed: rowMouse.pressed && delegateRoot.modelData.enabled
+
+                    color: isPressed ? Colors.overlay
+                        : (isHovered || isFocused) ? Colors.surfaceHigh
+                        : "transparent"
 
                     Behavior on color { ColorAnimation { duration: Config.animFast } }
 
@@ -101,7 +157,7 @@ Item {
                             id: checkIcon
                             width: visible ? 16 : 0
                             anchors.verticalCenter: parent.verticalCenter
-                            font.pixelSize: 14
+                            font.pixelSize: Config.fontSize
                             visible: delegateRoot.modelData.buttonType !== QsMenuButtonType.None
                             color: Colors.text
                             icon: {
@@ -126,7 +182,7 @@ Item {
                         MaterialIcon {
                             id: chevron
                             anchors.verticalCenter: parent.verticalCenter
-                            font.pixelSize: 14
+                            font.pixelSize: Config.fontSize
                             color: Colors.subtext
                             visible: delegateRoot.modelData.hasChildren
                             icon: "chevron_right"
@@ -134,6 +190,7 @@ Item {
                     }
 
                     MouseArea {
+                        id: rowMouse
                         anchors.fill: parent
                         enabled: delegateRoot.modelData.enabled
                         cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
@@ -152,10 +209,10 @@ Item {
         }
     }
 
-    // Submenu flyout — Loader with dynamic createComponent to break QML's
+    // Submenu flyout — Loader with dynamic setSource to break QML's
     // static recursive-instantiation check. The engine sees no compile-time
-    // self-reference this way; the component is resolved at runtime only
-    // when a submenu actually needs to open.
+    // self-reference; the component is resolved at runtime only when a
+    // submenu actually needs to open.
     Loader {
         id: submenuLoader
         active: level.submenuHandle !== null
