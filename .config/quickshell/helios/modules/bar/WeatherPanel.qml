@@ -73,12 +73,16 @@ Item {
         // ═══════════════════════════════════════════════════════════════════
         // CALENDAR CARD
         // ═══════════════════════════════════════════════════════════════════
-        Rectangle {
+        Item {
             width: 240
             height: calCol.implicitHeight + 24
-            radius: Colors.radiusLarge
-            color: Colors.surfaceHigh
-            opacity: 0.6
+
+            Rectangle {
+                anchors.fill: parent
+                radius: Colors.radiusLarge
+                color: Colors.surfaceHigh
+                opacity: 0.8
+            }
 
             Column {
                 id: calCol
@@ -266,7 +270,7 @@ Item {
                         height: 86
                         radius: 30
                         color: index === 0 ? Colors.accent : Colors.surfaceHigh
-                        opacity: index === 0 ? 1 : 0.6
+                        opacity: index === 0 ? 1 : 0.8
 
                         Column {
                             anchors.centerIn: parent
@@ -308,9 +312,33 @@ Item {
         // ═══════════════════════════════════════════════════════════════════
         // CURRENT CONDITIONS CARD
         // ═══════════════════════════════════════════════════════════════════
-        Column {
+        Item {
+            id: conditionsCard
             width: 220
-            spacing: 14
+            height: conditionsCol.implicitHeight + 28
+            clip: true
+
+            // Background — only this rectangle is translucent, not children
+            Rectangle {
+                anchors.fill: parent
+                radius: Colors.radiusLarge
+                color: Colors.surfaceHigh
+                opacity: 0.8
+            }
+
+            // Mini weather effect — very subtle behind text content
+            WeatherEffectMini {
+                anchors.fill: parent
+                opacity: 0.4
+            }
+
+            Column {
+                id: conditionsCol
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.top: parent.top
+                anchors.margins: 14
+                spacing: 14
 
             // Day navigator
             Item {
@@ -379,13 +407,17 @@ Item {
                         { icon: "device_thermostat", label: "Feels Like", value: Math.round(root.selectedDay.feelsLikeC) + "°" }
                     ] : []
 
-                    Rectangle {
+                    Item {
                         required property var modelData
                         width: (parent.width - 8) / 2
                         height: 72
-                        radius: Colors.radiusSmall
-                        color: Colors.surfaceHigh
-                        opacity: 0.5
+
+                        Rectangle {
+                            anchors.fill: parent
+                            radius: Colors.radiusSmall
+                            color: Colors.surfaceHigh
+                            opacity: 0.7
+                        }
 
                         Column {
                             anchors.centerIn: parent
@@ -412,6 +444,7 @@ Item {
                         }
                     }
                 }
+            }
             }
         }
     }

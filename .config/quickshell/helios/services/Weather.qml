@@ -12,6 +12,7 @@ QtObject {
 
     property bool available: false
     property bool loading: false
+
     property real tempC: 0
     property real feelsLikeC: 0
     property string condition: ""
