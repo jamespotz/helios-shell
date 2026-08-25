@@ -14,6 +14,17 @@ QtObject {
 
     property var items: []
 
+    // Ids whose thumbnail has already been decoded to disk this session —
+    // ListView recycles/recreates delegates on scroll, and each delegate
+    // used to unconditionally spawn its own "decode if missing" shell
+    // process on creation; for an already-decoded image that's a wasted
+    // fork+exec every time it scrolls back into view. Delegates check this
+    // first and skip spawning entirely once an id is known-ready.
+    property var readyThumbs: ({})
+    function markThumbReady(id) {
+        root.readyThumbs = Object.assign({}, root.readyThumbs, { [id]: true });
+    }
+
     function refresh() {
         lister.running = false;
         lister.running = true;

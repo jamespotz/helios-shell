@@ -153,7 +153,21 @@ QtObject {
         return h > 0 ? h + "h " + m + "m" : m + "m";
     }
 
+    // Read by every wall-clock-derived property below purely to create a
+    // binding dependency — QML doesn't re-evaluate a binding just because
+    // `new Date()` returns something different, so without this the
+    // day/week/month derivations would freeze at whatever they evaluated to
+    // when the shell started and go stale across a day/week boundary.
+    property int _clockTick: 0
+    property Timer clockTimer: Timer {
+        interval: 60000
+        running: true
+        repeat: true
+        onTriggered: root._clockTick++
+    }
+
     readonly property var weekDates: {
+        root._clockTick;
         const now = new Date();
         const monday = new Date(now);
         monday.setDate(now.getDate() - ((now.getDay() + 6) % 7));
@@ -172,7 +186,7 @@ QtObject {
         minutes: Math.round(root._totalFor(root._dayKey(d.getTime())) / 60)
     }))
 
-    readonly property int highlightedDayIndex: (new Date().getDay() + 6) % 7
+    readonly property int highlightedDayIndex: { root._clockTick; return (new Date().getDay() + 6) % 7; }
 
     readonly property real todayTotalSeconds: root._totalFor(root._dayKey(Date.now()))
     readonly property string todayTotalText: root._fmtDuration(root.todayTotalSeconds)
@@ -188,8 +202,8 @@ QtObject {
 
     readonly property var apps: root.appsFor(root._dayKey(Date.now()))
 
-    readonly property string monthLabel: Qt.formatDate(new Date(), "MMMM")
-    readonly property int todayDay: new Date().getDate()
+    readonly property string monthLabel: { root._clockTick; return Qt.formatDate(new Date(), "MMMM"); }
+    readonly property int todayDay: { root._clockTick; return new Date().getDate(); }
 
     // Real intensity level (0-3) from actual tracked hours that day. Days
     // that haven't happened yet (or aren't part of this month) render blank.
@@ -205,6 +219,7 @@ QtObject {
     }
 
     readonly property var monthWeeks: {
+        root._clockTick;
         const now = new Date();
         const year = now.getFullYear(), month = now.getMonth();
         const startOffset = (new Date(year, month, 1).getDay() + 6) % 7; // Monday-first

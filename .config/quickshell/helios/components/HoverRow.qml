@@ -15,6 +15,7 @@ Rectangle {
     height: 46
     radius: Colors.radiusSmall
     color: highlighted ? Colors.surfaceHigh : "transparent"
+    opacity: root.enabled ? 1 : 0.4
 
     Behavior on color { ColorAnimation { duration: Config.animFast; easing.type: Easing.OutCubic } }
 
@@ -28,13 +29,29 @@ Rectangle {
         Behavior on opacity { NumberAnimation { duration: Config.animFast; easing.type: Easing.OutCubic } }
     }
 
+    // Focus ring — keyboard-navigation feedback
+    Rectangle {
+        anchors.fill: parent
+        radius: parent.radius
+        color: "transparent"
+        border.width: 2
+        border.color: Colors.accent
+        visible: root.activeFocus
+    }
+
     HoverHandler {
         id: hoverHandler
+        enabled: root.enabled
     }
 
     MouseArea {
         anchors.fill: parent
+        enabled: root.enabled
         cursorShape: Qt.PointingHandCursor
         onClicked: root.clicked()
     }
+
+    activeFocusOnTab: root.enabled
+    Keys.onReturnPressed: root.clicked()
+    Keys.onSpacePressed: root.clicked()
 }

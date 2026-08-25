@@ -38,16 +38,9 @@ PanelWindow {
         focus: powerMenu.visible
         Keys.onEscapePressed: Bridge.closePowerMenu()
 
-        Rectangle {
-            anchors.fill: parent
-            color: "#000000"
-            opacity: powerMenu.visible ? 0.45 : 0
-            Behavior on opacity { NumberAnimation { duration: Config.animMedium } }
-
-            MouseArea {
-                anchors.fill: parent
-                onClicked: Bridge.closePowerMenu()
-            }
+        Scrim {
+            active: powerMenu.visible
+            onDismissed: Bridge.closePowerMenu()
         }
 
         Row {

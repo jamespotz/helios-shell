@@ -30,53 +30,18 @@ Item {
             Repeater {
                 model: root.modes
 
-                delegate: Rectangle {
-                    id: modeBtn
+                Chip {
+                    id: modeChip
                     required property var modelData
-                    readonly property bool isActive: Screenshot.mode === modelData.key
+                    active: Screenshot.mode === modelData.key
+                    text: modelData.label
+                    enabled: !Screenshot.capturing
+                    onClicked: Screenshot.mode = modeChip.modelData.key
 
-                    width: modeContent.implicitWidth + 18
-                    height: 28
-                    radius: height / 2
-                    color: isActive ? Colors.accent : Colors.surfaceHigh
-                    Behavior on color { ColorAnimation { duration: Config.animFast } }
-
-                    // Hover overlay
-                    Rectangle {
-                        anchors.fill: parent
-                        radius: parent.radius
-                        color: Colors.surfaceHigh
-                        opacity: modeHover.hovered && !modeBtn.isActive ? 0.25 : 0
-                        Behavior on opacity { NumberAnimation { duration: Config.animFast } }
-                    }
-
-                    HoverHandler { id: modeHover }
-
-                    Row {
-                        id: modeContent
-                        anchors.centerIn: parent
-                        spacing: 5
-
-                        MaterialIcon {
-                            icon: modeBtn.modelData.icon
-                            font.pixelSize: 14
-                            color: modeBtn.isActive ? Colors.accentText : Colors.text
-                            anchors.verticalCenter: parent.verticalCenter
-                        }
-                        StyledText {
-                            text: modeBtn.modelData.label
-                            font.pixelSize: Config.fontSize - 2
-                            font.weight: Font.Medium
-                            color: modeBtn.isActive ? Colors.accentText : Colors.text
-                            anchors.verticalCenter: parent.verticalCenter
-                        }
-                    }
-
-                    MouseArea {
-                        anchors.fill: parent
-                        cursorShape: Qt.PointingHandCursor
-                        enabled: !Screenshot.capturing
-                        onClicked: Screenshot.mode = modeBtn.modelData.key
+                    MaterialIcon {
+                        icon: modeChip.modelData.icon
+                        font.pixelSize: 14
+                        color: modeChip.active ? Colors.accentText : Colors.text
                     }
                 }
             }

@@ -27,7 +27,9 @@ Item {
     }
 
     // Subtle inner highlight along the top edge — mimics the way Apple's
-    // dark-mode materials catch a hair of light at the top.
+    // dark-mode materials catch a hair of light at the top. Kept a literal
+    // white (like LiquidGlassSurface's own rim) since it's a physical
+    // light-catch effect, not themed UI chrome.
     Rectangle {
         anchors.fill: parent
         radius: root.cornerRadius
@@ -44,6 +46,6 @@ Item {
         radius: root.cornerRadius + 0.5
         color: "transparent"
         border.width: 0.5
-        border.color: Qt.rgba(0, 0, 0, 0.4)
+        border.color: Qt.rgba(Colors.shadow.r, Colors.shadow.g, Colors.shadow.b, 0.4)
     }
 }

@@ -35,22 +35,8 @@ Item {
         spacing: 8
 
         // Recording indicator — safety-critical, always visible regardless
-        // of widget toggles. Slightly larger than before for visibility.
-        Rectangle {
-            visible: ScreenRecorder.recording
-            width: 8
-            height: 8
-            radius: 4
-            color: Colors.danger
-            anchors.verticalCenter: parent.verticalCenter
-
-            SequentialAnimation on opacity {
-                running: ScreenRecorder.recording
-                loops: Animation.Infinite
-                NumberAnimation { from: 1; to: 0.3; duration: 800; easing.type: Easing.InOutSine }
-                NumberAnimation { from: 0.3; to: 1; duration: 800; easing.type: Easing.InOutSine }
-            }
-        }
+        // of widget toggles.
+        RecordingDot { anchors.verticalCenter: parent.verticalCenter }
 
         Workspaces {
             visible: Config.showIdleWorkspaces

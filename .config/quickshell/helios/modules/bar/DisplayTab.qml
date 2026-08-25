@@ -58,9 +58,10 @@ Item {
 
                 width: col.width
                 height: monCol.implicitHeight + 20
-                radius: 12
+                radius: Colors.radiusLarge
                 color: Colors.surfaceHigh
-                opacity: 0.5
+                opacity: monCard.modelData.disabled ? 0.5 : 1
+                Behavior on opacity { NumberAnimation { duration: Config.animFast } }
 
                 Column {
                     id: monCol
@@ -137,28 +138,11 @@ Item {
                         Repeater {
                             model: [1.0, 1.25, 1.5, 1.75, 2.0]
 
-                            Rectangle {
+                            Chip {
                                 required property var modelData
-                                readonly property bool active: Math.abs(monCard.modelData.scale - modelData) < 0.01
-
-                                width: 36; height: 26; radius: 13
-                                color: active ? Colors.accent : (scaleHover.hovered ? Colors.surface : "transparent")
-                                Behavior on color { ColorAnimation { duration: Config.animFast } }
-
-                                StyledText {
-                                    anchors.centerIn: parent
-                                    text: modelData + "×"
-                                    font.pixelSize: Config.fontSize - 2
-                                    font.weight: Font.Medium
-                                    color: active ? Colors.accentText : Colors.text
-                                }
-
-                                HoverHandler { id: scaleHover }
-                                MouseArea {
-                                    anchors.fill: parent
-                                    cursorShape: Qt.PointingHandCursor
-                                    onClicked: DisplaySettings.setScale(monCard.modelData.name, modelData)
-                                }
+                                active: Math.abs(monCard.modelData.scale - modelData) < 0.01
+                                text: modelData + "×"
+                                onClicked: DisplaySettings.setScale(monCard.modelData.name, modelData)
                             }
                         }
                     }

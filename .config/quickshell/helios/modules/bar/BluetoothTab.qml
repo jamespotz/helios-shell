@@ -329,24 +329,13 @@ Item {
                 }
             }
 
-            Rectangle {
+            IconButton {
                 width: 44
                 height: 44
-                radius: 22
-                color: Colors.accent
-
-                MaterialIcon { anchors.centerIn: parent; icon: "power_settings_new"; color: Colors.accentText }
-
-                Rectangle {
-                    anchors.fill: parent
-                    radius: parent.radius
-                    color: Colors.surfaceHigh
-                    opacity: powerBtnHover.hovered ? 0.25 : 0
-                }
-
-                HoverHandler { id: powerBtnHover }
-
-                MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: Bridge.togglePowerMenu() }
+                active: true
+                icon: "power_settings_new"
+                iconSize: 18
+                onClicked: Bridge.togglePowerMenu()
             }
         }
 

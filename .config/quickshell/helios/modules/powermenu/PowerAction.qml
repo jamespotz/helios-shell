@@ -13,6 +13,13 @@ PanelBackground {
     signal activated()
     signal armRequested()
 
+    function activate() {
+        if (!root.destructive || root.armed)
+            root.activated();
+        else
+            root.armRequested();
+    }
+
     width: 110
     height: 110
     color: armed ? Colors.danger : Colors.surface
@@ -42,16 +49,25 @@ PanelBackground {
         opacity: actionHover.hovered ? 0.15 : 0
     }
 
+    // Focus ring — keyboard-navigation feedback
+    Rectangle {
+        anchors.fill: parent
+        radius: parent.radius
+        color: "transparent"
+        border.width: 2
+        border.color: Colors.accent
+        visible: root.activeFocus
+    }
+
     HoverHandler { id: actionHover }
 
     MouseArea {
         anchors.fill: parent
         cursorShape: Qt.PointingHandCursor
-        onClicked: {
-            if (!root.destructive || root.armed)
-                root.activated();
-            else
-                root.armRequested();
-        }
+        onClicked: root.activate()
     }
+
+    activeFocusOnTab: true
+    Keys.onReturnPressed: root.activate()
+    Keys.onSpacePressed: root.activate()
 }

@@ -8,5 +8,5 @@ Rectangle {
     opacity: Colors.panelOpacity
     radius: Colors.radiusLarge
     border.width: 0.5
-    border.color: Qt.rgba(1, 1, 1, 0.08)
+    border.color: Qt.rgba(Colors.outline.r, Colors.outline.g, Colors.outline.b, 0.5)
 }

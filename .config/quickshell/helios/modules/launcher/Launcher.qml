@@ -42,7 +42,7 @@ PanelWindow {
     }
 
     function refresh() {
-        const query = searchInput.text.trim().toLowerCase();
+        const query = searchField.text.trim().toLowerCase();
         const seen = new Set();
         const all = DesktopEntries.applications.values.filter(e => !e.noDisplay)
             .concat(ExtraApps.list)
@@ -85,9 +85,9 @@ PanelWindow {
 
     onVisibleChanged: {
         if (visible) {
-            searchInput.text = "";
+            searchField.text = "";
             refresh();
-            searchInput.forceActiveFocus();
+            searchField.focusInput();
             resultList.currentIndex = 0;
         }
     }
@@ -102,40 +102,25 @@ PanelWindow {
         function onListChanged() { if (launcher.visible) launcher.refresh() }
     }
 
-    // Dim backdrop
-    Rectangle {
-        anchors.fill: parent
-        color: "#000000"
-        opacity: launcher.visible ? 0.4 : 0
-        Behavior on opacity { NumberAnimation { duration: Config.animMedium; easing.type: Easing.OutCubic } }
-
-        MouseArea {
-            anchors.fill: parent
-            onClicked: Bridge.launcherOpen = false
-        }
+    Scrim {
+        active: launcher.visible
+        dimOpacity: 0.4
+        onDismissed: Bridge.launcherOpen = false
     }
 
     // Main card — Apple Spotlight style
-    Rectangle {
+    Item {
         id: card
         width: 540
         height: contentCol.implicitHeight + 32
         anchors.horizontalCenter: parent.horizontalCenter
         y: parent.height * 0.16
-        radius: 16
-        color: Colors.surface
-        opacity: Colors.panelOpacity
-
-        // Subtle top highlight
-        Rectangle {
-            anchors.fill: parent
-            radius: parent.radius
-            color: "transparent"
-            border.width: 0.5
-            border.color: Qt.rgba(1, 1, 1, 0.08)
-        }
 
         Behavior on height { NumberAnimation { duration: Config.animFast; easing.type: Easing.OutCubic } }
+
+        PanelBackground {
+            anchors.fill: parent
+        }
 
         Column {
             id: contentCol
@@ -146,55 +131,20 @@ PanelWindow {
             spacing: 12
 
             // Search field — prominent, Apple-style
-            Rectangle {
-                id: searchBar
+            SearchField {
+                id: searchField
                 width: parent.width
-                height: 46
-                radius: 12
-                color: Colors.surfaceHigh
+                placeholder: "Search apps…"
+                inputPixelSize: Config.fontSize + 2
 
-                Row {
-                    anchors.fill: parent
-                    anchors.leftMargin: 14
-                    anchors.rightMargin: 14
-                    spacing: 10
-
-                    MaterialIcon {
-                        icon: "search"
-                        font.pixelSize: 20
-                        color: Colors.subtext
-                        anchors.verticalCenter: parent.verticalCenter
-                    }
-
-                    TextInput {
-                        id: searchInput
-                        width: parent.width - 30 - 10
-                        anchors.verticalCenter: parent.verticalCenter
-                        color: Colors.text
-                        font.family: Config.fontFamily
-                        font.pixelSize: Config.fontSize + 2
-                        font.weight: Font.Normal
-                        focus: true
-                        clip: true
-
-                        Keys.onEscapePressed: Bridge.launcherOpen = false
-                        Keys.onDownPressed: resultList.currentIndex = Math.min(resultList.currentIndex + 1, results.length - 1)
-                        Keys.onUpPressed: resultList.currentIndex = Math.max(resultList.currentIndex - 1, 0)
-                        Keys.onReturnPressed: {
-                            if (results.length > 0) {
-                                launcher.launchApp(results[resultList.currentIndex]);
-                                Bridge.launcherOpen = false;
-                            }
-                        }
-                        onTextChanged: launcher.refresh()
-
-                        StyledText {
-                            visible: searchInput.text.length === 0
-                            text: "Search apps…"
-                            color: Colors.subtext
-                            font.pixelSize: Config.fontSize + 2
-                            anchors.verticalCenter: parent.verticalCenter
-                        }
+                onTextChanged: launcher.refresh()
+                onEscapePressed: Bridge.launcherOpen = false
+                onDownPressed: resultList.currentIndex = Math.min(resultList.currentIndex + 1, results.length - 1)
+                onUpPressed: resultList.currentIndex = Math.max(resultList.currentIndex - 1, 0)
+                onAccepted: {
+                    if (results.length > 0) {
+                        launcher.launchApp(results[resultList.currentIndex]);
+                        Bridge.launcherOpen = false;
                     }
                 }
             }
@@ -244,7 +194,7 @@ PanelWindow {
                             width: 36
                             height: 36
                             radius: 8
-                            color: index === resultList.currentIndex ? Qt.rgba(1, 1, 1, 0.15) : Colors.surfaceHigh
+                            color: index === resultList.currentIndex ? Qt.rgba(Colors.accentText.r, Colors.accentText.g, Colors.accentText.b, 0.15) : Colors.surfaceHigh
                             anchors.verticalCenter: parent.verticalCenter
                             clip: true
 
@@ -274,7 +224,7 @@ PanelWindow {
                                 visible: !!modelData.genericName
                                 text: modelData.genericName
                                 font.pixelSize: Config.fontSize - 2
-                                color: index === resultList.currentIndex ? Qt.rgba(1, 1, 1, 0.7) : Colors.subtext
+                                color: index === resultList.currentIndex ? Qt.rgba(Colors.accentText.r, Colors.accentText.g, Colors.accentText.b, 0.7) : Colors.subtext
                                 width: parent.width
                                 elide: Text.ElideRight
                             }
@@ -287,7 +237,7 @@ PanelWindow {
                             width: visible ? termRow.implicitWidth + 10 : 0
                             height: 20
                             radius: 10
-                            color: index === resultList.currentIndex ? Qt.rgba(1, 1, 1, 0.2) : Colors.surfaceHigh
+                            color: index === resultList.currentIndex ? Qt.rgba(Colors.accentText.r, Colors.accentText.g, Colors.accentText.b, 0.2) : Colors.surfaceHigh
                             anchors.verticalCenter: parent.verticalCenter
 
                             Row {
@@ -324,7 +274,7 @@ PanelWindow {
 
             // Empty state
             Item {
-                visible: results.length === 0 && searchInput.text.length > 0
+                visible: results.length === 0 && searchField.text.length > 0
                 width: parent.width
                 height: 60
 

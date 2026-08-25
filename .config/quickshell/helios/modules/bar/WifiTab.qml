@@ -206,20 +206,13 @@ Item {
                                 Keys.onReturnPressed: root.wn.submitPassword(netRow.modelData.ssid, pwInput.text)
                             }
 
-                            MaterialIcon {
+                            IconButton {
                                 anchors.right: parent.right
-                                anchors.rightMargin: 10
+                                anchors.rightMargin: 1
                                 anchors.verticalCenter: parent.verticalCenter
                                 icon: netRow.passwordVisible ? "visibility_off" : "visibility"
-                                font.pixelSize: 15
-                                opacity: 0.6
-
-                                MouseArea {
-                                    anchors.fill: parent
-                                    anchors.margins: -6
-                                    cursorShape: Qt.PointingHandCursor
-                                    onClicked: netRow.passwordVisible = !netRow.passwordVisible
-                                }
+                                iconSize: 15
+                                onClicked: netRow.passwordVisible = !netRow.passwordVisible
                             }
                         }
 
@@ -229,33 +222,14 @@ Item {
                         }
                     }
 
-                    Rectangle {
+                    PrimaryButton {
                         width: parent.width
                         height: 32
-                        radius: height / 2
-                        color: Colors.secondary
-
-                        StyledText {
-                            anchors.centerIn: parent
-                            text: "Join"
-                            color: Colors.secondaryText
-                            font.bold: true
-                        }
-
-                        Rectangle {
-                            anchors.fill: parent
-                            radius: parent.radius
-                            color: Colors.surfaceHigh
-                            opacity: joinBtnHover.hovered ? 0.2 : 0
-                        }
-
-                        HoverHandler { id: joinBtnHover }
-
-                        MouseArea {
-                            anchors.fill: parent
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: root.wn.submitPassword(netRow.modelData.ssid, pwInput.text)
-                        }
+                        active: true
+                        tint: Colors.secondary
+                        tintText: Colors.secondaryText
+                        text: "Join"
+                        onClicked: root.wn.submitPassword(netRow.modelData.ssid, pwInput.text)
                     }
                 }
             }
@@ -329,39 +303,13 @@ Item {
                 Repeater {
                     model: root.wn.securityOptions
 
-                    Rectangle {
-                        id: chip
+                    Chip {
                         required property var modelData
-                        readonly property bool active: root.addSecurity === modelData.key
-
-                        width: label.implicitWidth + 20
-                        height: 28
-                        radius: height / 2
-                        color: active ? Colors.secondary : Colors.surfaceHigh
-                        Behavior on color { ColorAnimation { duration: Config.animFast } }
-
-                        Rectangle {
-                            anchors.fill: parent
-                            radius: parent.radius
-                            color: Colors.surfaceHigh
-                            opacity: chipHover.hovered && !chip.active ? 0.25 : 0
-                        }
-
-                        HoverHandler { id: chipHover }
-
-                        StyledText {
-                            id: label
-                            anchors.centerIn: parent
-                            text: modelData.label
-                            font.pixelSize: Config.fontSize - 2
-                            color: chip.active ? Colors.secondaryText : Colors.text
-                        }
-
-                        MouseArea {
-                            anchors.fill: parent
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: root.addSecurity = modelData.key
-                        }
+                        active: root.addSecurity === modelData.key
+                        tint: Colors.secondary
+                        tintText: Colors.secondaryText
+                        text: modelData.label
+                        onClicked: root.addSecurity = modelData.key
                     }
                 }
             }
@@ -393,50 +341,24 @@ Item {
                     }
                 }
 
-                MaterialIcon {
+                IconButton {
                     anchors.right: parent.right
-                    anchors.rightMargin: 10
+                    anchors.rightMargin: 1
                     anchors.verticalCenter: parent.verticalCenter
                     icon: root.addPasswordVisible ? "visibility_off" : "visibility"
-                    font.pixelSize: 15
-                    opacity: 0.6
-
-                    MouseArea {
-                        anchors.fill: parent
-                        anchors.margins: -6
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: root.addPasswordVisible = !root.addPasswordVisible
-                    }
+                    iconSize: 15
+                    onClicked: root.addPasswordVisible = !root.addPasswordVisible
                 }
             }
 
-            Rectangle {
+            PrimaryButton {
                 width: parent.width
                 height: 32
-                radius: height / 2
-                color: Colors.secondary
-
-                StyledText {
-                    anchors.centerIn: parent
-                    text: "Join"
-                    color: Colors.secondaryText
-                    font.bold: true
-                }
-
-                Rectangle {
-                    anchors.fill: parent
-                    radius: parent.radius
-                    color: Colors.surfaceHigh
-                    opacity: connectBtnHover.hovered ? 0.2 : 0
-                }
-
-                HoverHandler { id: connectBtnHover }
-
-                MouseArea {
-                    anchors.fill: parent
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: root.submitAddNetwork()
-                }
+                active: true
+                tint: Colors.secondary
+                tintText: Colors.secondaryText
+                text: "Join"
+                onClicked: root.submitAddNetwork()
             }
         }
     }

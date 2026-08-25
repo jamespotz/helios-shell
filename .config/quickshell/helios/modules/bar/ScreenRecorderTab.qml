@@ -29,50 +29,18 @@ Item {
             Repeater {
                 model: root.modes
 
-                delegate: Rectangle {
-                    id: modeBtn
+                Chip {
+                    id: modeChip
                     required property var modelData
-                    readonly property bool isActive: ScreenRecorder.mode === modelData.key
+                    active: ScreenRecorder.mode === modelData.key
+                    text: modelData.label
+                    enabled: !ScreenRecorder.recording && !ScreenRecorder.starting
+                    onClicked: ScreenRecorder.setMode(modeChip.modelData.key)
 
-                    width: modeContent.implicitWidth + 16
-                    height: 26
-                    radius: height / 2
-                    color: isActive ? Colors.accent : Colors.surfaceHigh
-                    Behavior on color { ColorAnimation { duration: Config.animFast } }
-
-                    Rectangle {
-                        anchors.fill: parent
-                        radius: parent.radius
-                        color: Colors.surfaceHigh
-                        opacity: modeHover.hovered && !modeBtn.isActive ? 0.25 : 0
-                    }
-
-                    HoverHandler { id: modeHover }
-
-                    Row {
-                        id: modeContent
-                        anchors.centerIn: parent
-                        spacing: 4
-
-                        MaterialIcon {
-                            icon: modeBtn.modelData.icon
-                            font.pixelSize: 13
-                            color: modeBtn.isActive ? Colors.accentText : Colors.text
-                            anchors.verticalCenter: parent.verticalCenter
-                        }
-                        StyledText {
-                            text: modeBtn.modelData.label
-                            font.pixelSize: Config.fontSize - 3
-                            color: modeBtn.isActive ? Colors.accentText : Colors.text
-                            anchors.verticalCenter: parent.verticalCenter
-                        }
-                    }
-
-                    MouseArea {
-                        anchors.fill: parent
-                        cursorShape: Qt.PointingHandCursor
-                        enabled: !ScreenRecorder.recording && !ScreenRecorder.starting
-                        onClicked: ScreenRecorder.setMode(modeBtn.modelData.key)
+                    MaterialIcon {
+                        icon: modeChip.modelData.icon
+                        font.pixelSize: 13
+                        color: modeChip.active ? Colors.accentText : Colors.text
                     }
                 }
             }

@@ -16,6 +16,7 @@ Item {
 
     implicitWidth: 18
     width: implicitWidth
+    opacity: root.enabled ? 1 : 0.4
 
     Rectangle {
         id: track
@@ -48,19 +49,37 @@ Item {
         }
 
         Rectangle {
-            width: 14
-            height: 14
-            radius: 7
+            id: knob
+            width: dragArea.pressed || knobHover.hovered || root.activeFocus ? 16 : 14
+            height: width
+            radius: width / 2
             color: Colors.text
             anchors.horizontalCenter: parent.horizontalCenter
             y: track.height * (1 - root.value) - height / 2
+
+            Behavior on width { NumberAnimation { duration: Config.animFast; easing.type: Easing.OutCubic } }
+
+            // Focus ring — keyboard-navigation feedback
+            Rectangle {
+                anchors.fill: parent
+                anchors.margins: -3
+                radius: parent.radius + 3
+                color: "transparent"
+                border.width: 2
+                border.color: Colors.accent
+                visible: root.activeFocus
+            }
         }
+
+        HoverHandler { id: knobHover }
     }
 
     MouseArea {
+        id: dragArea
         anchors.fill: parent
         anchors.leftMargin: -6
         anchors.rightMargin: -6
+        enabled: root.enabled
         // The tab content sits in a vertically-scrolling Flickable
         // (PanelWrapper.qml) — without this, a vertical drag here gets
         // stolen by the Flickable's own scroll gesture instead of moving
@@ -69,8 +88,12 @@ Item {
         function posToValue(my) {
             return Math.max(0, Math.min(1, 1 - my / root.height));
         }
-        onPressed: mouse => root.moved(posToValue(mouse.y))
+        onPressed: mouse => { root.forceActiveFocus(); root.moved(posToValue(mouse.y)); }
         onPositionChanged: mouse => { if (pressed) root.moved(posToValue(mouse.y)); }
         onReleased: root.released()
     }
+
+    activeFocusOnTab: root.enabled
+    Keys.onUpPressed: if (root.enabled) root.moved(Math.min(1, root.value + 0.05))
+    Keys.onDownPressed: if (root.enabled) root.moved(Math.max(0, root.value - 0.05))
 }

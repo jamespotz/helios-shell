@@ -1,5 +1,6 @@
 import QtQuick
 import "../../services"
+import "../../components"
 
 // Hover-expanded state — Apple menu bar philosophy: two clearly separated
 // zones (left: navigation/context, right: utilities/status) with generous
@@ -29,21 +30,7 @@ Item {
             anchors.verticalCenter: parent.verticalCenter
             spacing: 12
 
-            Rectangle {
-                visible: ScreenRecorder.recording
-                width: 8
-                height: 8
-                radius: 4
-                color: Colors.danger
-                anchors.verticalCenter: parent.verticalCenter
-
-                SequentialAnimation on opacity {
-                    running: ScreenRecorder.recording
-                    loops: Animation.Infinite
-                    NumberAnimation { from: 1; to: 0.3; duration: 800; easing.type: Easing.InOutSine }
-                    NumberAnimation { from: 0.3; to: 1; duration: 800; easing.type: Easing.InOutSine }
-                }
-            }
+            RecordingDot { anchors.verticalCenter: parent.verticalCenter }
 
             Workspaces {
                 visible: Config.showWorkspaces

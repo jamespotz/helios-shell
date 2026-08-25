@@ -33,7 +33,7 @@ Item {
                 anchors.rightMargin: 8
                 anchors.verticalCenter: parent.verticalCenter
                 height: 32
-                radius: 16
+                radius: Colors.radiusLarge
                 color: Colors.surfaceHigh
                 opacity: 0.4
             }
@@ -68,63 +68,28 @@ Item {
                         { tab: "island", icon: "tune" }
                     ]
 
-                    delegate: Rectangle {
+                    delegate: IconButton {
                         required property var modelData
                         required property int index
 
-                        readonly property bool active: Bridge.islandTab === modelData.tab
-
-                        width: 30
-                        height: 30
-                        radius: 15
-                        color: active ? Colors.accent : (tabHover.hovered ? Colors.overlay : "transparent")
-                        opacity: active ? 1 : (tabHover.hovered ? 0.3 : 1)
-
-                        Behavior on color { ColorAnimation { duration: Config.animFast } }
-
-                        MaterialIcon {
-                            anchors.centerIn: parent
-                            icon: modelData.icon
-                            font.pixelSize: 16
-                            color: active ? Colors.accentText : Colors.text
-                            opacity: active ? 1 : 0.8
-                        }
-
-                        HoverHandler { id: tabHover }
-
-                        MouseArea {
-                            anchors.fill: parent
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: Bridge.setIslandTab(modelData.tab)
-                        }
+                        active: Bridge.islandTab === modelData.tab
+                        icon: modelData.icon
+                        onClicked: Bridge.setIslandTab(modelData.tab)
                     }
                 }
             }
 
             // Close button — subtle, right-aligned
-            Rectangle {
+            IconButton {
                 id: closeButton
                 anchors.right: parent.right
                 anchors.verticalCenter: parent.verticalCenter
                 width: 28
                 height: 28
-                radius: 14
-                color: closeHover.hovered ? Colors.surfaceHigh : "transparent"
-
-                MaterialIcon {
-                    anchors.centerIn: parent
-                    icon: "close"
-                    font.pixelSize: 14
-                    color: Colors.subtext
-                }
-
-                HoverHandler { id: closeHover }
-
-                MouseArea {
-                    anchors.fill: parent
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: Bridge.closeIsland()
-                }
+                icon: "close"
+                iconSize: 14
+                iconColor: Colors.subtext
+                onClicked: Bridge.closeIsland()
             }
         }
 
@@ -170,29 +135,7 @@ Item {
                 }
             }
 
-            // Scroll track — barely visible until content overflows
-            Rectangle {
-                visible: scrollWrap.showScrollbar
-                width: 3
-                radius: 1.5
-                color: Colors.overlay
-                opacity: 0.15
-                anchors.top: parent.top
-                anchors.bottom: parent.bottom
-                anchors.right: parent.right
-            }
-
-            // Scroll thumb — accent-tinted, minimal
-            Rectangle {
-                visible: scrollWrap.showScrollbar
-                width: 3
-                radius: 1.5
-                color: Colors.accent
-                opacity: 0.6
-                anchors.right: parent.right
-                y: flick.contentHeight > 0 ? (flick.contentY / flick.contentHeight) * scrollWrap.height : 0
-                height: flick.contentHeight > 0 ? Math.max(20, (flick.height / flick.contentHeight) * scrollWrap.height) : scrollWrap.height
-            }
+            ScrollIndicator { target: flick }
         }
     }
 

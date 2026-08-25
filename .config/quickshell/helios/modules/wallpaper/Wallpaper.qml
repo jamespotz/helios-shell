@@ -331,7 +331,10 @@ PanelWindow {
             Rectangle {
                 id: neonBlackout
                 anchors.fill: parent
-                color: "black"
+                // Matches the honeycomb/blinds modules' own cover tiles below
+                // (both use Colors.background for the same "cover the old
+                // frame" role) rather than a literal black.
+                color: Colors.background
             }
 
             Glow {

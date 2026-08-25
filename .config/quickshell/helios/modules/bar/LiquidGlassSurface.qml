@@ -1,4 +1,5 @@
 import QtQuick
+import "../../services"
 
 // Apple-style vibrancy surface: Hyprland supplies the real blur (via
 // `layerrule blur` for the "helios:bar" namespace in shell.qml); this
@@ -13,8 +14,22 @@ Canvas {
 
     property bool active: false
     property real cornerRadius: 8
-    property color fallbackColor: "#1c1c1e"
+    property color fallbackColor: Colors.background
     property real glassAmount: active ? 1 : 0
+
+    // Canvas painting is imperative (getContext/fillRect), so it doesn't
+    // automatically repaint when a QML color binding changes like a
+    // Rectangle would — these connections are what make the glass tint
+    // actually follow live theme switches (Colors' own ColorAnimation
+    // Behaviors fire onXxxChanged every frame of the crossfade, so this
+    // repaints in step with it) instead of freezing at whatever the theme
+    // was when the shell started.
+    Connections {
+        target: Colors
+        function onSurfaceChanged() { root.requestPaint(); }
+        function onBackgroundChanged() { root.requestPaint(); }
+        function onShadowChanged() { root.requestPaint(); }
+    }
 
     antialiasing: true
 
@@ -40,6 +55,10 @@ Canvas {
         context.closePath();
     }
 
+    function _rgba(c, alpha) {
+        return "rgba(" + Math.round(c.r * 255) + ", " + Math.round(c.g * 255) + ", " + Math.round(c.b * 255) + ", " + alpha + ")";
+    }
+
     function paintFallback(context) {
         if (root.glassAmount >= 0.999)
             return;
@@ -61,26 +80,31 @@ Canvas {
         context.clip();
         context.globalAlpha = root.glassAmount;
 
-        // Neutral dark tint — Apple vibrancy is almost monochrome gray,
-        // letting the blurred wallpaper underneath provide color.
+        // Neutral tint — Apple vibrancy is almost monochrome gray, letting
+        // the blurred wallpaper underneath provide color. Drawn from the
+        // live theme's surface/background tokens so it follows theme
+        // switches instead of being locked to one fixed dark palette.
         const body = context.createLinearGradient(0, 0, 0, height);
-        body.addColorStop(0, "rgba(38, 38, 40, 0.72)");
-        body.addColorStop(1, "rgba(28, 28, 30, 0.78)");
+        body.addColorStop(0, root._rgba(Colors.surface, 0.72));
+        body.addColorStop(1, root._rgba(Colors.background, 0.78));
         context.fillStyle = body;
         context.fillRect(0, 0, width, height);
 
         // Subtle vignette darkening at the bottom edge — adds depth
         // without being distracting.
         const vignette = context.createLinearGradient(0, height * 0.6, 0, height);
-        vignette.addColorStop(0, "rgba(0, 0, 0, 0)");
-        vignette.addColorStop(1, "rgba(0, 0, 0, 0.08)");
+        vignette.addColorStop(0, root._rgba(Colors.shadow, 0));
+        vignette.addColorStop(1, root._rgba(Colors.shadow, 0.08));
         context.fillStyle = vignette;
         context.fillRect(0, 0, width, height);
 
         context.globalCompositeOperation = "source-over";
 
         // Top-edge specular highlight — a single clean line, the way Apple
-        // dark materials catch ambient light at the top.
+        // dark materials catch ambient light at the top. Kept a literal
+        // white rather than a theme token: this is a physical light-catch
+        // reflection, not UI chrome, so it stays white in every theme the
+        // same way a real glass edge would.
         root.traceBody(context, 0.5);
         context.lineWidth = 0.75;
         const rim = context.createLinearGradient(0, 0, width, 0);

@@ -15,11 +15,14 @@ Rectangle {
     implicitWidth: 42
     implicitHeight: 24
     radius: height / 2
+    opacity: root.enabled ? 1 : 0.4
     color: checked ? Colors.success : Colors.surfaceHigh
+    border.width: hoverHandler.hovered ? 2 : 0
+    border.color: Colors.accent
 
     Behavior on color { ColorAnimation { duration: Config.animMedium; easing.type: Easing.OutCubic } }
 
-    // Knob with subtle shadow
+    // Knob — pure white regardless of theme, matching Apple's switch design
     Rectangle {
         width: 18
         height: 18
@@ -29,22 +32,32 @@ Rectangle {
         x: root.checked ? parent.width - width - 3 : 3
 
         Behavior on x { NumberAnimation { duration: Config.animMedium; easing.type: Easing.OutCubic } }
+    }
 
-        // Knob shadow
-        Rectangle {
-            anchors.fill: parent
-            anchors.margins: -1
-            radius: parent.radius + 1
-            color: "transparent"
-            border.width: 1
-            border.color: Qt.rgba(0, 0, 0, 0.1)
-            z: -1
-        }
+    // Focus ring — keyboard-navigation feedback
+    Rectangle {
+        anchors.fill: parent
+        anchors.margins: -3
+        radius: parent.radius + 3
+        color: "transparent"
+        border.width: 2
+        border.color: Colors.accent
+        visible: root.activeFocus
+    }
+
+    HoverHandler {
+        id: hoverHandler
+        enabled: root.enabled
     }
 
     MouseArea {
         anchors.fill: parent
+        enabled: root.enabled
         cursorShape: Qt.PointingHandCursor
         onClicked: root.toggled(!root.checked)
     }
+
+    activeFocusOnTab: root.enabled
+    Keys.onReturnPressed: root.toggled(!root.checked)
+    Keys.onSpacePressed: root.toggled(!root.checked)
 }

@@ -100,7 +100,6 @@ Item {
                 height: 52
                 radius: 10
                 color: histHover.hovered ? Colors.surfaceHigh : "transparent"
-                opacity: histHover.hovered ? 0.6 : 1
 
                 HoverHandler { id: histHover }
 

@@ -78,14 +78,14 @@ Item {
                             radius: 10
                             color: "transparent"
                             border.width: 0.5
-                            border.color: Qt.rgba(1, 1, 1, 0.1)
+                            border.color: Qt.rgba(card.palette.text.r, card.palette.text.g, card.palette.text.b, 0.1)
                         }
 
                         // Hover overlay
                         Rectangle {
                             anchors.fill: parent
                             radius: parent.radius
-                            color: "#ffffff"
+                            color: card.palette.text
                             opacity: cardHover.hovered && !card.active ? 0.06 : 0
 
                             Behavior on opacity { NumberAnimation { duration: Config.animFast } }
@@ -170,51 +170,12 @@ Item {
             }
 
             // Dynamic theme button — prominent when active
-            Rectangle {
+            PrimaryButton {
                 width: parent.width
-                height: 44
-                radius: 12
-                color: Themes.mode === "dynamic" ? Colors.accent : Colors.surfaceHigh
-                opacity: Themes.mode === "dynamic" ? 1 : 0.7
-
-                Behavior on color { ColorAnimation { duration: Config.animFast } }
-
-                Row {
-                    anchors.centerIn: parent
-                    spacing: 8
-
-                    MaterialIcon {
-                        icon: "auto_awesome"
-                        font.pixelSize: 18
-                        color: Themes.mode === "dynamic" ? Colors.accentText : Colors.text
-                        anchors.verticalCenter: parent.verticalCenter
-                    }
-
-                    StyledText {
-                        text: Themes.generating ? "Generating…" : "Dynamic (from wallpaper)"
-                        color: Themes.mode === "dynamic" ? Colors.accentText : Colors.text
-                        font.weight: Font.DemiBold
-                        anchors.verticalCenter: parent.verticalCenter
-                    }
-                }
-
-                // Hover overlay
-                Rectangle {
-                    anchors.fill: parent
-                    radius: parent.radius
-                    color: "#ffffff"
-                    opacity: dynamicHover.hovered ? 0.08 : 0
-
-                    Behavior on opacity { NumberAnimation { duration: Config.animFast } }
-                }
-
-                HoverHandler { id: dynamicHover }
-
-                MouseArea {
-                    anchors.fill: parent
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: Themes.applyDynamic()
-                }
+                icon: "auto_awesome"
+                text: Themes.generating ? "Generating…" : "Dynamic (from wallpaper)"
+                active: Themes.mode === "dynamic"
+                onClicked: Themes.applyDynamic()
             }
 
             // Error message
@@ -234,7 +195,7 @@ Item {
                 radius: 12
                 color: Colors.surfaceHigh
                 opacity: Themes.mode === "dynamic" ? 0.5 : 0.25
-                visible: true
+                enabled: Themes.mode === "dynamic"
 
                 Behavior on opacity { NumberAnimation { duration: Config.animMedium } }
 
@@ -287,63 +248,23 @@ Item {
                         Repeater {
                             model: Themes.schemeOptions
 
-                            Rectangle {
+                            Chip {
                                 id: schemeChip
                                 required property var modelData
-                                readonly property bool active: Themes.paletteScheme === modelData.value
+                                active: Themes.paletteScheme === modelData.value
+                                text: modelData.label
+                                onClicked: Themes.setPaletteScheme(modelData.value)
 
-                                width: chipContent.implicitWidth + 16
-                                height: 28
-                                radius: 14
-                                color: active ? Colors.accent : Colors.surface
-
-                                Behavior on color { ColorAnimation { duration: Config.animFast } }
-
-                                // Hover
-                                Rectangle {
-                                    anchors.fill: parent
-                                    radius: parent.radius
-                                    color: "#ffffff"
-                                    opacity: chipHover.hovered && !schemeChip.active ? 0.08 : 0
-                                }
-
-                                HoverHandler { id: chipHover }
-
-                                Row {
-                                    id: chipContent
-                                    anchors.centerIn: parent
-                                    spacing: 5
-
-                                    // Color swatch dots
-                                    Row {
+                                Repeater {
+                                    model: schemeChip.modelData.swatch
+                                    Rectangle {
+                                        required property string modelData
+                                        width: 7
+                                        height: 7
+                                        radius: 3.5
                                         anchors.verticalCenter: parent.verticalCenter
-                                        spacing: 2
-                                        Repeater {
-                                            model: schemeChip.modelData.swatch
-                                            Rectangle {
-                                                required property string modelData
-                                                width: 7
-                                                height: 7
-                                                radius: 3.5
-                                                anchors.verticalCenter: parent.verticalCenter
-                                                color: modelData
-                                            }
-                                        }
+                                        color: modelData
                                     }
-
-                                    StyledText {
-                                        anchors.verticalCenter: parent.verticalCenter
-                                        text: schemeChip.modelData.label
-                                        font.pixelSize: Config.fontSize - 2
-                                        font.weight: Font.Medium
-                                        color: schemeChip.active ? Colors.accentText : Colors.text
-                                    }
-                                }
-
-                                MouseArea {
-                                    anchors.fill: parent
-                                    cursorShape: Qt.PointingHandCursor
-                                    onClicked: Themes.setPaletteScheme(schemeChip.modelData.value)
                                 }
                             }
                         }

@@ -1,11 +1,12 @@
 import QtQuick
+import "../services"
 
 // A tiny equalizer driven by live cava bar levels (0..1 each).
 Row {
     id: root
 
     property bool active: false
-    property color barColor: "white"
+    property color barColor: Colors.text
     property var levels: []
     property int maxHeight: 10
 

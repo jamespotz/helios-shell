@@ -87,10 +87,20 @@ Item {
                     command: ["sh", "-c",
                         "[ -f \"$2\" ] || { mkdir -p \"$(dirname \"$2\")\" && printf '%s' \"$1\" | cliphist decode > \"$2\"; }",
                         "_", row.modelData.line, row.thumbPath]
-                    onExited: row.thumbSource = "file://" + row.thumbPath
+                    onExited: {
+                        row.thumbSource = "file://" + row.thumbPath;
+                        Clipboard.markThumbReady(row.modelData.id);
+                    }
                 }
 
-                Component.onCompleted: if (row.modelData.isImage) thumbDecoder.running = true
+                Component.onCompleted: {
+                    if (!row.modelData.isImage) return;
+                    if (Clipboard.readyThumbs[row.modelData.id]) {
+                        row.thumbSource = "file://" + row.thumbPath;
+                    } else {
+                        thumbDecoder.running = true;
+                    }
+                }
 
                 Row {
                     anchors.fill: parent

@@ -326,37 +326,14 @@ Item {
                 Repeater {
                     model: Object.keys(Equalizer.eqPresets)
 
-                    Rectangle {
+                    Chip {
                         required property string modelData
-                        readonly property bool active: Equalizer.currentPreset === modelData
 
                         width: (parent.width - 3 * 8) / 4
                         height: 32
-                        radius: height / 2
-                        color: active ? Colors.accent : Colors.surfaceHigh
-                        Behavior on color { ColorAnimation { duration: Config.animFast } }
-
-                        StyledText {
-                            anchors.centerIn: parent
-                            text: modelData.charAt(0).toUpperCase() + modelData.slice(1)
-                            color: active ? Colors.accentText : Colors.text
-                            font.pixelSize: Config.fontSize - 2
-                        }
-
-                        Rectangle {
-                            anchors.fill: parent
-                            radius: parent.radius
-                            color: Colors.surfaceHigh
-                            opacity: eqChipHover.hovered && !active ? 0.25 : 0
-                        }
-
-                        HoverHandler { id: eqChipHover }
-
-                        MouseArea {
-                            anchors.fill: parent
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: Equalizer.applyPreset(modelData)
-                        }
+                        active: Equalizer.currentPreset === modelData
+                        text: modelData.charAt(0).toUpperCase() + modelData.slice(1)
+                        onClicked: Equalizer.applyPreset(modelData)
                     }
                 }
             }

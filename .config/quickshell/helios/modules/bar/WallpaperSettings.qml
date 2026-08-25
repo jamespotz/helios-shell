@@ -189,40 +189,11 @@ Item {
             Repeater {
                 model: Config.wallpaperRevealStyles
 
-                Rectangle {
-                    id: styleChip
+                Chip {
                     required property string modelData
-                    readonly property bool active: Config.wallpaperRevealStyle === modelData
-
-                    width: chipText.implicitWidth + 18
-                    height: 28
-                    radius: height / 2
-                    color: active ? Colors.accent : Colors.surfaceHigh
-                    Behavior on color { ColorAnimation { duration: Config.animFast } }
-
-                    Rectangle {
-                        anchors.fill: parent
-                        radius: parent.radius
-                        color: Colors.overlay
-                        opacity: styleChipHover.hovered && !styleChip.active ? 0.2 : 0
-                    }
-
-                    HoverHandler { id: styleChipHover }
-
-                    StyledText {
-                        id: chipText
-                        anchors.centerIn: parent
-                        text: styleChip.modelData
-                        color: styleChip.active ? Colors.accentText : Colors.text
-                        font.pixelSize: Config.fontSize - 2
-                        font.capitalization: Font.Capitalize
-                    }
-
-                    MouseArea {
-                        anchors.fill: parent
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: Config.setWallpaperRevealStyle(styleChip.modelData)
-                    }
+                    active: Config.wallpaperRevealStyle === modelData
+                    text: modelData.charAt(0).toUpperCase() + modelData.slice(1)
+                    onClicked: Config.setWallpaperRevealStyle(modelData)
                 }
             }
         }

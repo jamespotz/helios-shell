@@ -27,7 +27,7 @@ PanelWindow {
     property var entries: []
 
     readonly property var filtered: {
-        const q = searchInput.text.trim().toLowerCase();
+        const q = searchField.text.trim().toLowerCase();
         if (!q) return entries;
         return entries.filter(b => (b.description || "").toLowerCase().includes(q)
             || root.comboLabel(b).toLowerCase().includes(q));
@@ -49,10 +49,10 @@ PanelWindow {
 
     onVisibleChanged: {
         if (visible) {
-            searchInput.text = "";
+            searchField.text = "";
             bindsProc.running = false;
             bindsProc.running = true;
-            searchInput.forceActiveFocus();
+            searchField.focusInput();
         }
     }
 
@@ -93,17 +93,9 @@ PanelWindow {
         return mods.join(" + ");
     }
 
-    // Backdrop
-    Rectangle {
-        anchors.fill: parent
-        color: "#000000"
-        opacity: root.visible ? 0.45 : 0
-        Behavior on opacity { NumberAnimation { duration: Config.animMedium; easing.type: Easing.OutCubic } }
-
-        MouseArea {
-            anchors.fill: parent
-            onClicked: Bridge.closeKeybinds()
-        }
+    Scrim {
+        active: root.visible
+        onDismissed: Bridge.closeKeybinds()
     }
 
     Item {
@@ -112,21 +104,14 @@ PanelWindow {
         Keys.onEscapePressed: Bridge.closeKeybinds()
 
         // Main card
-        Rectangle {
+        Item {
             id: card
             width: 680
             height: Math.min(640, root.height * 0.8)
             anchors.centerIn: parent
-            radius: 16
-            color: Colors.surface
-            opacity: Colors.panelOpacity
 
-            Rectangle {
+            PanelBackground {
                 anchors.fill: parent
-                radius: parent.radius
-                color: "transparent"
-                border.width: 0.5
-                border.color: Qt.rgba(1, 1, 1, 0.08)
             }
 
             MouseArea { anchors.fill: parent }
@@ -167,44 +152,11 @@ PanelWindow {
                 }
 
                 // Search
-                Rectangle {
+                SearchField {
+                    id: searchField
                     width: parent.width
-                    height: 42
-                    radius: 12
-                    color: Colors.surfaceHigh
-
-                    Row {
-                        anchors.fill: parent
-                        anchors.leftMargin: 14
-                        anchors.rightMargin: 14
-                        spacing: 10
-
-                        MaterialIcon {
-                            icon: "search"
-                            font.pixelSize: 18
-                            color: Colors.subtext
-                            anchors.verticalCenter: parent.verticalCenter
-                        }
-
-                        TextInput {
-                            id: searchInput
-                            width: parent.width - 28 - 10
-                            anchors.verticalCenter: parent.verticalCenter
-                            color: Colors.text
-                            font.family: Config.fontFamily
-                            font.pixelSize: Config.fontSize
-                            clip: true
-
-                            Keys.onEscapePressed: Bridge.closeKeybinds()
-
-                            StyledText {
-                                visible: searchInput.text.length === 0
-                                text: "Filter shortcuts…"
-                                color: Colors.subtext
-                                anchors.verticalCenter: parent.verticalCenter
-                            }
-                        }
-                    }
+                    placeholder: "Filter shortcuts…"
+                    onEscapePressed: Bridge.closeKeybinds()
                 }
 
                 // Bind list

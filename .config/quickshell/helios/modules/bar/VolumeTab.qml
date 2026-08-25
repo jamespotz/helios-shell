@@ -65,50 +65,14 @@ Item {
         spacing: 14
 
         // --- Output/Input segmented switch ----------------------------------
-        Rectangle {
+        SegmentedControl {
             width: parent.width
-            height: 36
-            radius: height / 2
-            color: Colors.surfaceHigh
-
-            Row {
-                anchors.fill: parent
-                anchors.margins: 3
-
-                Rectangle {
-                    width: parent.width / 2
-                    height: parent.height
-                    radius: height / 2
-                    color: root.isOutput ? Colors.accent : "transparent"
-                    Behavior on color { ColorAnimation { duration: Config.animFast } }
-
-                    Row {
-                        anchors.centerIn: parent
-                        spacing: 6
-                        MaterialIcon { icon: "volume_up"; font.pixelSize: 15; color: root.isOutput ? Colors.accentText : Colors.text; anchors.verticalCenter: parent.verticalCenter }
-                        StyledText { text: "Output"; color: root.isOutput ? Colors.accentText : Colors.text; anchors.verticalCenter: parent.verticalCenter }
-                    }
-
-                    MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: root.mode = "output" }
-                }
-
-                Rectangle {
-                    width: parent.width / 2
-                    height: parent.height
-                    radius: height / 2
-                    color: !root.isOutput ? Colors.accent : "transparent"
-                    Behavior on color { ColorAnimation { duration: Config.animFast } }
-
-                    Row {
-                        anchors.centerIn: parent
-                        spacing: 6
-                        MaterialIcon { icon: "mic"; font.pixelSize: 15; color: !root.isOutput ? Colors.accentText : Colors.text; anchors.verticalCenter: parent.verticalCenter }
-                        StyledText { text: "Input"; color: !root.isOutput ? Colors.accentText : Colors.text; anchors.verticalCenter: parent.verticalCenter }
-                    }
-
-                    MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: root.mode = "input" }
-                }
-            }
+            model: [
+                { value: "output", label: "Output", icon: "volume_up" },
+                { value: "input", label: "Input", icon: "mic" }
+            ]
+            currentValue: root.mode
+            onActivated: value => root.mode = value
         }
 
         // --- Hero volume card ------------------------------------------------

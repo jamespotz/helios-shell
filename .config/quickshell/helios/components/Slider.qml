@@ -17,9 +17,10 @@ Item {
     signal moved(real value)
 
     readonly property real fraction: root.maxValue > 0 ? Math.max(0, Math.min(1, root.value / root.maxValue)) : 0
-    readonly property bool showThumb: !root.thumbHoverOnly || trackHover.hovered || dragArea.pressed
+    readonly property bool showThumb: !root.thumbHoverOnly || trackHover.hovered || dragArea.pressed || root.activeFocus
 
     implicitHeight: 24
+    opacity: root.enabled ? 1 : 0.4
 
     HoverHandler { id: trackHover }
 
@@ -63,15 +64,15 @@ Item {
 
             Behavior on opacity { NumberAnimation { duration: Config.animFast; easing.type: Easing.OutCubic } }
 
-            // Shadow ring
+            // Focus ring — keyboard-navigation feedback
             Rectangle {
                 anchors.fill: parent
-                anchors.margins: -1
-                radius: parent.radius + 1
+                anchors.margins: -3
+                radius: parent.radius + 3
                 color: "transparent"
-                border.width: 1
-                border.color: Qt.rgba(0, 0, 0, 0.15)
-                z: -1
+                border.width: 2
+                border.color: Colors.accent
+                visible: root.activeFocus
             }
         }
     }
@@ -79,10 +80,16 @@ Item {
     MouseArea {
         id: dragArea
         anchors.fill: parent
+        enabled: root.enabled
         function posToValue(mx) {
             return Math.max(0, Math.min(1, mx / width)) * root.maxValue;
         }
-        onPressed: mouse => root.moved(posToValue(mouse.x))
+        onPressed: mouse => { root.forceActiveFocus(); root.moved(posToValue(mouse.x)); }
         onPositionChanged: mouse => { if (pressed) root.moved(posToValue(mouse.x)); }
     }
+
+    activeFocusOnTab: root.enabled
+    readonly property real _step: root.maxValue > 0 ? root.maxValue / 20 : 0.05
+    Keys.onLeftPressed: if (root.enabled) root.moved(Math.max(0, root.value - root._step))
+    Keys.onRightPressed: if (root.enabled) root.moved(Math.min(root.maxValue, root.value + root._step))
 }
