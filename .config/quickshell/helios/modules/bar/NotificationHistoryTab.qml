@@ -158,26 +158,28 @@ Item {
                         }
                     }
 
-                    // Open app
-                    Rectangle {
+                    // Open app — uses the smart priority chain:
+                    // focus window → default action/deep link → launch app
+                    MouseArea {
+                        id: openBtn
                         width: 28
                         height: 28
-                        radius: 14
                         anchors.verticalCenter: parent.verticalCenter
-                        color: openBtnHover.hovered ? Colors.surfaceHigh : "transparent"
+                        cursorShape: Qt.PointingHandCursor
+                        hoverEnabled: true
+                        onClicked: Notifications.openNotification(histRow.modelData)
 
-                        MaterialIcon {
-                            anchors.centerIn: parent
-                            icon: "open_in_new"
-                            font.pixelSize: 14
-                            color: Colors.accent
-                        }
-
-                        HoverHandler { id: openBtnHover }
-                        MouseArea {
+                        Rectangle {
                             anchors.fill: parent
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: Notifications.openApp(histRow.modelData)
+                            radius: 14
+                            color: openBtn.containsMouse ? Colors.surfaceHigh : "transparent"
+
+                            MaterialIcon {
+                                anchors.centerIn: parent
+                                icon: "open_in_new"
+                                font.pixelSize: 14
+                                color: Colors.accent
+                            }
                         }
                     }
 
