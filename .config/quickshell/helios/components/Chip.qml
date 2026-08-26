@@ -14,6 +14,11 @@ Rectangle {
     // security options) intentionally use a different semantic tint.
     property color tint: Colors.accent
     property color tintText: Colors.accentText
+    // Fill when inactive — defaults to blend with the panel background (the
+    // original look, used where a chip should read as a subtle toggle).
+    // Pass Colors.surfaceHigh for chips that need to read as a button even
+    // at rest, e.g. standalone action buttons not paired with active state.
+    property color inactiveTint: Colors.surface
     default property alias leading: leadingRow.data
 
     signal clicked()
@@ -22,7 +27,7 @@ Rectangle {
     implicitHeight: 28
     radius: height / 2
     opacity: root.enabled ? 1 : 0.4
-    color: active ? root.tint : (hoverHandler.hovered ? Colors.surfaceHigh : Colors.surface)
+    color: active ? root.tint : (hoverHandler.hovered ? Colors.surfaceHigh : root.inactiveTint)
 
     Behavior on color { ColorAnimation { duration: Config.animFast; easing.type: Easing.OutCubic } }
 

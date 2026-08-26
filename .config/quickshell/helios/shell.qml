@@ -87,6 +87,7 @@ ShellRoot {
         function location(text: string) { Weather.setLocation(text) }
     }
 
+
     IpcHandler {
         target: "wallpaper"
         function set(path: string) { Wallpaper.setPath(path) }

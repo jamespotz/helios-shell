@@ -242,18 +242,10 @@ PanelWindow {
                     width: resultList.width
                     height: 50
                     radius: 10
-                    color: index === resultList.currentIndex ? Colors.accent : "transparent"
+                    color: index === resultList.currentIndex ? Colors.accent
+                        : resultHover.hovered ? Colors.surfaceHigh : "transparent"
 
                     Behavior on color { ColorAnimation { duration: Config.animFast } }
-
-                    // Hover overlay
-                    Rectangle {
-                        anchors.fill: parent
-                        radius: parent.radius
-                        color: Colors.surfaceHigh
-                        opacity: resultHover.hovered && index !== resultList.currentIndex ? 0.3 : 0
-                        Behavior on opacity { NumberAnimation { duration: Config.animFast } }
-                    }
 
                     HoverHandler { id: resultHover }
 

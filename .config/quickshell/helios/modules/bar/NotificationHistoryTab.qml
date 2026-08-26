@@ -83,7 +83,7 @@ Item {
             id: historyList
             width: parent.width
             visible: Notifications.history.length > 0
-            height: Math.min(280, Notifications.history.length * 56)
+            height: Math.min(320, Notifications.history.length * 68)
             clip: true
             spacing: 4
             model: Notifications.history
@@ -97,9 +97,16 @@ Item {
                 required property int index
 
                 width: historyList.width
-                height: 52
+                height: 64
                 radius: 10
                 color: histHover.hovered ? Colors.surfaceHigh : "transparent"
+
+                // Truncate to a fixed character budget rather than relying on
+                // single-line width-elide, which cropped long bodies after
+                // only a handful of characters.
+                function truncate(text, max) {
+                    return text.length > max ? text.slice(0, max).replace(/\s+$/, "") + "…" : text;
+                }
 
                 HoverHandler { id: histHover }
 
@@ -128,7 +135,7 @@ Item {
                     // Content
                     Column {
                         anchors.verticalCenter: parent.verticalCenter
-                        width: histRow.width - 32 - 10 - 60 - 24
+                        width: histRow.width - 16 - 32 - 28 - 60 - 40
                         spacing: 2
 
                         StyledText {
@@ -142,10 +149,35 @@ Item {
                         StyledText {
                             visible: (histRow.modelData.body || "").length > 0
                             width: parent.width
+                            wrapMode: Text.WordWrap
+                            maximumLineCount: 2
                             elide: Text.ElideRight
                             font.pixelSize: Config.fontSize - 2
                             color: Colors.subtext
-                            text: histRow.modelData.body || ""
+                            text: histRow.truncate(histRow.modelData.body || "", 150)
+                        }
+                    }
+
+                    // Open app
+                    Rectangle {
+                        width: 28
+                        height: 28
+                        radius: 14
+                        anchors.verticalCenter: parent.verticalCenter
+                        color: openBtnHover.hovered ? Colors.surfaceHigh : "transparent"
+
+                        MaterialIcon {
+                            anchors.centerIn: parent
+                            icon: "open_in_new"
+                            font.pixelSize: 14
+                            color: Colors.accent
+                        }
+
+                        HoverHandler { id: openBtnHover }
+                        MouseArea {
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: Notifications.openApp(histRow.modelData)
                         }
                     }
 
