@@ -82,6 +82,7 @@ Item {
                 IconButton {
                     icon: "open_in_new"
                     iconSize: 14
+                    visible: root.count === 1 && Notifications.hasDefaultAction(root.list[0])
                     onClicked: if (root.count === 1) Notifications.focusApp(root.list[0])
                 }
 
@@ -211,6 +212,7 @@ Item {
                         anchors.verticalCenter: parent.verticalCenter
                         icon: "open_in_new"
                         iconSize: 13
+                        visible: Notifications.hasDefaultAction(row.modelData)
                         onClicked: Notifications.focusApp(row.modelData)
                     }
 

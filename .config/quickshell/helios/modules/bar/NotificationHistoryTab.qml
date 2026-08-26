@@ -158,16 +158,18 @@ Item {
                         }
                     }
 
-                    // Open app — uses the smart priority chain:
-                    // focus window → default action/deep link → launch app
+                    // Open app — relaunches via its .desktop entry (the live
+                    // notification's actions are long gone by the time this
+                    // is history; most apps focus their own window on relaunch).
                     MouseArea {
                         id: openBtn
                         width: 28
                         height: 28
                         anchors.verticalCenter: parent.verticalCenter
+                        visible: Notifications.canOpenApp(histRow.modelData)
                         cursorShape: Qt.PointingHandCursor
                         hoverEnabled: true
-                        onClicked: Notifications.openNotification(histRow.modelData)
+                        onClicked: Notifications.openApp(histRow.modelData)
 
                         Rectangle {
                             anchors.fill: parent
