@@ -31,7 +31,7 @@ Item {
         wn.connectError = "";
     }
 
-    implicitWidth: 720
+    implicitWidth: root.viewMode === "orbit" ? 720 : 320
     implicitHeight: col.implicitHeight
 
     Column {
@@ -383,7 +383,7 @@ Item {
 
         ListView {
             id: networkList
-            width: parent.width - 8
+            width: parent.width
             visible: root.viewMode === "list" && Networking.wifiEnabled
             // contentHeight (not a row-count*46 estimate) so an expanded
             // network's password box/error text — which the estimate never

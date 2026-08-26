@@ -137,7 +137,7 @@ Item {
 
         ListView {
             id: deviceList
-            width: parent.width - 8
+            width: parent.width
             visible: root.activeDevices.length > 0
             height: Math.min(220, Math.max(0, root.activeDevices.length * 44))
             clip: true

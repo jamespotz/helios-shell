@@ -14,7 +14,7 @@ Item {
         { key: ScreenRecorder.modeRegion, icon: "crop", label: "Custom Area" }
     ]
 
-    implicitWidth: 280
+    implicitWidth: 360
     implicitHeight: col.implicitHeight
 
     Column {

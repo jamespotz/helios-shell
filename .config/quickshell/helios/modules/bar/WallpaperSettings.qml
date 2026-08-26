@@ -207,7 +207,7 @@ Item {
 
         Flickable {
             id: thumbFlick
-            width: parent.width - 8
+            width: parent.width
             height: Math.min(200, grid.implicitHeight)
             contentWidth: width
             contentHeight: grid.implicitHeight

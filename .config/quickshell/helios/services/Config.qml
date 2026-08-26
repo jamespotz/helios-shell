@@ -62,7 +62,7 @@ QtObject {
     // usual — the surface is transparent and click-through outside the
     // visible pill (see Bar.qml's `mask`), so extra headroom here is free.
     readonly property int islandMaxWidth: 1300
-    readonly property int islandMaxHeight: 480
+    readonly property int islandMaxHeight: 820
 
     // Apple-style spring: critically damped (no overshoot) with moderate
     // stiffness for a smooth, decisive morph. Both axes must share params

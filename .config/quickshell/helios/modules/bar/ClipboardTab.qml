@@ -60,7 +60,7 @@ Item {
 
         ListView {
             id: clipList
-            width: parent.width - 8
+            width: parent.width
             visible: Clipboard.items.length > 0
             height: Math.min(280, Math.max(0, Clipboard.items.length * 46))
             clip: true

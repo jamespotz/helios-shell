@@ -27,7 +27,7 @@ Item {
     }
     readonly property var activeSegment: root.segments[root.activeIndex]
 
-    implicitWidth: 300
+    implicitWidth: 400
     implicitHeight: col.implicitHeight
 
     Column {

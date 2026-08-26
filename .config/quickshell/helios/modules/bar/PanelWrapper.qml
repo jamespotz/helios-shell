@@ -11,19 +11,22 @@ Item {
 
     readonly property int maxContentHeight: Config.islandMaxHeight - 120
 
-    implicitWidth: pane.implicitWidth
+    implicitWidth: pane.width
     implicitHeight: tabs.height + pane.spacing + Math.min(panelLoader.implicitHeight, root.maxContentHeight)
 
     Column {
         id: pane
-        width: Math.max(tabs.implicitWidth, panelLoader.implicitWidth)
+        // Sized to the active tab's own content — not the tab bar, which
+        // scrolls horizontally instead of forcing every tab to be at least
+        // as wide as all 17 icons combined (~590px). The floor here is a
+        // defensive minimum, well below any real tab's implicitWidth.
+        width: Math.max(220, panelLoader.implicitWidth)
         spacing: 14
 
         // ─── Tab bar: segmented control style ────────────────────────────
         Item {
             id: tabs
             width: pane.width
-            implicitWidth: tabRow.implicitWidth + 8 + closeButton.width + 16
             height: 36
 
             // Background capsule for the tab row
@@ -38,43 +41,55 @@ Item {
                 opacity: 0.4
             }
 
-            Row {
-                id: tabRow
+            // Tab icons scroll horizontally instead of forcing the panel to
+            // stay as wide as all 17 of them — no visible scrollbar, just
+            // drag/flick, to keep the segmented-pill look intact.
+            Flickable {
+                id: tabScroll
                 anchors.left: parent.left
                 anchors.leftMargin: 4
                 anchors.right: closeButton.left
                 anchors.rightMargin: 8
                 anchors.verticalCenter: parent.verticalCenter
-                spacing: 2
+                height: tabRow.implicitHeight
+                contentWidth: tabRow.implicitWidth
+                clip: true
+                boundsBehavior: Flickable.StopAtBounds
+                flickableDirection: Flickable.HorizontalFlick
 
-                Repeater {
-                    model: [
-                        { tab: "volume", icon: "volume_up" },
-                        { tab: "bluetooth", icon: "bluetooth" },
-                        { tab: "wifi", icon: "wifi" },
-                        { tab: "media", icon: "music_note" },
-                        { tab: "clipboard", icon: "content_paste" },
-                        { tab: "recorder", icon: "videocam" },
-                        { tab: "screenshot", icon: "screenshot_monitor" },
-                        { tab: "weather", icon: "cloud" },
-                        { tab: "activity", icon: "bar_chart" },
-                        { tab: "notifications", icon: "history" },
-                        { tab: "nightlight", icon: "nightlight" },
-                        { tab: "display", icon: "monitor" },
-                        { tab: "idle", icon: "bedtime" },
-                        { tab: "wallpaper", icon: "wallpaper" },
-                        { tab: "theme", icon: "palette" },
-                        { tab: "power", icon: powerIcon },
-                        { tab: "island", icon: "tune" }
-                    ]
+                Row {
+                    id: tabRow
+                    spacing: 2
 
-                    delegate: IconButton {
-                        required property var modelData
-                        required property int index
+                    Repeater {
+                        model: [
+                            { tab: "volume", icon: "volume_up" },
+                            { tab: "bluetooth", icon: "bluetooth" },
+                            { tab: "wifi", icon: "wifi" },
+                            { tab: "media", icon: "music_note" },
+                            { tab: "clipboard", icon: "content_paste" },
+                            { tab: "recorder", icon: "videocam" },
+                            { tab: "screenshot", icon: "screenshot_monitor" },
+                            { tab: "weather", icon: "cloud" },
+                            { tab: "activity", icon: "bar_chart" },
+                            { tab: "notifications", icon: "history" },
+                            { tab: "nightlight", icon: "nightlight" },
+                            { tab: "display", icon: "monitor" },
+                            { tab: "idle", icon: "bedtime" },
+                            { tab: "wallpaper", icon: "wallpaper" },
+                            { tab: "theme", icon: "palette" },
+                            { tab: "power", icon: powerIcon },
+                            { tab: "island", icon: "tune" }
+                        ]
 
-                        active: Bridge.islandTab === modelData.tab
-                        icon: modelData.icon
-                        onClicked: Bridge.setIslandTab(modelData.tab)
+                        delegate: IconButton {
+                            required property var modelData
+                            required property int index
+
+                            active: Bridge.islandTab === modelData.tab
+                            icon: modelData.icon
+                            onClicked: Bridge.setIslandTab(modelData.tab)
+                        }
                     }
                 }
             }
@@ -99,12 +114,9 @@ Item {
             width: pane.width
             height: Math.min(panelLoader.implicitHeight, root.maxContentHeight)
 
-            readonly property bool showScrollbar: flick.contentHeight > flick.height
-
             Flickable {
                 id: flick
                 anchors.fill: parent
-                anchors.rightMargin: scrollWrap.showScrollbar ? 8 : 0
                 contentWidth: width
                 contentHeight: panelLoader.implicitHeight
                 clip: true

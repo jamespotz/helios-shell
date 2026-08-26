@@ -33,7 +33,7 @@ Item {
     // it always, to keep the list compact.
     property string expandedDevice: ""
 
-    implicitWidth: 720
+    implicitWidth: root.viewMode === "orbit" ? 720 : 320
     implicitHeight: col.implicitHeight
 
     Component.onCompleted: Bluetooth.open()
@@ -365,74 +365,66 @@ Item {
         }
 
         // --- List view: Scan/Refresh + Pairing/Discoverable + My Devices / Nearby --
+        // Flat text links, not cards — icon + accent-colored label, no
+        // background at rest or on hover (just a slight dim), left-aligned.
         Row {
             width: parent.width
             visible: root.viewMode === "list" && Bluetooth.powered
-            spacing: 12
+            spacing: 20
 
-            HoverRow {
-                id: scanCta
-                width: (parent.width - 12) / 2
-                height: 52
-                highlighted: Bluetooth.scanning
-                onClicked: Bluetooth.scanning ? Bluetooth.stopDiscovery() : Bluetooth.startDiscovery()
+            Item {
+                id: scanLink
+                width: scanLinkRow.implicitWidth
+                height: scanLinkRow.implicitHeight
+                opacity: scanLinkHover.hovered ? 0.7 : 1
+                Behavior on opacity { NumberAnimation { duration: Config.animFast; easing.type: Easing.OutCubic } }
 
                 Row {
-                    anchors.left: parent.left
-                    anchors.leftMargin: 10
-                    anchors.right: parent.right
-                    anchors.rightMargin: 10
-                    anchors.verticalCenter: parent.verticalCenter
-                    spacing: 10
+                    id: scanLinkRow
+                    spacing: 6
 
-                    MaterialIcon { icon: "search"; font.pixelSize: 18; color: Colors.accent; anchors.verticalCenter: parent.verticalCenter }
-                    Column {
-                        spacing: 2
+                    MaterialIcon { icon: "search"; font.pixelSize: 15; color: Colors.accent; anchors.verticalCenter: parent.verticalCenter }
+                    StyledText {
+                        text: Bluetooth.scanning ? "Scanning…" : "Scan"
+                        color: Colors.accent
+                        font.weight: Font.Medium
                         anchors.verticalCenter: parent.verticalCenter
-                        StyledText {
-                            text: Bluetooth.scanning ? "Scanning…" : "Scan / Refresh"
-                            color: Colors.accent
-                            font.weight: Font.DemiBold
-                        }
-                        StyledText {
-                            text: "Search for nearby or newly available devices"
-                            opacity: 0.6
-                            font.pixelSize: Config.fontSize - 3
-                        }
                     }
+                }
+
+                HoverHandler { id: scanLinkHover }
+                MouseArea {
+                    anchors.fill: parent
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: Bluetooth.scanning ? Bluetooth.stopDiscovery() : Bluetooth.startDiscovery()
                 }
             }
 
-            HoverRow {
-                id: discoverableCta
-                width: (parent.width - 12) / 2
-                height: 52
-                highlighted: Bluetooth.discoverable
-                onClicked: Bluetooth.setDiscoverable(!Bluetooth.discoverable)
+            Item {
+                id: discoverableLink
+                width: discoverableLinkRow.implicitWidth
+                height: discoverableLinkRow.implicitHeight
+                opacity: discoverableLinkHover.hovered ? 0.7 : 1
+                Behavior on opacity { NumberAnimation { duration: Config.animFast; easing.type: Easing.OutCubic } }
 
                 Row {
-                    anchors.left: parent.left
-                    anchors.leftMargin: 10
-                    anchors.right: parent.right
-                    anchors.rightMargin: 10
-                    anchors.verticalCenter: parent.verticalCenter
-                    spacing: 10
+                    id: discoverableLinkRow
+                    spacing: 6
 
-                    MaterialIcon { icon: "visibility"; font.pixelSize: 18; color: Colors.accent; anchors.verticalCenter: parent.verticalCenter }
-                    Column {
-                        spacing: 2
+                    MaterialIcon { icon: "visibility"; font.pixelSize: 15; color: Colors.accent; anchors.verticalCenter: parent.verticalCenter }
+                    StyledText {
+                        text: Bluetooth.discoverable ? "Discoverable" : "Make Discoverable"
+                        color: Colors.accent
+                        font.weight: Font.Medium
                         anchors.verticalCenter: parent.verticalCenter
-                        StyledText {
-                            text: Bluetooth.discoverable ? "Discoverable" : "Pairing / Discoverable"
-                            color: Colors.accent
-                            font.weight: Font.DemiBold
-                        }
-                        StyledText {
-                            text: "Let other devices find and pair with this system"
-                            opacity: 0.6
-                            font.pixelSize: Config.fontSize - 3
-                        }
                     }
+                }
+
+                HoverHandler { id: discoverableLinkHover }
+                MouseArea {
+                    anchors.fill: parent
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: Bluetooth.setDiscoverable(!Bluetooth.discoverable)
                 }
             }
         }
@@ -492,11 +484,11 @@ Item {
                             anchors.right: infoBtn.left
                             anchors.rightMargin: 8
                             anchors.verticalCenter: parent.verticalCenter
-                            width: 68
+                            width: 40
                             height: 30
                             active: true
                             tint: Colors.danger
-                            text: "Forget"
+                            icon: "delete"
                             onClicked: Bluetooth.removeDevice(myRow.modelData.path)
                         }
 
