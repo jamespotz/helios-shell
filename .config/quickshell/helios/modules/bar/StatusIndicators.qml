@@ -2,7 +2,6 @@ import QtQuick
 import Quickshell.Services.Pipewire
 import Quickshell.Services.UPower
 import Quickshell.Networking
-import Quickshell.Bluetooth
 import Quickshell.Services.Mpris
 import "../../services"
 import "../../components"
@@ -34,10 +33,7 @@ Row {
     readonly property var battery: UPower.displayDevice
     readonly property bool hasBattery: battery && battery.isLaptopBattery && battery.isPresent
 
-    readonly property bool bluetoothConnected: {
-        const devices = Bluetooth.devices ? Bluetooth.devices.values : [];
-        return devices.some(d => d.connected);
-    }
+    readonly property bool bluetoothConnected: Bluetooth.devices.some(d => d.connected)
 
     readonly property bool hasActiveMedia: {
         const players = Mpris.players ? Mpris.players.values : [];
@@ -68,7 +64,7 @@ Row {
 
     IconButton {
         icon: root.bluetoothConnected ? "bluetooth_connected"
-            : (Bluetooth.defaultAdapter && Bluetooth.defaultAdapter.enabled) ? "bluetooth" : "bluetooth_disabled"
+            : Bluetooth.powered ? "bluetooth" : "bluetooth_disabled"
         active: root.isIslandTab("bluetooth")
         onClicked: root.openIslandTab("bluetooth")
     }

@@ -1,6 +1,5 @@
 import QtQuick
 import Quickshell.Services.Pipewire
-import Quickshell.Bluetooth
 import "../../services"
 import "../../components"
 
@@ -47,7 +46,7 @@ Item {
         // device list (same service BluetoothTab/MediaCard already use) by
         // name — catches real headsets that PipeWire's own props miss.
         const label = (node && (node.description || node.nickname || node.name)) || "";
-        const btDevices = Bluetooth.devices ? Bluetooth.devices.values : [];
+        const btDevices = Bluetooth.devices;
         if (label && btDevices.some(d => d.connected && d.name && label.includes(d.name))) return "bluetooth_audio";
         if (formFactor === "headset" || formFactor === "headphone") return "headphones";
         if (formFactor === "hdmi" || formFactor === "tv") return "tv";

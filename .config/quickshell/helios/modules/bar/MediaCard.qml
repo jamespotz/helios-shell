@@ -1,5 +1,4 @@
 import QtQuick
-import Quickshell.Bluetooth
 import Quickshell.Services.Mpris
 import Qt5Compat.GraphicalEffects
 import "../../services"
@@ -13,10 +12,7 @@ Item {
         return players.find(p => p.isPlaying) || players.find(p => p.canControl) || players[0] || null;
     }
 
-    readonly property var connectedDevice: {
-        const devices = Bluetooth.devices ? Bluetooth.devices.values : [];
-        return devices.find(d => d.connected) || null;
-    }
+    readonly property var connectedDevice: Bluetooth.devices.find(d => d.connected) || null
 
     // Most players only emit positionChanged on seek/track-change, not every
     // second during normal playback — binding the seek bar straight to

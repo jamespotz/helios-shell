@@ -1,14 +1,28 @@
 import QtQuick
-import Quickshell.Bluetooth
 import "../../services"
 import "../../components"
 
 Item {
     id: root
 
-    readonly property var adapter: Bluetooth.defaultAdapter
-    readonly property var devices: Bluetooth.devices ? Bluetooth.devices.values : []
+    readonly property var devices: Bluetooth.devices
     readonly property var connectedDevice: root.devices.find(d => d.connected) || null
+    readonly property var myDevices: root.devices.filter(d => d.paired)
+    readonly property var nearbyDevices: root.devices.filter(d => !d.paired)
+
+    // BlueZ reports XDG icon names (e.g. "audio-headset", "input-keyboard"),
+    // not Material Symbols — map the common ones so device rows get a
+    // sensible glyph instead of always falling back to the plain bluetooth icon.
+    function iconFor(dev) {
+        const raw = (dev.icon || "").toLowerCase();
+        if (raw.includes("headset") || raw.includes("headphone")) return "headset";
+        if (raw.includes("phone")) return "smartphone";
+        if (raw.includes("keyboard")) return "keyboard";
+        if (raw.includes("mouse")) return "mouse";
+        if (raw.includes("audio") || raw.includes("speaker")) return "speaker";
+        if (raw.includes("display") || raw.includes("monitor")) return "desktop_windows";
+        return dev.connected ? "bluetooth_connected" : "bluetooth";
+    }
 
     // "orbit" is the focused single-device view from the mockup; "list"
     // is the old flat device list, still useful with several paired devices.
@@ -22,6 +36,9 @@ Item {
     implicitWidth: 720
     implicitHeight: col.implicitHeight
 
+    Component.onCompleted: Bluetooth.open()
+    Component.onDestruction: Bluetooth.close()
+
     Column {
         id: col
         width: parent.width
@@ -34,30 +51,38 @@ Item {
             MaterialIcon {
                 anchors.left: parent.left
                 anchors.verticalCenter: parent.verticalCenter
-                icon: root.adapter && root.adapter.enabled ? "bluetooth" : "bluetooth_disabled"
+                icon: Bluetooth.powered ? "bluetooth" : "bluetooth_disabled"
             }
             StyledText {
                 anchors.left: parent.left
                 anchors.leftMargin: 26
                 anchors.verticalCenter: parent.verticalCenter
-                text: root.adapter
-                    ? (root.adapter.enabled ? (root.adapter.discovering ? "Scanning…" : "On") : "Off")
-                    : "No adapter"
+                text: !Bluetooth.available ? "No adapter"
+                    : (Bluetooth.powered ? (Bluetooth.scanning ? "Scanning…" : "On") : "Off")
             }
             Toggle {
                 anchors.right: parent.right
                 anchors.verticalCenter: parent.verticalCenter
-                checked: root.adapter ? root.adapter.enabled : false
-                enabled: !!root.adapter
-                onToggled: v => { if (root.adapter) root.adapter.enabled = v }
+                checked: Bluetooth.powered
+                enabled: Bluetooth.available
+                onToggled: v => Bluetooth.setPowered(v)
             }
+        }
+
+        StyledText {
+            visible: Bluetooth.lastError.length > 0
+            text: Bluetooth.lastError
+            color: Colors.danger
+            font.pixelSize: Config.fontSize - 2
+            wrapMode: Text.WordWrap
+            width: parent.width
         }
 
         // --- Orbit view: focused view of the connected device ------------------
         Item {
             width: parent.width
             height: 460
-            visible: root.viewMode === "orbit" && root.adapter && root.adapter.enabled
+            visible: root.viewMode === "orbit" && Bluetooth.powered
 
             Item {
                 id: orbitCenter
@@ -98,7 +123,7 @@ Item {
                             anchors.horizontalCenter: parent.horizontalCenter
                         }
                         StyledText {
-                            text: root.connectedDevice ? (root.connectedDevice.name || root.connectedDevice.deviceName) : "No device"
+                            text: root.connectedDevice ? root.connectedDevice.name : "No device"
                             color: Colors.secondaryText
                             font.bold: true
                             anchors.horizontalCenter: parent.horizontalCenter
@@ -149,7 +174,7 @@ Item {
                     MouseArea {
                         anchors.fill: parent
                         cursorShape: Qt.PointingHandCursor
-                        onClicked: if (root.adapter) root.adapter.discovering = !root.adapter.discovering
+                        onClicked: Bluetooth.scanning ? Bluetooth.stopDiscovery() : Bluetooth.startDiscovery()
                     }
                     MouseArea {
                         // "Switch View" label only
@@ -246,7 +271,7 @@ Item {
         }
 
         StyledText {
-            visible: root.viewMode === "orbit" && root.adapter && root.adapter.enabled && root.devices.length === 0
+            visible: root.viewMode === "orbit" && Bluetooth.powered && root.devices.length === 0
             text: "No devices found"
             opacity: 0.6
             font.pixelSize: Config.fontSize - 2
@@ -339,110 +364,237 @@ Item {
             }
         }
 
-        // --- List view: original flat device list -------------------------------
-        ListView {
-            id: deviceList
-            width: parent.width - 8
-            visible: root.viewMode === "list" && root.adapter && root.adapter.enabled
-            height: visible ? Math.min(300, Math.max(0, root.devices.length * 46)) : 0
-            clip: true
-            spacing: 4
-            model: root.devices
-            boundsBehavior: Flickable.StopAtBounds
+        // --- List view: Scan/Refresh + Pairing/Discoverable + My Devices / Nearby --
+        Row {
+            width: parent.width
+            visible: root.viewMode === "list" && Bluetooth.powered
+            spacing: 12
 
-            ScrollIndicator { target: deviceList }
+            HoverRow {
+                id: scanCta
+                width: (parent.width - 12) / 2
+                height: 52
+                highlighted: Bluetooth.scanning
+                onClicked: Bluetooth.scanning ? Bluetooth.stopDiscovery() : Bluetooth.startDiscovery()
 
-            delegate: Column {
-                id: row
-                required property var modelData
-                required property int index
+                Row {
+                    anchors.left: parent.left
+                    anchors.leftMargin: 10
+                    anchors.right: parent.right
+                    anchors.rightMargin: 10
+                    anchors.verticalCenter: parent.verticalCenter
+                    spacing: 10
 
-                readonly property bool expanded: root.expandedDevice === modelData.address
-
-                width: deviceList.width
-                spacing: 2
-
-                HoverRow {
-                    id: card
-                    width: parent.width
-                    height: 40
-                    highlighted: row.modelData.connected
-                    onClicked: root.expandedDevice = row.expanded ? "" : row.modelData.address
-
-                    Row {
-                        anchors.left: parent.left
-                        anchors.right: connectIcon.left
+                    MaterialIcon { icon: "search"; font.pixelSize: 18; color: Colors.accent; anchors.verticalCenter: parent.verticalCenter }
+                    Column {
+                        spacing: 2
                         anchors.verticalCenter: parent.verticalCenter
-                        anchors.leftMargin: 8
-                        anchors.rightMargin: 4
-                        spacing: 8
-
-                        MaterialIcon {
-                            anchors.verticalCenter: parent.verticalCenter
-                            icon: row.modelData.connected ? "bluetooth_connected"
-                                : row.modelData.pairing ? "bluetooth_searching" : "bluetooth"
-                            font.pixelSize: 16
-                        }
-
                         StyledText {
-                            width: parent.width - 24
-                            elide: Text.ElideRight
-                            text: (row.modelData.name || row.modelData.deviceName || row.modelData.address)
-                                + (row.modelData.batteryAvailable ? "  ·  " + Math.round(row.modelData.battery * 100) + "%" : "")
+                            text: Bluetooth.scanning ? "Scanning…" : "Scan / Refresh"
+                            color: Colors.accent
+                            font.weight: Font.DemiBold
                         }
-                    }
-
-                    MaterialIcon {
-                        id: connectIcon
-                        anchors.right: parent.right
-                        anchors.rightMargin: 10
-                        anchors.verticalCenter: parent.verticalCenter
-                        icon: row.modelData.connected ? "link_off"
-                            : row.modelData.pairing ? "bluetooth_searching" : "link"
-                        color: row.modelData.connected ? Colors.danger : Colors.secondary
-                        font.pixelSize: 18
-
-                        MouseArea {
-                            anchors.fill: parent
-                            anchors.margins: -2
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: {
-                                if (row.modelData.connected) row.modelData.disconnect();
-                                else if (row.modelData.paired) row.modelData.connect();
-                                else row.modelData.pair();
-                            }
+                        StyledText {
+                            text: "Search for nearby or newly available devices"
+                            opacity: 0.6
+                            font.pixelSize: Config.fontSize - 3
                         }
                     }
                 }
+            }
 
-                Item {
-                    visible: row.expanded
-                    width: parent.width
-                    height: 22
+            HoverRow {
+                id: discoverableCta
+                width: (parent.width - 12) / 2
+                height: 52
+                highlighted: Bluetooth.discoverable
+                onClicked: Bluetooth.setDiscoverable(!Bluetooth.discoverable)
 
-                    StyledText {
-                        anchors.left: parent.left
-                        anchors.leftMargin: 8
+                Row {
+                    anchors.left: parent.left
+                    anchors.leftMargin: 10
+                    anchors.right: parent.right
+                    anchors.rightMargin: 10
+                    anchors.verticalCenter: parent.verticalCenter
+                    spacing: 10
+
+                    MaterialIcon { icon: "visibility"; font.pixelSize: 18; color: Colors.accent; anchors.verticalCenter: parent.verticalCenter }
+                    Column {
+                        spacing: 2
                         anchors.verticalCenter: parent.verticalCenter
-                        text: "Auto-connect"
-                        opacity: 0.6
-                        font.pixelSize: Config.fontSize - 2
-                    }
-
-                    Toggle {
-                        anchors.right: parent.right
-                        anchors.verticalCenter: parent.verticalCenter
-                        checked: row.modelData.trusted
-                        onToggled: v => row.modelData.trusted = v
+                        StyledText {
+                            text: Bluetooth.discoverable ? "Discoverable" : "Pairing / Discoverable"
+                            color: Colors.accent
+                            font.weight: Font.DemiBold
+                        }
+                        StyledText {
+                            text: "Let other devices find and pair with this system"
+                            opacity: 0.6
+                            font.pixelSize: Config.fontSize - 3
+                        }
                     }
                 }
             }
         }
 
+        Column {
+            width: parent.width
+            visible: root.viewMode === "list" && Bluetooth.powered && myDevices.length > 0
+            spacing: 4
+
+            StyledText { text: "MY DEVICES"; opacity: 0.5; font.bold: true; font.pixelSize: Config.fontSize - 3 }
+
+            Repeater {
+                model: root.myDevices
+
+                Column {
+                    id: myRow
+                    required property var modelData
+                    readonly property bool expanded: root.expandedDevice === modelData.address
+                    width: parent.width
+                    spacing: 2
+
+                    HoverRow {
+                        width: parent.width
+                        highlighted: myRow.modelData.connected
+                        // Devices here are always paired, so this is just the
+                        // connected/paired branch of Bluetooth's connect logic —
+                        // the info button (below) handles expand/collapse instead.
+                        onClicked: myRow.modelData.connected
+                            ? Bluetooth.disconnectDevice(myRow.modelData.path)
+                            : Bluetooth.connectDevice(myRow.modelData.path)
+
+                        Row {
+                            anchors.left: parent.left
+                            anchors.leftMargin: 8
+                            anchors.right: infoBtn.left
+                            anchors.rightMargin: 8
+                            anchors.verticalCenter: parent.verticalCenter
+                            spacing: 10
+
+                            MaterialIcon { icon: root.iconFor(myRow.modelData); font.pixelSize: 18; anchors.verticalCenter: parent.verticalCenter }
+                            Column {
+                                spacing: 1
+                                anchors.verticalCenter: parent.verticalCenter
+                                StyledText { text: myRow.modelData.name; font.weight: Font.DemiBold }
+                                StyledText {
+                                    text: myRow.modelData.connected ? "Connected" : "Not Connected"
+                                    opacity: 0.6
+                                    font.pixelSize: Config.fontSize - 3
+                                }
+                            }
+                        }
+
+                        // Slides over the name/status text when expanded — matches
+                        // the mockup's overlapping red "Forget" affordance.
+                        PrimaryButton {
+                            visible: myRow.expanded
+                            anchors.right: infoBtn.left
+                            anchors.rightMargin: 8
+                            anchors.verticalCenter: parent.verticalCenter
+                            width: 68
+                            height: 30
+                            active: true
+                            tint: Colors.danger
+                            text: "Forget"
+                            onClicked: Bluetooth.removeDevice(myRow.modelData.path)
+                        }
+
+                        IconButton {
+                            id: infoBtn
+                            anchors.right: parent.right
+                            anchors.rightMargin: 8
+                            anchors.verticalCenter: parent.verticalCenter
+                            icon: "info"
+                            iconSize: 15
+                            onClicked: root.expandedDevice = myRow.expanded ? "" : myRow.modelData.address
+                        }
+                    }
+
+                    Item {
+                        visible: myRow.expanded
+                        width: parent.width
+                        height: 26
+
+                        StyledText {
+                            anchors.left: parent.left
+                            anchors.leftMargin: 8
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: "Auto-connect"
+                            opacity: 0.6
+                            font.pixelSize: Config.fontSize - 2
+                        }
+
+                        Toggle {
+                            anchors.right: parent.right
+                            anchors.verticalCenter: parent.verticalCenter
+                            checked: myRow.modelData.trusted
+                            onToggled: v => Bluetooth.setTrusted(myRow.modelData.path, v)
+                        }
+                    }
+                }
+            }
+        }
+
+        Column {
+            width: parent.width
+            visible: root.viewMode === "list" && Bluetooth.powered && nearbyDevices.length > 0
+            spacing: 4
+
+            StyledText { text: "NEARBY"; opacity: 0.5; font.bold: true; font.pixelSize: Config.fontSize - 3 }
+
+            Repeater {
+                model: root.nearbyDevices
+
+                HoverRow {
+                    id: nearRow
+                    required property var modelData
+                    width: parent.width
+
+                    Row {
+                        anchors.left: parent.left
+                        anchors.leftMargin: 8
+                        anchors.right: connectBtn.left
+                        anchors.rightMargin: 8
+                        anchors.verticalCenter: parent.verticalCenter
+                        spacing: 10
+
+                        MaterialIcon { icon: root.iconFor(nearRow.modelData); font.pixelSize: 18; anchors.verticalCenter: parent.verticalCenter }
+                        StyledText {
+                            anchors.verticalCenter: parent.verticalCenter
+                            elide: Text.ElideRight
+                            width: parent.width - 28
+                            text: nearRow.modelData.name || nearRow.modelData.address
+                        }
+                    }
+
+                    PrimaryButton {
+                        id: connectBtn
+                        anchors.right: parent.right
+                        anchors.rightMargin: 8
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: 78
+                        height: 28
+                        enabled: !nearRow.modelData.pairing
+                        active: true
+                        text: nearRow.modelData.pairing ? "Pairing…" : "Connect"
+                        onClicked: Bluetooth.pairDevice(nearRow.modelData.path)
+                    }
+                }
+            }
+        }
+
+        StyledText {
+            visible: root.viewMode === "list" && Bluetooth.powered && root.devices.length === 0
+            text: "No devices found"
+            opacity: 0.6
+            font.pixelSize: Config.fontSize - 2
+        }
+
         Item {
             width: switchRow.implicitWidth
             height: switchRow.implicitHeight
-            visible: root.viewMode === "list" && root.adapter && root.adapter.enabled && !!root.connectedDevice
+            visible: root.viewMode === "list" && Bluetooth.powered && !!root.connectedDevice
 
             Row {
                 id: switchRow

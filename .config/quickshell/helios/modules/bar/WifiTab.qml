@@ -10,6 +10,13 @@ Item {
     id: root
 
     readonly property var wn: WifiNetworks
+    readonly property var connectedNetwork: root.wn.networks.find(n => n.connected) || null
+
+    // "orbit" is the focused single-network view matching Bluetooth's; "list"
+    // is the scannable flat network list, still the better view when nothing
+    // is connected yet.
+    property string viewMode: root.connectedNetwork ? "orbit" : "list"
+
     property bool addNetworkOpen: false
     property string addSecurity: "wpa"
     property bool addPasswordVisible: false
@@ -24,7 +31,7 @@ Item {
         wn.connectError = "";
     }
 
-    implicitWidth: 320
+    implicitWidth: 720
     implicitHeight: col.implicitHeight
 
     Column {
@@ -73,8 +80,302 @@ Item {
             }
         }
 
+        // --- Orbit view: focused view of the connected network -----------------
+        Item {
+            width: parent.width
+            height: 460
+            visible: root.viewMode === "orbit" && Networking.wifiEnabled
+
+            Item {
+                id: orbitCenter
+                anchors.centerIn: parent
+                width: 1
+                height: 1
+
+                Repeater {
+                    model: [90, 140, 190]
+                    Rectangle {
+                        required property int modelData
+                        anchors.centerIn: parent
+                        width: modelData * 2
+                        height: width
+                        radius: width / 2
+                        color: "transparent"
+                        border.width: 1
+                        border.color: Colors.overlay
+                        opacity: 0.25
+                    }
+                }
+
+                Rectangle {
+                    id: centerCircle
+                    anchors.centerIn: parent
+                    width: 150
+                    height: 150
+                    radius: 75
+                    color: Colors.secondary
+
+                    Column {
+                        anchors.centerIn: parent
+                        spacing: 4
+                        MaterialIcon {
+                            icon: "wifi"
+                            font.pixelSize: 40
+                            color: Colors.secondaryText
+                            anchors.horizontalCenter: parent.horizontalCenter
+                        }
+                        StyledText {
+                            text: root.connectedNetwork ? root.connectedNetwork.ssid : "No network"
+                            color: Colors.secondaryText
+                            font.bold: true
+                            anchors.horizontalCenter: parent.horizontalCenter
+                        }
+                        StyledText {
+                            text: root.connectedNetwork ? "Connected" : "Not connected"
+                            color: Colors.secondaryText
+                            opacity: 0.75
+                            font.pixelSize: Config.fontSize - 2
+                            anchors.horizontalCenter: parent.horizontalCenter
+                        }
+                    }
+                }
+
+                // --- Satellite cards ---------------------------------------------
+                Rectangle {
+                    id: scanCard
+                    width: 190
+                    height: 56
+                    radius: Colors.radiusLarge
+                    color: Colors.surfaceHigh
+                    x: -width / 2
+                    y: -190
+
+                    Row {
+                        anchors.left: parent.left
+                        anchors.leftMargin: 12
+                        anchors.verticalCenter: parent.verticalCenter
+                        spacing: 10
+
+                        MaterialIcon { icon: "search"; anchors.verticalCenter: parent.verticalCenter }
+                        Column {
+                            spacing: 2
+                            StyledText { text: "Scan Networks"; font.bold: true; font.pixelSize: Config.fontSize - 1 }
+                            StyledText { text: "Switch View"; opacity: 0.6; font.pixelSize: Config.fontSize - 3 }
+                        }
+                    }
+
+                    Rectangle {
+                        anchors.fill: parent
+                        radius: parent.radius
+                        color: Colors.surfaceHigh
+                        opacity: scanCardHover.hovered ? 0.15 : 0
+                    }
+
+                    HoverHandler { id: scanCardHover }
+
+                    MouseArea {
+                        anchors.fill: parent
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: root.wn.scan()
+                    }
+                    MouseArea {
+                        // "Switch View" label only
+                        height: 18
+                        anchors.left: parent.left
+                        anchors.leftMargin: 40
+                        anchors.bottom: parent.bottom
+                        anchors.bottomMargin: 6
+                        width: 90
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: root.viewMode = "list"
+                    }
+                }
+
+                Rectangle {
+                    width: 180
+                    height: 56
+                    radius: Colors.radiusLarge
+                    color: Colors.surfaceHigh
+                    x: -320
+                    y: -28
+
+                    Row {
+                        anchors.left: parent.left
+                        anchors.leftMargin: 12
+                        anchors.verticalCenter: parent.verticalCenter
+                        spacing: 10
+                        MaterialIcon { icon: "dns"; anchors.verticalCenter: parent.verticalCenter }
+                        Column {
+                            spacing: 2
+                            StyledText {
+                                text: root.wn.wifiDevice && root.wn.wifiDevice.address ? root.wn.wifiDevice.address : "—"
+                                font.bold: true
+                                font.family: Config.monoFontFamily
+                                font.pixelSize: Config.fontSize - 2
+                            }
+                            StyledText { text: "IP Address"; opacity: 0.6; font.pixelSize: Config.fontSize - 3 }
+                        }
+                    }
+                }
+
+                Rectangle {
+                    width: 180
+                    height: 56
+                    radius: Colors.radiusLarge
+                    color: Colors.surfaceHigh
+                    x: 140
+                    y: -28
+
+                    Row {
+                        anchors.left: parent.left
+                        anchors.leftMargin: 12
+                        anchors.verticalCenter: parent.verticalCenter
+                        spacing: 10
+                        MaterialIcon {
+                            anchors.verticalCenter: parent.verticalCenter
+                            icon: !root.connectedNetwork ? "wifi_off"
+                                : root.connectedNetwork.signal > 70 ? "wifi"
+                                : root.connectedNetwork.signal > 40 ? "wifi_2_bar" : "wifi_1_bar"
+                        }
+                        Column {
+                            spacing: 2
+                            StyledText {
+                                text: root.connectedNetwork ? root.connectedNetwork.signal + "%" : "—"
+                                font.bold: true
+                                font.pixelSize: Config.fontSize - 1
+                            }
+                            StyledText { text: "Signal"; opacity: 0.6; font.pixelSize: Config.fontSize - 3 }
+                        }
+                    }
+                }
+
+                Rectangle {
+                    width: 190
+                    height: 56
+                    radius: Colors.radiusLarge
+                    color: Colors.surfaceHigh
+                    x: -width / 2
+                    y: 130
+
+                    Row {
+                        anchors.left: parent.left
+                        anchors.leftMargin: 12
+                        anchors.verticalCenter: parent.verticalCenter
+                        spacing: 10
+                        MaterialIcon {
+                            icon: root.connectedNetwork && root.connectedNetwork.secured ? "lock" : "lock_open"
+                            anchors.verticalCenter: parent.verticalCenter
+                        }
+                        Column {
+                            spacing: 2
+                            StyledText {
+                                text: !root.connectedNetwork ? "—" : (root.connectedNetwork.secured ? root.connectedNetwork.security : "Open")
+                                font.bold: true
+                                font.pixelSize: Config.fontSize - 1
+                            }
+                            StyledText { text: "Security"; opacity: 0.6; font.pixelSize: Config.fontSize - 3 }
+                        }
+                    }
+                }
+            }
+        }
+
         StyledText {
-            visible: Networking.wifiEnabled && root.wn.loaded && root.wn.networks.length === 0
+            visible: root.viewMode === "orbit" && Networking.wifiEnabled && root.wn.loaded && root.wn.networks.length === 0
+            text: "No networks found"
+            opacity: 0.6
+            font.pixelSize: Config.fontSize - 2
+        }
+
+        // --- Bottom bar: Wi-Fi / Bluetooth switch + power -----------------------
+        Row {
+            width: parent.width
+            visible: root.viewMode === "orbit"
+            spacing: 10
+
+            Rectangle {
+                width: parent.width - 44 - 10
+                height: 44
+                radius: 22
+                color: Colors.surfaceHigh
+
+                Row {
+                    anchors.fill: parent
+                    anchors.margins: 3
+
+                    Rectangle {
+                        width: parent.width / 2
+                        height: parent.height
+                        radius: 19
+                        color: Bridge.islandTab === "wifi" ? Colors.surface : "transparent"
+
+                        Row {
+                            anchors.centerIn: parent
+                            spacing: 6
+                            MaterialIcon { icon: "wifi"; font.pixelSize: 15; anchors.verticalCenter: parent.verticalCenter }
+                            StyledText { text: "Wi-Fi"; anchors.verticalCenter: parent.verticalCenter }
+                        }
+
+                        Rectangle {
+                            anchors.fill: parent
+                            radius: parent.radius
+                            color: Colors.surfaceHigh
+                            opacity: wifiPillHover.hovered && Bridge.islandTab !== "wifi" ? 0.25 : 0
+                        }
+
+                        HoverHandler { id: wifiPillHover }
+
+                        MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: Bridge.setIslandTab("wifi") }
+                    }
+
+                    Rectangle {
+                        width: parent.width / 2
+                        height: parent.height
+                        radius: 19
+                        color: Bridge.islandTab === "bluetooth" ? Colors.secondary : "transparent"
+
+                        Row {
+                            anchors.centerIn: parent
+                            spacing: 6
+                            MaterialIcon {
+                                icon: "bluetooth"
+                                font.pixelSize: 15
+                                color: Bridge.islandTab === "bluetooth" ? Colors.secondaryText : Colors.text
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+                            StyledText {
+                                text: "Bluetooth"
+                                color: Bridge.islandTab === "bluetooth" ? Colors.secondaryText : Colors.text
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+                        }
+
+                        Rectangle {
+                            anchors.fill: parent
+                            radius: parent.radius
+                            color: Colors.surfaceHigh
+                            opacity: btPillHover.hovered && Bridge.islandTab !== "bluetooth" ? 0.25 : 0
+                        }
+
+                        HoverHandler { id: btPillHover }
+
+                        MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: Bridge.setIslandTab("bluetooth") }
+                    }
+                }
+            }
+
+            IconButton {
+                width: 44
+                height: 44
+                active: true
+                icon: "power_settings_new"
+                iconSize: 18
+                onClicked: Bridge.togglePowerMenu()
+            }
+        }
+
+        StyledText {
+            visible: root.viewMode === "list" && Networking.wifiEnabled && root.wn.loaded && root.wn.networks.length === 0
             text: "No networks found"
             opacity: 0.6
             font.pixelSize: Config.fontSize - 2
@@ -83,7 +384,7 @@ Item {
         ListView {
             id: networkList
             width: parent.width - 8
-            visible: Networking.wifiEnabled
+            visible: root.viewMode === "list" && Networking.wifiEnabled
             // contentHeight (not a row-count*46 estimate) so an expanded
             // network's password box/error text — which the estimate never
             // accounted for — isn't clipped off by an undersized viewport.
@@ -241,7 +542,7 @@ Item {
             width: parent.width
             height: 36
             highlighted: root.addNetworkOpen
-            visible: Networking.wifiEnabled && !!root.wn.wifiDevice
+            visible: root.viewMode === "list" && Networking.wifiEnabled && !!root.wn.wifiDevice
             onClicked: root.addNetworkOpen = !root.addNetworkOpen
 
             Row {
@@ -263,7 +564,7 @@ Item {
         Column {
             width: parent.width
             spacing: 8
-            visible: root.addNetworkOpen && Networking.wifiEnabled && !!root.wn.wifiDevice
+            visible: root.viewMode === "list" && root.addNetworkOpen && Networking.wifiEnabled && !!root.wn.wifiDevice
 
             Rectangle {
                 width: parent.width

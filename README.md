@@ -14,6 +14,8 @@ A [Quickshell](https://quickshell.org)-based desktop shell for [Hyprland](https:
 - **Idle & Lock** — hypridle integration with dim/lock/DPMS timeouts + caffeine mode
 - **Audio** — output/input device picker, volume control, mute
 - **Bluetooth** — device discovery, connect/disconnect
+  - Scan / Refresh button — search for nearby or newly available Bluetooth devices
+  - Pairing / Discoverable button — put the system into pairing/discovery mode so other devices can find it
 - **WiFi** — network scan, connect with password, forget
 - **Media** — MPRIS player with EQ presets (EasyEffects)
 - **Clipboard history** — cliphist integration
