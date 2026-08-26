@@ -11,8 +11,19 @@ Item {
 
     readonly property int maxContentHeight: Config.islandMaxHeight - 120
 
+    // A tab's implicitHeight has to stay bound to its TRUE full content
+    // height (see e.g. IslandSettings.qml's `implicitHeight: col.implicitHeight`)
+    // because that same number also drives the Flickable's contentHeight
+    // below — shrink it and the tab doesn't get shorter, it just loses the
+    // ability to scroll to whatever content that number no longer accounts
+    // for. To make a specific tab render shorter (and scrollable) without
+    // touching its real content height, cap its effective viewport height
+    // here instead, per tab.
+    readonly property var _tabMaxHeight: ({ "island": 360 })
+    readonly property int _effectiveMaxHeight: root._tabMaxHeight[Bridge.islandTab] || root.maxContentHeight
+
     implicitWidth: pane.width
-    implicitHeight: tabs.height + pane.spacing + Math.min(panelLoader.implicitHeight, root.maxContentHeight)
+    implicitHeight: tabs.height + pane.spacing + Math.min(panelLoader.implicitHeight, root._effectiveMaxHeight)
 
     Column {
         id: pane
@@ -112,7 +123,7 @@ Item {
         Item {
             id: scrollWrap
             width: pane.width
-            height: Math.min(panelLoader.implicitHeight, root.maxContentHeight)
+            height: Math.min(panelLoader.implicitHeight, root._effectiveMaxHeight)
 
             Flickable {
                 id: flick

@@ -74,9 +74,13 @@ QtObject {
     // The freedesktop spec defines the "default" action (or an empty-string
     // identifier) as what fires when you click the notification body — this
     // is what Slack/Teams/etc. use to navigate to the exact channel/thread.
-    // CLI notifiers (notify-send) rarely register one, so as a fallback we
-    // try focusing the window of whatever process sent the notification —
-    // see the PID resolver below.
+    // But invoking it is not enough on its own: confirmed live, real Slack
+    // notifications carry a "default" action and a desktopEntry hint but no
+    // appName or sender-pid, and invoking the action makes Slack navigate
+    // internally without raising its window (a known Linux/Electron quirk).
+    // So we always also try focusing the window by class — cheap and
+    // synchronous, unlike the PID resolver, since it just checks the
+    // already-live Hyprland.toplevels list rather than racing a subprocess.
     function _findDefaultAction(notification) {
         if (!notification || !notification.actions) return null;
         return notification.actions.find(a => a.identifier === "default")
@@ -88,29 +92,43 @@ QtObject {
         return (notification && notification.hints && notification.hints["sender-pid"]) || 0;
     }
 
+    function _focusByClass(desktopEntry, appName) {
+        const needles = [desktopEntry, appName].map(s => (s || "").toLowerCase()).filter(s => s.length > 0);
+        if (needles.length === 0) return false;
+        for (const top of Hyprland.toplevels.values) {
+            const ipc = top.lastIpcObject;
+            const cls = (ipc ? (ipc.class || ipc.initialClass || "") : "").toLowerCase();
+            if (needles.some(n => cls && (cls === n || cls.includes(n) || n.includes(cls)))) {
+                root._hyprctlFocusWindow(top.address);
+                return true;
+            }
+        }
+        return false;
+    }
+
     // Whether NotifyCard should show the Open icon for this live notification.
-    // Only true for apps that registered an actual default action (Slack,
-    // Teams, etc.) — the PID resolver below is still tried on click as a
-    // fallback, but its low hit rate for fast-exiting CLI tools means it
-    // isn't a promise worth making an icon out of.
+    // True for a registered default action OR a desktopEntry we can match
+    // against a running window — the PID resolver alone doesn't count here
+    // since its low hit rate for fast-exiting CLI tools isn't worth an icon.
     function hasDefaultAction(notification) {
-        return !!root._findDefaultAction(notification);
+        return !!root._findDefaultAction(notification)
+            || !!(notification && notification.desktopEntry);
     }
 
     function focusApp(notification) {
+        if (!notification) return false;
+        const focused = root._focusByClass(notification.desktopEntry, notification.appName);
         const action = root._findDefaultAction(notification);
-        if (action) {
-            action.invoke();
-            return true;
-        }
+        if (action) action.invoke();
+        if (focused || action) return true;
         return root._focusByPid(root._senderPid(notification));
     }
 
     // ── "Open" for a history entry (NotificationHistoryTab) ──
-    // History entries have no live DBus object left to invoke an action on,
-    // so this first tries relaunching the app via its .desktop entry — most
-    // apps are single-instance and focus their existing window themselves on
-    // relaunch — then falls back to the PID resolver, same as live popups.
+    // History entries have no live DBus object left to invoke an action on.
+    // Try focusing a still-running window first (cheap, reliable) — only
+    // relaunch via the .desktop entry if nothing is running, then fall back
+    // to the PID resolver as a last resort.
     //
     // heuristicLookup("") does NOT return null — it returns some arbitrary
     // entry (seen returning org.gnome.Maps / org.gnome.DiskUtility) — so
@@ -126,12 +144,14 @@ QtObject {
     }
 
     function openApp(entry) {
+        if (!entry) return false;
+        if (root._focusByClass(entry.desktopEntry, entry.appName)) return true;
         const target = root._resolveEntry(entry);
         if (target) {
             root._launchEntry(target);
             return true;
         }
-        return root._focusByPid(entry && entry.senderPid);
+        return root._focusByPid(entry.senderPid);
     }
 
     // Launch helper — same logic as Launcher.qml's launchApp() to handle
