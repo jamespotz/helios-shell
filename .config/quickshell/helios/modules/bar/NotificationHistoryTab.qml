@@ -110,6 +110,17 @@ Item {
 
                 HoverHandler { id: histHover }
 
+                // Open app on click — relaunches via its .desktop entry, then
+                // falls back to the PID resolver (see Notifications.qml). No
+                // dedicated icon: the resolver's hit rate for CLI notifiers
+                // is too low to promise via a button, so the whole row is
+                // just clickable and silently no-ops if nothing resolves.
+                MouseArea {
+                    anchors.fill: parent
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: Notifications.openApp(histRow.modelData)
+                }
+
                 Row {
                     anchors.fill: parent
                     anchors.leftMargin: 8
@@ -135,7 +146,7 @@ Item {
                     // Content
                     Column {
                         anchors.verticalCenter: parent.verticalCenter
-                        width: histRow.width - 16 - 32 - 28 - 60 - 40
+                        width: histRow.width - 16 - 32 - 60 - 20
                         spacing: 2
 
                         StyledText {
@@ -155,33 +166,6 @@ Item {
                             font.pixelSize: Config.fontSize - 2
                             color: Colors.subtext
                             text: histRow.truncate(histRow.modelData.body || "", 150)
-                        }
-                    }
-
-                    // Open app — relaunches via its .desktop entry (the live
-                    // notification's actions are long gone by the time this
-                    // is history; most apps focus their own window on relaunch).
-                    MouseArea {
-                        id: openBtn
-                        width: 28
-                        height: 28
-                        anchors.verticalCenter: parent.verticalCenter
-                        visible: Notifications.canOpenApp(histRow.modelData)
-                        cursorShape: Qt.PointingHandCursor
-                        hoverEnabled: true
-                        onClicked: Notifications.openApp(histRow.modelData)
-
-                        Rectangle {
-                            anchors.fill: parent
-                            radius: 14
-                            color: openBtn.containsMouse ? Colors.surfaceHigh : "transparent"
-
-                            MaterialIcon {
-                                anchors.centerIn: parent
-                                icon: "open_in_new"
-                                font.pixelSize: 14
-                                color: Colors.accent
-                            }
                         }
                     }
 
