@@ -7,8 +7,13 @@ Item {
 
     readonly property var devices: Bluetooth.devices
     readonly property var connectedDevice: root.devices.find(d => d.connected) || null
-    readonly property var myDevices: root.devices.filter(d => d.paired)
-    readonly property var nearbyDevices: root.devices.filter(d => !d.paired)
+    // Trusted, not just Paired: some devices (confirmed for the Soundcore
+    // R60i NC) never persist a real bond — BlueZ reports Paired: false the
+    // moment they disconnect, even though Trusted (the actual "this is my
+    // device" flag) survives. Keying off paired alone made such a device
+    // vanish into "Nearby" every time it disconnected.
+    readonly property var myDevices: root.devices.filter(d => d.paired || d.trusted)
+    readonly property var nearbyDevices: root.devices.filter(d => !d.paired && !d.trusted)
 
     // BlueZ reports XDG icon names (e.g. "audio-headset", "input-keyboard"),
     // not Material Symbols — map the common ones so device rows get a
@@ -467,12 +472,14 @@ Item {
                     HoverRow {
                         width: parent.width
                         highlighted: myRow.modelData.connected
-                        // Devices here are always paired, so this is just the
-                        // connected/paired branch of Bluetooth's connect logic —
-                        // the info button (below) handles expand/collapse instead.
-                        onClicked: myRow.modelData.connected
-                            ? Bluetooth.disconnectDevice(myRow.modelData.path)
-                            : Bluetooth.connectDevice(myRow.modelData.path)
+                        // Trusted-but-unpaired devices (see myDevices above)
+                        // need Pair(), not Connect() — the info button
+                        // (below) handles expand/collapse instead.
+                        onClicked: {
+                            if (myRow.modelData.connected) Bluetooth.disconnectDevice(myRow.modelData.path);
+                            else if (myRow.modelData.paired) Bluetooth.connectDevice(myRow.modelData.path);
+                            else Bluetooth.pairDevice(myRow.modelData.path);
+                        }
 
                         Row {
                             anchors.left: parent.left

@@ -76,6 +76,55 @@ QtObject {
         onTriggered: root.refreshAll()
     }
 
+    // --- Background auto-reconnect (runs whether or not the panel is open) --
+    // BlueZ normally reconnects a Trusted device on its own once the
+    // peripheral pages back in — no action needed here. But some devices
+    // (confirmed for the Soundcore R60i NC via direct D-Bus inspection: it
+    // reports Bonded: false, and Paired flips back to false the moment it
+    // disconnects) never persist a real bond, so BlueZ has no pairing record
+    // left to reconnect to. Compensate by periodically re-discovering and
+    // re-pairing/connecting any Trusted device that isn't currently
+    // connected, and keeping discovery running in the background while one
+    // is outstanding so BlueZ has a chance to see it page back in at all.
+    property var lastReconnectAttempt: ({})
+    readonly property int reconnectCooldownMs: 20000
+
+    property Timer backgroundPollTimer: Timer {
+        interval: 15000
+        running: root.available
+        repeat: true
+        triggeredOnStart: true
+        onTriggered: root.refreshAll()
+    }
+
+    function maybeAutoReconnect(list) {
+        if (!root.powered) return;
+        // Never stomp on an in-flight pair/connect — including one this same
+        // function started a moment ago, since reassigning pairProc/
+        // connectProc's `command` while they're still running would kill and
+        // restart them mid-call (including a legitimate user-initiated one).
+        if (root.pairProc.running || root.connectProc.running) return;
+
+        const pending = list.filter(d => d.trusted && !d.connected && !d.pairing);
+        if (pending.length === 0) return;
+
+        const now = Date.now();
+        const dev = pending.find(d => (now - (root.lastReconnectAttempt[d.path] || 0)) >= root.reconnectCooldownMs);
+        if (dev) {
+            root.lastReconnectAttempt[dev.path] = now;
+            // Paired devices just need a Connect(); devices that lost their
+            // bond (like the R60i) need a fresh Pair() — pairDevice() already
+            // chains into connectDevice() on success.
+            if (dev.paired) root.connectDevice(dev.path);
+            else root.pairDevice(dev.path);
+        }
+
+        // Keep discovery alive while any trusted device is still missing —
+        // classic BT devices only show up in GetManagedObjects once BlueZ
+        // has actually seen them via an active inquiry.
+        if (!root.scanning) root.startDiscovery();
+    }
+
     // --- Discovery -----------------------------------------------------
 
     // BlueZ ties an active discovery session to the D-Bus connection that
@@ -298,6 +347,7 @@ QtObject {
         }
         list.sort((a, b) => a.name.localeCompare(b.name));
         root.devices = list;
+        root.maybeAutoReconnect(list);
     }
 
     Component.onCompleted: root.refreshAll()
