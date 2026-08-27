@@ -82,6 +82,7 @@ Item {
 
         // --- Orbit view: focused view of the connected network -----------------
         Item {
+            id: orbitView
             width: parent.width
             height: 460
             visible: root.viewMode === "orbit" && Networking.wifiEnabled
@@ -91,6 +92,19 @@ Item {
                 anchors.centerIn: parent
                 width: 1
                 height: 1
+
+                // Drives the satellite cards around the outer ring — cards
+                // travel the circle but stay upright (position-only, no
+                // rotation on the cards themselves) so their text stays
+                // readable throughout. Paused when the view isn't visible.
+                property real orbitAngle: 0
+                NumberAnimation on orbitAngle {
+                    running: orbitView.visible
+                    from: 0
+                    to: 360
+                    duration: 60000
+                    loops: Animation.Infinite
+                }
 
                 Repeater {
                     model: [90, 140, 190]
@@ -147,8 +161,9 @@ Item {
                     height: 56
                     radius: Colors.radiusLarge
                     color: Colors.surfaceHigh
-                    x: -width / 2
-                    y: -190
+                    readonly property real orbitBaseAngle: -90
+                    x: 190 * Math.cos((orbitCenter.orbitAngle + orbitBaseAngle) * Math.PI / 180) - width / 2
+                    y: 190 * Math.sin((orbitCenter.orbitAngle + orbitBaseAngle) * Math.PI / 180) - height / 2
 
                     Row {
                         anchors.left: parent.left
@@ -196,8 +211,9 @@ Item {
                     height: 56
                     radius: Colors.radiusLarge
                     color: Colors.surfaceHigh
-                    x: -320
-                    y: -28
+                    readonly property real orbitBaseAngle: 180
+                    x: 190 * Math.cos((orbitCenter.orbitAngle + orbitBaseAngle) * Math.PI / 180) - width / 2
+                    y: 190 * Math.sin((orbitCenter.orbitAngle + orbitBaseAngle) * Math.PI / 180) - height / 2
 
                     Row {
                         anchors.left: parent.left
@@ -223,8 +239,9 @@ Item {
                     height: 56
                     radius: Colors.radiusLarge
                     color: Colors.surfaceHigh
-                    x: 140
-                    y: -28
+                    readonly property real orbitBaseAngle: 0
+                    x: 190 * Math.cos((orbitCenter.orbitAngle + orbitBaseAngle) * Math.PI / 180) - width / 2
+                    y: 190 * Math.sin((orbitCenter.orbitAngle + orbitBaseAngle) * Math.PI / 180) - height / 2
 
                     Row {
                         anchors.left: parent.left
@@ -254,8 +271,9 @@ Item {
                     height: 56
                     radius: Colors.radiusLarge
                     color: Colors.surfaceHigh
-                    x: -width / 2
-                    y: 130
+                    readonly property real orbitBaseAngle: 90
+                    x: 190 * Math.cos((orbitCenter.orbitAngle + orbitBaseAngle) * Math.PI / 180) - width / 2
+                    y: 190 * Math.sin((orbitCenter.orbitAngle + orbitBaseAngle) * Math.PI / 180) - height / 2
 
                     Row {
                         anchors.left: parent.left
