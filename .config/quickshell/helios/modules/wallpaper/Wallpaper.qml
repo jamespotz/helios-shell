@@ -1,8 +1,10 @@
 import QtQuick
 import QtQuick.Shapes
+import QtMultimedia
 import Qt5Compat.GraphicalEffects
 import Quickshell
 import Quickshell.Wayland
+import Quickshell.Services.UPower
 import "../../services"
 
 // One background-layer surface per screen, sitting below every real window
@@ -52,6 +54,8 @@ PanelWindow {
         property bool transitioning: false
         readonly property string revealStyle: Config.wallpaperRevealStyle
         readonly property var allStyles: ["blur", "glitch", "liquid", "grid", "neon", "honeycomb", "blinds"]
+        readonly property bool videoShouldPlay: Wallpaper.isVideo && !Bridge.locked && !UPower.onBattery
+        onVideoShouldPlayChanged: videoPlayer.sync()
 
         function pickStyle() {
             return stage.revealStyle === "random"
@@ -102,7 +106,7 @@ PanelWindow {
         Image {
             id: bgNew
             anchors.fill: parent
-            visible: source !== "" && status === Image.Ready
+            visible: !Wallpaper.isVideo && source !== "" && status === Image.Ready
             fillMode: Image.PreserveAspectCrop
             asynchronous: true
             cache: true
@@ -112,13 +116,38 @@ PanelWindow {
             onStatusChanged: if (stage.awaitingReady && status === Image.Ready) stage.playTransition()
         }
 
+        // playbackState is read-only on MediaPlayer — drive it with
+        // play()/pause() instead of binding to it directly. And this
+        // Qt6Multimedia build's VideoOutput has no `source` property (only
+        // `videoSink`) — the supported wiring is MediaPlayer.videoOutput,
+        // not VideoOutput.source.
+        MediaPlayer {
+            id: videoPlayer
+            source: Wallpaper.isVideo ? Wallpaper.source : ""
+            loops: MediaPlayer.Infinite
+            audioOutput: null
+            videoOutput: bgVideo
+
+            function sync() { stage.videoShouldPlay ? play() : pause() }
+            onSourceChanged: sync()
+            Component.onCompleted: sync()
+        }
+
+        VideoOutput {
+            id: bgVideo
+            anchors.fill: parent
+            visible: Wallpaper.isVideo
+            z: 1
+            fillMode: VideoOutput.PreserveAspectCrop
+        }
+
         // A slow, near-imperceptible drift on the resting wallpaper — the
         // same "living wallpaper" touch noctalia-shell uses — instead of a
         // perfectly static image once a transition settles.
         SequentialAnimation {
             id: driftAnim
             loops: Animation.Infinite
-            running: !stage.awaitingReady && !stage.transitioning && bgNew.status === Image.Ready
+            running: !Wallpaper.isVideo && !stage.awaitingReady && !stage.transitioning && bgNew.status === Image.Ready
 
             NumberAnimation { target: bgNew; property: "scale"; to: 1.035; duration: 14000; easing.type: Easing.InOutSine }
             NumberAnimation { target: bgNew; property: "scale"; to: 1.0; duration: 14000; easing.type: Easing.InOutSine }
