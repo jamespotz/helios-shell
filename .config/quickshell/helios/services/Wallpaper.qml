@@ -24,6 +24,11 @@ QtObject {
         return p.startsWith("/") ? "file://" + p : p;
     }
 
+    readonly property bool isVideo: {
+        const ext = root.path.split(".").pop().toLowerCase();
+        return ["mp4", "webm", "mkv", "mov"].includes(ext);
+    }
+
     function setPath(text) {
         settingsAdapter.path = text.trim();
         root.settingsFile.writeAdapter();
@@ -44,7 +49,7 @@ QtObject {
         let dir = settingsAdapter.folderPath;
         if (dir.startsWith("~")) dir = Quickshell.env("HOME") + dir.slice(1);
         folderScanner.command = ["sh", "-c",
-            'find "$1" -maxdepth 1 -type f \\( -iname "*.jpg" -o -iname "*.jpeg" -o -iname "*.png" -o -iname "*.webp" -o -iname "*.bmp" \\) 2>/dev/null | sort',
+            'find "$1" -maxdepth 1 -type f \\( -iname "*.jpg" -o -iname "*.jpeg" -o -iname "*.png" -o -iname "*.webp" -o -iname "*.bmp" -o -iname "*.mp4" -o -iname "*.webm" -o -iname "*.mkv" -o -iname "*.mov" \\) 2>/dev/null | sort',
             "sh", dir];
         folderScanner.running = false;
         folderScanner.running = true;
