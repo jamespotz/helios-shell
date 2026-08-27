@@ -124,6 +124,7 @@ QtObject {
     // scheme chips) collapses into a single process.
     function applyDynamic() {
         if (!Wallpaper.path) { root.lastError = "Set a wallpaper first"; return; }
+        if (Wallpaper.isVideo) { return; }
         root.lastError = "";
         root.generating = true;
         root.regenerateTimer.restart();
