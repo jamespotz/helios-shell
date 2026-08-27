@@ -45,11 +45,54 @@ PanelWindow {
     property var contextMenuEntry: null
     property point contextMenuPos: Qt.point(0, 0)
 
+    // --- Launch frequency tracking ------------------------------------------
+    // Drives the "most used" ranking in refresh() below — persisted so it
+    // survives restarts, same FileView pattern as Activity.qml's app-usage
+    // log. Keyed by entry.name since that's already the dedup key refresh()
+    // uses to merge DesktopEntries + ExtraApps.
+    property var launchCounts: ({})
+
+    function countFor(name) { return launcher.launchCounts[name] || 0; }
+    function recordLaunch(name) {
+        if (!name) return;
+        launcher.launchCounts = Object.assign({}, launcher.launchCounts, { [name]: launcher.countFor(name) + 1 });
+        launchCountsFile.setText(JSON.stringify(launcher.launchCounts));
+    }
+
+    property FileView launchCountsFile: FileView {
+        path: Quickshell.statePath("launcher-app-usage.json")
+        printErrors: false
+        atomicWrites: true
+        preload: true
+        blockLoading: true
+        onLoaded: {
+            try {
+                const parsed = JSON.parse(launchCountsFile.text());
+                if (parsed && typeof parsed === "object") launcher.launchCounts = parsed;
+            } catch (e) {
+                // First run / empty file — start with no usage history.
+            }
+        }
+    }
+
     function matchesKeywords(entry, query) {
         const kw = entry.keywords;
         if (!kw || kw.length === 0) return false;
         if (typeof kw.some === "function") return kw.some(k => k.toLowerCase().includes(query));
         return String(kw).toLowerCase().includes(query);
+    }
+
+    // Relevance tiers so e.g. "fire" ranks Firefox (name match) above some
+    // unrelated app whose keywords merely happen to contain "fire". Ties
+    // within a tier fall back to launch frequency — see refresh() below.
+    function matchScore(entry, query) {
+        const name = entry.name.toLowerCase();
+        if (name === query) return 4;
+        if (name.startsWith(query)) return 3;
+        if (name.includes(query)) return 2;
+        if ((entry.genericName || "").toLowerCase().includes(query)) return 1;
+        if (launcher.matchesKeywords(entry, query)) return 1;
+        return 0;
     }
 
     function refresh() {
@@ -73,14 +116,23 @@ PanelWindow {
                 return true;
             });
         if (!query) {
-            results = all.slice(0, 9);
+            // No query: lead with whatever's actually used most (Spotlight-
+            // style "frequently used" ranking) instead of DesktopEntries'
+            // arbitrary filesystem-scan order.
+            results = all.slice().sort((a, b) => {
+                return launcher.countFor(b.name) - launcher.countFor(a.name) || a.name.localeCompare(b.name);
+            }).slice(0, 9);
             return;
         }
-        results = all.filter(e => {
-            return e.name.toLowerCase().includes(query)
-                || (e.genericName && e.genericName.toLowerCase().includes(query))
-                || launcher.matchesKeywords(e, query);
-        }).slice(0, 9);
+        results = all.map(e => ({ entry: e, score: launcher.matchScore(e, query) }))
+            .filter(m => m.score > 0)
+            .sort((a, b) => {
+                return b.score - a.score
+                    || launcher.countFor(b.entry.name) - launcher.countFor(a.entry.name)
+                    || a.entry.name.localeCompare(b.entry.name);
+            })
+            .map(m => m.entry)
+            .slice(0, 9);
     }
 
     // Launch an app — wraps terminal apps (btop, nvim, etc.) in the
@@ -88,6 +140,7 @@ PanelWindow {
     // in their own execute(), but Quickshell's native DesktopEntry.execute()
     // does NOT spawn a terminal even when runInTerminal is true.
     function launchApp(entry) {
+        launcher.recordLaunch(entry.name);
         if (entry.runInTerminal) {
             // entry.command is the parsed Exec as a list
             const cmd = entry.command || [];
@@ -110,6 +163,9 @@ PanelWindow {
     // (same gap as DesktopEntry.execute() noted above), while manually
     // spawning its parsed command works.
     function runAction(action) {
+        // A Desktop Action (e.g. "New Window") still launches the app it
+        // belongs to, so it counts toward that app's frequency too.
+        launcher.recordLaunch(launcher.contextMenuEntry ? launcher.contextMenuEntry.name : "");
         const cmd = action.command || [];
         if (cmd.length > 0) {
             Quickshell.execDetached(cmd);
