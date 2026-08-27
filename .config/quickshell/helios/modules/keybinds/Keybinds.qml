@@ -100,7 +100,9 @@ PanelWindow {
 
     Item {
         anchors.fill: parent
-        focus: root.visible
+        // No `focus: root.visible` here — that binding fought
+        // searchField.focusInput() (below) for focus on open. Escape is
+        // already handled by SearchField's own onEscapePressed.
         Keys.onEscapePressed: Bridge.closeKeybinds()
 
         // Main card

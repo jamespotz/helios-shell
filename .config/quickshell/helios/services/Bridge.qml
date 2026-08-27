@@ -1,7 +1,10 @@
 pragma Singleton
 import QtQuick
+import Quickshell
+import Quickshell.Io
 
 QtObject {
+    id: root
     property bool locked: false
     property bool launcherOpen: false
     property bool powerMenuOpen: false
@@ -15,7 +18,6 @@ QtObject {
     property string islandScreen: ""
     property string islandTab: "volume"
 
-    property bool liquidGlassEnabled: false
     property bool dndEnabled: false
 
     // Custom tray right-click menu — replaces the native QMenu display()
@@ -65,4 +67,33 @@ QtObject {
     function setIslandTab(tab) { islandTab = tab }
     function closeIsland() { islandOpen = false }
     function toggleLiquidGlass() { liquidGlassEnabled = !liquidGlassEnabled }
+
+    // --- Persisted: liquid glass preference ---------------------------------
+    // Unlike the rest of this singleton (which is deliberately session-only
+    // UI state — open panels, tray menu position, etc.), liquid glass is a
+    // user preference like NightLight.enabled/IdleInhibit.enabled, so it
+    // should survive a shell restart.
+    //
+    // Aliased straight to the JsonAdapter's own property rather than mirrored
+    // into a plain `property bool` restored in Component.onCompleted: FileView
+    // loads from disk *asynchronously* unless preload+blockLoading are set,
+    // so a Component.onCompleted snapshot reads the adapter's compiled-in
+    // default (false) before the real value has loaded — which is exactly
+    // why the mirrored version kept resetting on every restart even though
+    // the file itself was being written correctly. An alias has no such
+    // race: it always reflects whatever the adapter currently holds, and
+    // updates on its own the instant the async load actually lands.
+    property alias liquidGlassEnabled: liquidGlassAdapter.enabled
+
+    property FileView liquidGlassFile: FileView {
+        path: Quickshell.statePath("liquid-glass.json")
+        watchChanges: true
+
+        JsonAdapter {
+            id: liquidGlassAdapter
+            property bool enabled: false
+        }
+    }
+
+    onLiquidGlassEnabledChanged: root.liquidGlassFile.writeAdapter()
 }

@@ -95,6 +95,21 @@ PanelWindow {
         return 0;
     }
 
+    // Deduped app list, independent of the search query — hoisted out of
+    // refresh() so it only recomputes when DesktopEntries/ExtraApps actually
+    // change instead of on every keystroke (refresh() used to redo this
+    // filter+concat+dedup on every single character typed).
+    readonly property var allApps: {
+        const seen = new Set();
+        return DesktopEntries.applications.values.filter(e => !e.noDisplay)
+            .concat(ExtraApps.list)
+            .filter(e => {
+                if (seen.has(e.name)) return false;
+                seen.add(e.name);
+                return true;
+            });
+    }
+
     function refresh() {
         const raw = searchField.text.trim();
         // "/em" or "/emoji", optionally followed by a search term.
@@ -107,14 +122,7 @@ PanelWindow {
         launcher.emojiMode = false;
 
         const query = raw.toLowerCase();
-        const seen = new Set();
-        const all = DesktopEntries.applications.values.filter(e => !e.noDisplay)
-            .concat(ExtraApps.list)
-            .filter(e => {
-                if (seen.has(e.name)) return false;
-                seen.add(e.name);
-                return true;
-            });
+        const all = launcher.allApps;
         if (!query) {
             // No query: lead with whatever's actually used most (Spotlight-
             // style "frequently used" ranking) instead of DesktopEntries'

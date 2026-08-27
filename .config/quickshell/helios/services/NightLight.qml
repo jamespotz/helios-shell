@@ -9,12 +9,20 @@ import Quickshell.Io
 QtObject {
     id: root
 
-    property bool enabled: false
-    property int temperature: 4000  // Kelvin (warm end when active)
-    property int dayTemp: 6500      // Kelvin (neutral daylight)
-    property bool scheduled: false
-    property real latitude: 0.0
-    property real longitude: 0.0
+    // Aliased straight to the JsonAdapter's own properties (see
+    // services/Bridge.qml's liquidGlassEnabled fix for the full story)
+    // rather than mirrored into plain properties restored in
+    // Component.onCompleted — FileView loads asynchronously, so a
+    // Component.onCompleted snapshot read the adapter's compiled-in
+    // defaults before the real values had loaded from disk, silently
+    // resetting every persisted night-light setting on each shell restart.
+    property alias enabled: adapter.enabled
+    property alias temperature: adapter.temperature
+    property alias scheduled: adapter.scheduled
+    property alias latitude: adapter.latitude
+    property alias longitude: adapter.longitude
+
+    property int dayTemp: 6500      // Kelvin (neutral daylight) — not persisted
 
     readonly property int tempMin: 1000
     readonly property int tempMax: 6500
@@ -90,24 +98,16 @@ QtObject {
             property real latitude: 0.0
             property real longitude: 0.0
         }
+
+        // Fires once the async load actually completes — the correct place
+        // to act on the *real* restored `enabled`, unlike Component.onCompleted
+        // (see the comment on the aliases above).
+        onLoaded: if (root.enabled) root._sync()
     }
 
-    property bool _loaded: false
-
-    Component.onCompleted: {
-        // Restore saved state
-        root.enabled = adapter.enabled;
-        root.temperature = adapter.temperature;
-        root.scheduled = adapter.scheduled;
-        root.latitude = adapter.latitude;
-        root.longitude = adapter.longitude;
-        root._loaded = true;
-        if (root.enabled) root._sync();
-    }
-
-    onEnabledChanged: { if (root._loaded) { adapter.enabled = root.enabled; root.settingsFile.writeAdapter(); } }
-    onTemperatureChanged: { if (root._loaded) { adapter.temperature = root.temperature; root.settingsFile.writeAdapter(); } }
-    onScheduledChanged: { if (root._loaded) { adapter.scheduled = root.scheduled; root.settingsFile.writeAdapter(); } }
-    onLatitudeChanged: { if (root._loaded) { adapter.latitude = root.latitude; root.settingsFile.writeAdapter(); } }
-    onLongitudeChanged: { if (root._loaded) { adapter.longitude = root.longitude; root.settingsFile.writeAdapter(); } }
+    onEnabledChanged: root.settingsFile.writeAdapter()
+    onTemperatureChanged: root.settingsFile.writeAdapter()
+    onScheduledChanged: root.settingsFile.writeAdapter()
+    onLatitudeChanged: root.settingsFile.writeAdapter()
+    onLongitudeChanged: root.settingsFile.writeAdapter()
 }

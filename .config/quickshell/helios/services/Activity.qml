@@ -148,11 +148,9 @@ QtObject {
                 name: meta.label,
                 icon: meta.icon,
                 category: meta.category,
-                color: root.categoryColorFor(meta.category),
                 duration: root._fmtDuration(day[cls]),
                 fraction: total > 0 ? day[cls] / total : 0,
-                seconds: day[cls],
-                limitMinutes: root.limitMinutesFor(cls)
+                seconds: day[cls]
             };
         });
         list.sort((a, b) => b.seconds - a.seconds);

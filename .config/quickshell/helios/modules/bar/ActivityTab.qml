@@ -53,10 +53,12 @@ Item {
         ? root.filteredApps : root.filteredApps.slice(0, root.visibleAppCount)
 
     // Category rollup of the selected day's apps, sorted by time descending.
+    // Color is resolved at the render site (Activity.categoryColorFor), not
+    // baked in here — see the app-row fix below for why.
     readonly property var categoryGroups: {
         const groups = {};
         root.selectedApps.forEach(a => {
-            if (!groups[a.category]) groups[a.category] = { name: a.category, color: a.color, seconds: 0, count: 0 };
+            if (!groups[a.category]) groups[a.category] = { name: a.category, seconds: 0, count: 0 };
             groups[a.category].seconds += a.seconds;
             groups[a.category].count += 1;
         });
@@ -111,7 +113,11 @@ Item {
                 onClicked: {
                     root.searchOpen = !root.searchOpen;
                     if (root.searchOpen) searchField.focusInput();
-                    else root.searchQuery = "";
+                    // searchField.text: root.searchQuery (below) is a one-time
+                    // binding that typing severs, so closing has to clear the
+                    // field itself too — not just the query — or reopening
+                    // shows stale text next to an already-unfiltered list.
+                    else searchField.text = "";
                 }
             }
         }
@@ -348,7 +354,7 @@ Item {
             placeholder: "Filter apps…"
             text: root.searchQuery
             onTextChanged: root.searchQuery = text
-            onEscapePressed: { root.searchOpen = false; root.searchQuery = ""; }
+            onEscapePressed: { root.searchOpen = false; searchField.text = ""; }
         }
 
         // --- Apps head: view tabs + total --------------------------------------
@@ -424,6 +430,11 @@ Item {
                     id: appRow
                     required property var modelData
                     readonly property bool expanded: root.expandedApp === appRow.modelData.cls
+                    // Resolved here (not baked into Activity.appsFor's model)
+                    // so a theme's color animation just updates this binding
+                    // in place instead of invalidating selectedApps and
+                    // tearing down/rebuilding every app row.
+                    readonly property color appColor: Activity.categoryColorFor(appRow.modelData.category)
 
                     width: parent.width
                     spacing: 8
@@ -447,7 +458,7 @@ Item {
                                     width: 28
                                     height: 28
                                     radius: Colors.radiusSmall
-                                    color: appRow.modelData.color
+                                    color: appRow.appColor
                                     anchors.verticalCenter: parent.verticalCenter
 
                                     MaterialIcon { anchors.centerIn: parent; icon: appRow.modelData.icon; font.pixelSize: 15; color: Colors.accentText }
@@ -497,7 +508,7 @@ Item {
                                 width: parent.width * appRow.modelData.fraction
                                 height: parent.height
                                 radius: parent.radius
-                                color: appRow.modelData.color
+                                color: appRow.appColor
                             }
                         }
                     }
@@ -538,7 +549,7 @@ Item {
                                         anchors.bottom: parent.bottom
                                         height: Math.max(3, 32 * (modelData / drawer.maxSpark))
                                         radius: 2
-                                        color: isToday ? appRow.modelData.color : Colors.surfaceHigh
+                                        color: isToday ? appRow.appColor : Colors.surfaceHigh
                                     }
                                 }
                             }
@@ -570,7 +581,12 @@ Item {
                                         font.pixelSize: Config.fontSize - 1
                                         clip: true
                                         validator: IntValidator { bottom: 0; top: 999 }
-                                        text: appRow.modelData.limitMinutes > 0 ? String(appRow.modelData.limitMinutes) : ""
+                                        // Read directly from Activity (not baked into modelData) so
+                                        // saving a limit updates just this field in place instead of
+                                        // invalidating selectedApps and destroying this very delegate
+                                        // — see appColor above for the same reasoning.
+                                        readonly property int savedLimit: Activity.limitMinutesFor(appRow.modelData.cls)
+                                        text: savedLimit > 0 ? String(savedLimit) : ""
 
                                         StyledText {
                                             visible: limitInput.text.length === 0
@@ -663,7 +679,7 @@ Item {
                         required property var modelData
                         height: parent.height
                         width: root.selectedTotalSeconds > 0 ? parent.width * (modelData.seconds / root.selectedTotalSeconds) : 0
-                        color: modelData.color
+                        color: Activity.categoryColorFor(modelData.name)
                     }
                 }
             }
@@ -682,7 +698,7 @@ Item {
                         anchors.verticalCenter: parent.verticalCenter
                         spacing: 10
 
-                        Rectangle { width: 8; height: 8; radius: 4; color: catRow.modelData.color; anchors.verticalCenter: parent.verticalCenter }
+                        Rectangle { width: 8; height: 8; radius: 4; color: Activity.categoryColorFor(catRow.modelData.name); anchors.verticalCenter: parent.verticalCenter }
                         StyledText { text: catRow.modelData.name; anchors.verticalCenter: parent.verticalCenter }
                         StyledText {
                             text: catRow.modelData.count + (catRow.modelData.count > 1 ? " apps" : " app")
