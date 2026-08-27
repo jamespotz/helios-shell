@@ -121,3 +121,10 @@ hl.bind(mainMod .. " + ALT + L", hl.dsp.exec_cmd(helios .. " island toggle night
   { description = "Toggle night light island" })
 hl.bind(mainMod .. " + ALT + B", hl.dsp.exec_cmd(helios .. " island toggle idle"),
   { description = "Toggle idle/lock settings island" })
+
+-- System monitor: own ipc target (see systemmonitor toggle in shell.qml),
+-- bound to the literal Ctrl+Alt+Delete chord rather than the mainMod
+-- convention above, since that's the muscle-memory shortcut for "show me
+-- what's using my system" on every other desktop.
+hl.bind("CTRL + ALT + DELETE", hl.dsp.exec_cmd(helios .. " systemmonitor toggle"),
+  { description = "Toggle system monitor island (Ctrl+Alt+Del)" })

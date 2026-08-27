@@ -4,6 +4,7 @@ import Quickshell
 import Quickshell.Io
 import Quickshell.Hyprland
 import Quickshell.Wayland
+import "../services"
 
 // Real per-app focus-time tracking for modules/bar/ActivityTab.qml.
 //
@@ -25,30 +26,47 @@ QtObject {
     property string currentApp: ""
     property real currentSince: 0 // Date.now() ms
 
-    // App class (lowercased) -> nicer icon/label than the raw wm class.
-    // Unlisted apps fall back to _prettify()'d class name + a generic icon.
+    // App class (lowercased) -> nicer icon/label/category than the raw wm
+    // class. Unlisted apps fall back to _prettify()'d class name, a generic
+    // icon, and the "Other" category.
     readonly property var appMeta: ({
-        "firefox": { icon: "public", label: "Firefox" },
-        "librewolf": { icon: "public", label: "LibreWolf" },
-        "chromium": { icon: "public", label: "Chromium" },
-        "google-chrome": { icon: "public", label: "Chrome" },
-        "app.zen_browser.zen": { icon: "public", label: "Zen Browser" },
-        "org.telegram.desktop": { icon: "send", label: "Telegram" },
-        "discord": { icon: "forum", label: "Discord" },
-        "vesktop": { icon: "forum", label: "Vesktop" },
-        "code": { icon: "code", label: "VS Code" },
-        "code-oss": { icon: "code", label: "VS Code" },
-        "com.mitchellh.ghostty": { icon: "terminal", label: "Ghostty" },
-        "kitty": { icon: "terminal", label: "Kitty" },
-        "foot": { icon: "terminal", label: "Foot" },
-        "org.kde.dolphin": { icon: "folder", label: "Dolphin" },
-        "nautilus": { icon: "folder", label: "Files" },
-        "org.gnome.nautilus": { icon: "folder", label: "Files" },
-        "spotify": { icon: "music_note", label: "Spotify" },
-        "onlyoffice-desktopeditors": { icon: "description", label: "ONLYOFFICE" },
-        "obs": { icon: "videocam", label: "OBS Studio" },
-        "steam": { icon: "sports_esports", label: "Steam" }
+        "firefox": { icon: "public", label: "Firefox", category: "Browsing" },
+        "librewolf": { icon: "public", label: "LibreWolf", category: "Browsing" },
+        "chromium": { icon: "public", label: "Chromium", category: "Browsing" },
+        "google-chrome": { icon: "public", label: "Chrome", category: "Browsing" },
+        "app.zen_browser.zen": { icon: "public", label: "Zen Browser", category: "Browsing" },
+        "org.telegram.desktop": { icon: "send", label: "Telegram", category: "Communication" },
+        "discord": { icon: "forum", label: "Discord", category: "Communication" },
+        "vesktop": { icon: "forum", label: "Vesktop", category: "Communication" },
+        "code": { icon: "code", label: "VS Code", category: "Development" },
+        "code-oss": { icon: "code", label: "VS Code", category: "Development" },
+        "com.mitchellh.ghostty": { icon: "terminal", label: "Ghostty", category: "Development" },
+        "kitty": { icon: "terminal", label: "Kitty", category: "Development" },
+        "foot": { icon: "terminal", label: "Foot", category: "Development" },
+        "org.kde.dolphin": { icon: "folder", label: "Dolphin", category: "Productivity" },
+        "nautilus": { icon: "folder", label: "Files", category: "Productivity" },
+        "org.gnome.nautilus": { icon: "folder", label: "Files", category: "Productivity" },
+        "spotify": { icon: "music_note", label: "Spotify", category: "Media" },
+        "onlyoffice-desktopeditors": { icon: "description", label: "ONLYOFFICE", category: "Productivity" },
+        "obs": { icon: "videocam", label: "OBS Studio", category: "Media" },
+        "steam": { icon: "sports_esports", label: "Steam", category: "Gaming" }
     })
+
+    // Category -> theme color. Reuses the shell's existing semantic role
+    // palette (see Colors.qml) instead of introducing category-specific
+    // hardcoded colors, per AGENTS.md.
+    readonly property var categoryColors: ({
+        "Development": Colors.primary,
+        "Communication": Colors.accent,
+        "Browsing": Colors.success,
+        "Media": Colors.secondary,
+        "Productivity": Colors.tertiary,
+        "Gaming": Colors.danger,
+        "Other": Colors.subtext
+    })
+    function categoryColorFor(category) {
+        return root.categoryColors[category] || Colors.subtext;
+    }
 
     function _prettify(cls) {
         if (!cls) return "Unknown";
@@ -56,7 +74,7 @@ QtObject {
         return seg.length > 0 ? seg.charAt(0).toUpperCase() + seg.slice(1) : cls;
     }
     function _metaFor(cls) {
-        return root.appMeta[(cls || "").toLowerCase()] || { icon: "apps", label: root._prettify(cls) };
+        return root.appMeta[(cls || "").toLowerCase()] || { icon: "apps", label: root._prettify(cls), category: "Other" };
     }
 
     function _dayKey(ms) {
@@ -126,17 +144,56 @@ QtObject {
         const list = Object.keys(day).map(cls => {
             const meta = root._metaFor(cls);
             return {
+                cls: cls,
                 name: meta.label,
                 icon: meta.icon,
+                category: meta.category,
+                color: root.categoryColorFor(meta.category),
                 duration: root._fmtDuration(day[cls]),
                 fraction: total > 0 ? day[cls] / total : 0,
-                seconds: day[cls]
+                seconds: day[cls],
+                limitMinutes: root.limitMinutesFor(cls)
             };
         });
         list.sort((a, b) => b.seconds - a.seconds);
         return list;
     }
     function dayKeyFor(date) { return root._dayKey(date.getTime()); }
+
+    // Per-app minutes across the current week (Mon..Sun) — drives the
+    // sparkline in ActivityTab's expanded app row.
+    function appSparkline(cls) {
+        return root.weekDates.map(d => {
+            const day = root.days[root._dayKey(d.getTime())];
+            return Math.round(((day && day[cls]) || 0) / 60);
+        });
+    }
+
+    // --- Per-app daily limits (display/save only — no enforcement) ------
+
+    property var limits: ({}) // { "firefox": 30, ... } minutes/day
+
+    function limitMinutesFor(cls) { return root.limits[cls] || 0; }
+    function setLimitMinutes(cls, minutes) {
+        root.limits = Object.assign({}, root.limits, { [cls]: minutes });
+        limitsFile.setText(JSON.stringify(root.limits));
+    }
+
+    property FileView limitsFile: FileView {
+        path: Quickshell.statePath("app-usage-limits.json")
+        printErrors: false
+        atomicWrites: true
+        preload: true
+        blockLoading: true
+        onLoaded: {
+            try {
+                const parsed = JSON.parse(limitsFile.text());
+                if (parsed && typeof parsed === "object") root.limits = parsed;
+            } catch (e) {
+                // First run / empty file — start with no limits set.
+            }
+        }
+    }
 
     function _totalFor(dayKey) {
         const day = root.days[dayKey];

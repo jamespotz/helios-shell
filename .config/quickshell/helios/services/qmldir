@@ -20,3 +20,4 @@ singleton DisplaySettings 1.0 DisplaySettings.qml
 singleton IdleInhibit 1.0 IdleInhibit.qml
 singleton Equalizer 1.0 Equalizer.qml
 singleton Emoji 1.0 Emoji.qml
+singleton SystemStats 1.0 SystemStats.qml

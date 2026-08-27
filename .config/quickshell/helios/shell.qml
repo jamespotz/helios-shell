@@ -167,4 +167,15 @@ ShellRoot {
         function enable() { IdleInhibit.setEnabled(true) }
         function disable() { IdleInhibit.setEnabled(false) }
     }
+
+    IpcHandler {
+        target: "systemmonitor"
+        // Own ipc (vs. `island toggle system`) so a hotkey keeps working
+        // even if the system monitor tab's island target ever changes —
+        // same convention as `clipboard toggle`/`recorder toggle` above.
+        function toggle() {
+            const screen = Utils.screenForMonitor(Quickshell.screens, Hyprland.focusedMonitor) || Quickshell.screens[0];
+            Bridge.toggleIsland(screen.name, "system");
+        }
+    }
 }

@@ -37,6 +37,32 @@ Item {
         return (diffDays >= 0 && diffDays < 7) ? diffDays : -1;
     }
 
+    // --- App list view state ------------------------------------------------
+    property bool searchOpen: false
+    property string searchQuery: ""
+    property string viewMode: "apps" // "apps" | "category"
+    property bool showAllApps: false
+    property string expandedApp: "" // app `cls` currently expanded, or ""
+
+    readonly property int visibleAppCount: 4
+
+    readonly property var filteredApps: root.searchQuery.length === 0 ? root.selectedApps
+        : root.selectedApps.filter(a => a.name.toLowerCase().includes(root.searchQuery.toLowerCase()))
+
+    readonly property var visibleApps: (root.showAllApps || root.searchQuery.length > 0)
+        ? root.filteredApps : root.filteredApps.slice(0, root.visibleAppCount)
+
+    // Category rollup of the selected day's apps, sorted by time descending.
+    readonly property var categoryGroups: {
+        const groups = {};
+        root.selectedApps.forEach(a => {
+            if (!groups[a.category]) groups[a.category] = { name: a.category, color: a.color, seconds: 0, count: 0 };
+            groups[a.category].seconds += a.seconds;
+            groups[a.category].count += 1;
+        });
+        return Object.values(groups).sort((a, b) => b.seconds - a.seconds);
+    }
+
     implicitWidth: 860
     implicitHeight: col.implicitHeight
 
@@ -74,6 +100,18 @@ Item {
                     enabled: root.dayOffset < 0
                     opacity: enabled ? 1 : 0.3
                     onClicked: root.dayOffset += 1
+                }
+            }
+
+            IconButton {
+                anchors.right: parent.right
+                anchors.verticalCenter: parent.verticalCenter
+                icon: "search"
+                active: root.searchOpen
+                onClicked: {
+                    root.searchOpen = !root.searchOpen;
+                    if (root.searchOpen) searchField.focusInput();
+                    else root.searchQuery = "";
                 }
             }
         }
@@ -302,69 +340,364 @@ Item {
             }
         }
 
-        // --- App usage list ----------------------------------------------------
+        // --- Search --------------------------------------------------------
+        SearchField {
+            id: searchField
+            width: parent.width
+            visible: root.searchOpen
+            placeholder: "Filter apps…"
+            text: root.searchQuery
+            onTextChanged: root.searchQuery = text
+            onEscapePressed: { root.searchOpen = false; root.searchQuery = ""; }
+        }
+
+        // --- Apps head: view tabs + total --------------------------------------
+        Item {
+            width: parent.width
+            height: 24
+
+            Row {
+                anchors.left: parent.left
+                spacing: 18
+
+                Repeater {
+                    model: [
+                        { value: "apps", label: "By app" },
+                        { value: "category", label: "By category" }
+                    ]
+
+                    Column {
+                        id: viewTab
+                        required property var modelData
+                        readonly property bool active: root.viewMode === viewTab.modelData.value
+                        spacing: 6
+
+                        StyledText {
+                            text: viewTab.modelData.label
+                            font.bold: viewTab.active
+                            opacity: viewTab.active ? 1 : 0.55
+                            font.pixelSize: Config.fontSize - 1
+                        }
+                        Rectangle {
+                            width: parent.width
+                            height: 2
+                            radius: 1
+                            color: viewTab.active ? Colors.accent : "transparent"
+                        }
+
+                        MouseArea {
+                            anchors.fill: parent
+                            anchors.margins: -4
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: root.viewMode = viewTab.modelData.value
+                        }
+                    }
+                }
+            }
+
+            StyledText {
+                anchors.right: parent.right
+                anchors.verticalCenter: parent.verticalCenter
+                text: root.selectedTotalText + " total"
+                opacity: 0.5
+                font.pixelSize: Config.fontSize - 3
+            }
+        }
+
+        // --- By app ----------------------------------------------------------
         Column {
             width: parent.width
             spacing: 14
+            visible: root.viewMode === "apps"
 
             StyledText {
-                visible: root.selectedApps.length === 0
-                text: "No activity tracked for this day"
+                visible: root.filteredApps.length === 0
+                text: root.selectedApps.length === 0 ? "No activity tracked for this day" : "No apps match your search"
                 opacity: 0.6
                 font.pixelSize: Config.fontSize - 2
             }
 
             Repeater {
-                model: root.selectedApps
+                model: root.visibleApps
 
                 Column {
+                    id: appRow
                     required property var modelData
+                    readonly property bool expanded: root.expandedApp === appRow.modelData.cls
 
                     width: parent.width
-                    spacing: 6
+                    spacing: 8
 
-                    Item {
+                    Column {
                         width: parent.width
-                        height: 30
+                        spacing: 6
 
-                        Row {
-                            anchors.left: parent.left
-                            anchors.verticalCenter: parent.verticalCenter
-                            spacing: 10
+                        Item {
+                            width: parent.width
+                            height: 30
 
-                            Rectangle {
-                                width: 28
-                                height: 28
-                                radius: Colors.radiusSmall
-                                color: Colors.surfaceHigh
+                            Row {
+                                anchors.left: parent.left
+                                anchors.right: chevron.left
+                                anchors.rightMargin: 8
                                 anchors.verticalCenter: parent.verticalCenter
+                                spacing: 10
 
-                                MaterialIcon { anchors.centerIn: parent; icon: modelData.icon; font.pixelSize: 15 }
+                                Rectangle {
+                                    width: 28
+                                    height: 28
+                                    radius: Colors.radiusSmall
+                                    color: appRow.modelData.color
+                                    anchors.verticalCenter: parent.verticalCenter
+
+                                    MaterialIcon { anchors.centerIn: parent; icon: appRow.modelData.icon; font.pixelSize: 15; color: Colors.accentText }
+                                }
+
+                                Column {
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    spacing: 2
+                                    StyledText { text: appRow.modelData.name }
+                                    StyledText { text: appRow.modelData.category; opacity: 0.5; font.pixelSize: Config.fontSize - 4 }
+                                }
                             }
 
-                            StyledText { text: modelData.name; anchors.verticalCenter: parent.verticalCenter }
+                            StyledText {
+                                text: appRow.modelData.duration
+                                anchors.right: chevron.left
+                                anchors.rightMargin: 10
+                                anchors.verticalCenter: parent.verticalCenter
+                                font.family: Config.monoFontFamily
+                                opacity: 0.8
+                            }
+
+                            MaterialIcon {
+                                id: chevron
+                                icon: "chevron_right"
+                                anchors.right: parent.right
+                                anchors.verticalCenter: parent.verticalCenter
+                                opacity: 0.5
+                                rotation: appRow.expanded ? 90 : 0
+                                Behavior on rotation { NumberAnimation { duration: Config.animFast; easing.type: Easing.OutCubic } }
+                            }
+
+                            MouseArea {
+                                anchors.fill: parent
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: root.expandedApp = appRow.expanded ? "" : appRow.modelData.cls
+                            }
                         }
-                        StyledText {
-                            text: modelData.duration
-                            anchors.right: parent.right
-                            anchors.verticalCenter: parent.verticalCenter
-                            font.family: Config.monoFontFamily
-                            opacity: 0.8
+
+                        Rectangle {
+                            width: parent.width
+                            height: 5
+                            radius: height / 2
+                            color: Colors.surfaceHigh
+
+                            Rectangle {
+                                width: parent.width * appRow.modelData.fraction
+                                height: parent.height
+                                radius: parent.radius
+                                color: appRow.modelData.color
+                            }
                         }
                     }
 
-                    Rectangle {
+                    // --- Expanded drawer: weekly sparkline + daily limit -----
+                    Item {
                         width: parent.width
-                        height: 5
-                        radius: height / 2
-                        color: Colors.surfaceHigh
+                        height: appRow.expanded ? drawer.implicitHeight : 0
+                        clip: true
+                        opacity: appRow.expanded ? 1 : 0
 
-                        Rectangle {
-                            width: parent.width * modelData.fraction
-                            height: parent.height
-                            radius: parent.radius
-                            color: Colors.accent
+                        Behavior on height { NumberAnimation { duration: Config.animMedium; easing.type: Easing.OutCubic } }
+                        Behavior on opacity { NumberAnimation { duration: Config.animFast } }
+
+                        Column {
+                            id: drawer
+                            x: 38
+                            width: parent.width - 38
+                            spacing: 12
+
+                            readonly property var spark: appRow.expanded ? Activity.appSparkline(appRow.modelData.cls) : []
+                            readonly property real maxSpark: Math.max(1, ...(drawer.spark.length ? drawer.spark : [0]))
+
+                            Row {
+                                width: parent.width
+                                height: 32
+                                spacing: 4
+
+                                Repeater {
+                                    model: drawer.spark
+
+                                    Rectangle {
+                                        required property real modelData
+                                        required property int index
+                                        readonly property bool isToday: index === Activity.highlightedDayIndex
+
+                                        width: (drawer.width - 6 * 4) / 7
+                                        anchors.bottom: parent.bottom
+                                        height: Math.max(3, 32 * (modelData / drawer.maxSpark))
+                                        radius: 2
+                                        color: isToday ? appRow.modelData.color : Colors.surfaceHigh
+                                    }
+                                }
+                            }
+
+                            Row {
+                                spacing: 10
+
+                                StyledText {
+                                    text: "Daily limit"
+                                    opacity: 0.6
+                                    font.pixelSize: Config.fontSize - 2
+                                    anchors.verticalCenter: parent.verticalCenter
+                                }
+
+                                Rectangle {
+                                    width: 70
+                                    height: 30
+                                    radius: Colors.radiusSmall
+                                    color: Colors.surfaceHigh
+                                    anchors.verticalCenter: parent.verticalCenter
+
+                                    TextInput {
+                                        id: limitInput
+                                        anchors.fill: parent
+                                        anchors.margins: 8
+                                        verticalAlignment: Text.AlignVCenter
+                                        color: Colors.text
+                                        font.family: Config.fontFamily
+                                        font.pixelSize: Config.fontSize - 1
+                                        clip: true
+                                        validator: IntValidator { bottom: 0; top: 999 }
+                                        text: appRow.modelData.limitMinutes > 0 ? String(appRow.modelData.limitMinutes) : ""
+
+                                        StyledText {
+                                            visible: limitInput.text.length === 0
+                                            text: "e.g. 30m"
+                                            opacity: 0.4
+                                            font.pixelSize: Config.fontSize - 1
+                                        }
+                                    }
+                                }
+
+                                StyledText {
+                                    text: "Save"
+                                    color: Colors.accent
+                                    font.pixelSize: Config.fontSize - 2
+                                    anchors.verticalCenter: parent.verticalCenter
+
+                                    MouseArea {
+                                        anchors.fill: parent
+                                        anchors.margins: -6
+                                        cursorShape: Qt.PointingHandCursor
+                                        onClicked: {
+                                            const v = parseInt(limitInput.text);
+                                            Activity.setLimitMinutes(appRow.modelData.cls, isNaN(v) ? 0 : v);
+                                            savedHint.opacity = 1;
+                                            savedHintTimer.restart();
+                                        }
+                                    }
+                                }
+
+                                StyledText {
+                                    id: savedHint
+                                    text: "Saved"
+                                    color: Colors.success
+                                    font.pixelSize: Config.fontSize - 2
+                                    opacity: 0
+                                    anchors.verticalCenter: parent.verticalCenter
+
+                                    Behavior on opacity { NumberAnimation { duration: Config.animFast } }
+
+                                    Timer {
+                                        id: savedHintTimer
+                                        interval: 1800
+                                        onTriggered: savedHint.opacity = 0
+                                    }
+                                }
+                            }
                         }
+                    }
+                }
+            }
+
+            StyledText {
+                visible: root.searchQuery.length === 0 && root.filteredApps.length > root.visibleAppCount
+                text: root.showAllApps ? "Show less" : "Show all (" + root.filteredApps.length + ")"
+                anchors.horizontalCenter: parent.horizontalCenter
+                color: Colors.accent
+                font.pixelSize: Config.fontSize - 2
+
+                MouseArea {
+                    anchors.fill: parent
+                    anchors.margins: -6
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: root.showAllApps = !root.showAllApps
+                }
+            }
+        }
+
+        // --- By category -------------------------------------------------------
+        Column {
+            width: parent.width
+            spacing: 10
+            visible: root.viewMode === "category"
+
+            StyledText {
+                visible: root.categoryGroups.length === 0
+                text: "No activity tracked for this day"
+                opacity: 0.6
+                font.pixelSize: Config.fontSize - 2
+            }
+
+            Row {
+                width: parent.width
+                height: 8
+                visible: root.categoryGroups.length > 0
+
+                Repeater {
+                    model: root.categoryGroups
+
+                    Rectangle {
+                        required property var modelData
+                        height: parent.height
+                        width: root.selectedTotalSeconds > 0 ? parent.width * (modelData.seconds / root.selectedTotalSeconds) : 0
+                        color: modelData.color
+                    }
+                }
+            }
+
+            Repeater {
+                model: root.categoryGroups
+
+                Item {
+                    id: catRow
+                    required property var modelData
+                    width: parent.width
+                    height: 34
+
+                    Row {
+                        anchors.left: parent.left
+                        anchors.verticalCenter: parent.verticalCenter
+                        spacing: 10
+
+                        Rectangle { width: 8; height: 8; radius: 4; color: catRow.modelData.color; anchors.verticalCenter: parent.verticalCenter }
+                        StyledText { text: catRow.modelData.name; anchors.verticalCenter: parent.verticalCenter }
+                        StyledText {
+                            text: catRow.modelData.count + (catRow.modelData.count > 1 ? " apps" : " app")
+                            opacity: 0.5
+                            font.pixelSize: Config.fontSize - 3
+                            anchors.verticalCenter: parent.verticalCenter
+                        }
+                    }
+
+                    StyledText {
+                        text: Activity.fmtDuration(modelData.seconds)
+                        anchors.right: parent.right
+                        anchors.verticalCenter: parent.verticalCenter
+                        font.family: Config.monoFontFamily
+                        opacity: 0.8
                     }
                 }
             }

@@ -83,6 +83,7 @@ Item {
                             { tab: "screenshot", icon: "screenshot_monitor" },
                             { tab: "weather", icon: "cloud" },
                             { tab: "activity", icon: "bar_chart" },
+                            { tab: "system", icon: "memory" },
                             { tab: "notifications", icon: "history" },
                             { tab: "nightlight", icon: "nightlight" },
                             { tab: "display", icon: "monitor" },
@@ -146,6 +147,7 @@ Item {
                         : Bridge.islandTab === "weather" ? weatherTab
                         : Bridge.islandTab === "calendar" ? weatherTab
                         : Bridge.islandTab === "activity" ? activityTab
+                        : Bridge.islandTab === "system" ? systemTab
                         : Bridge.islandTab === "notifications" ? notificationsTab
                         : Bridge.islandTab === "nightlight" ? nightlightTab
                         : Bridge.islandTab === "display" ? displayTab
@@ -175,6 +177,7 @@ Item {
     Component { id: screenshotTab; ScreenshotTab {} }
     Component { id: weatherTab; WeatherPanel {} }
     Component { id: activityTab; ActivityTab {} }
+    Component { id: systemTab; SystemMonitorTab {} }
     Component { id: notificationsTab; NotificationHistoryTab {} }
     Component { id: nightlightTab; NightLightTab {} }
     Component { id: displayTab; DisplayTab {} }
