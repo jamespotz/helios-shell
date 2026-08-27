@@ -117,9 +117,12 @@ QtObject {
 
     function focusApp(notification) {
         if (!notification) return false;
-        const focused = root._focusByClass(notification.desktopEntry, notification.appName);
+        // Invoke first, then raise — invoking can itself cause the app to
+        // navigate/steal its own focus state (see comment above), so the
+        // class-based raise must happen last to actually win.
         const action = root._findDefaultAction(notification);
         if (action) action.invoke();
+        const focused = root._focusByClass(notification.desktopEntry, notification.appName);
         if (focused || action) return true;
         return root._focusByPid(root._senderPid(notification));
     }
