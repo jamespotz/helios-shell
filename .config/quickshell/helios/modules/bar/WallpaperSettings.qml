@@ -1,4 +1,5 @@
 import QtQuick
+import QtMultimedia
 import Qt5Compat.GraphicalEffects
 import "../../services"
 import "../../components"
@@ -31,10 +32,32 @@ Item {
 
             Image {
                 anchors.fill: parent
-                visible: Wallpaper.path !== ""
+                visible: Wallpaper.path !== "" && !Wallpaper.isVideo
                 source: Wallpaper.path !== "" ? "file://" + Wallpaper.path : ""
                 fillMode: Image.PreserveAspectCrop
                 asynchronous: true
+            }
+
+            // videoOutput is set on MediaPlayer, not source on VideoOutput —
+            // this build's VideoOutput has no `source` property (see
+            // modules/wallpaper/Wallpaper.qml).
+            MediaPlayer {
+                id: previewPlayer
+                source: Wallpaper.isVideo ? Wallpaper.source : ""
+                loops: MediaPlayer.Infinite
+                audioOutput: null
+                videoOutput: previewVideo
+
+                function sync() { Wallpaper.isVideo ? play() : pause() }
+                onSourceChanged: sync()
+                Component.onCompleted: sync()
+            }
+
+            VideoOutput {
+                id: previewVideo
+                anchors.fill: parent
+                visible: Wallpaper.isVideo
+                fillMode: VideoOutput.PreserveAspectCrop
             }
 
             MaterialIcon {
@@ -238,6 +261,7 @@ Item {
                         height: grid.cellHeight
 
                         readonly property bool selected: Wallpaper.path === modelData
+                        readonly property bool isVideoThumb: ["mp4", "webm", "mkv", "mov"].includes(modelData.split(".").pop().toLowerCase())
 
                         // Soft accent glow behind the selected tile — same
                         // "today" halo language used everywhere else, instead
@@ -272,6 +296,37 @@ Item {
                             anchors.fill: mask
                             source: img
                             maskSource: mask
+                            visible: !thumb.isVideoThumb
+                        }
+
+                        Rectangle {
+                            anchors.fill: parent
+                            radius: Colors.radiusSmall
+                            color: Colors.surfaceHigh
+                            visible: thumb.isVideoThumb
+
+                            MaterialIcon {
+                                anchors.centerIn: parent
+                                anchors.verticalCenterOffset: -8
+                                icon: "movie"
+                                font.pixelSize: 22
+                                opacity: 0.6
+                            }
+
+                            StyledText {
+                                anchors.horizontalCenter: parent.horizontalCenter
+                                anchors.bottom: parent.bottom
+                                anchors.bottomMargin: 6
+                                anchors.left: parent.left
+                                anchors.right: parent.right
+                                anchors.leftMargin: 6
+                                anchors.rightMargin: 6
+                                horizontalAlignment: Text.AlignHCenter
+                                elide: Text.ElideMiddle
+                                font.pixelSize: Config.fontSize - 3
+                                opacity: 0.7
+                                text: thumb.modelData.split("/").pop()
+                            }
                         }
 
                         Rectangle {
