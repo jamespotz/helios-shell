@@ -50,6 +50,7 @@ PanelWindow {
         // them at z >= 2) — none of them do manual top/bottom bookkeeping, so
         // there's nothing for them to desync.
         property string prevSource: ""
+        property bool outgoingWasVideo: false
         property bool awaitingReady: false
         property bool transitioning: false
         readonly property string revealStyle: Config.wallpaperRevealStyle
@@ -66,21 +67,46 @@ PanelWindow {
         function transitionFinished() { stage.transitioning = false }
 
         function beginTransition() {
-            bgOld.source = stage.prevSource;
+            // Captured before prevSource is overwritten below — this is the
+            // one point where prevSource still reliably names the outgoing
+            // (currently showing) wallpaper, not the incoming one.
+            stage.outgoingWasVideo = ["mp4", "webm", "mkv", "mov"].includes(stage.prevSource.split(".").pop().toLowerCase());
+
+            if (stage.outgoingWasVideo) {
+                bgVideo.grabToImage(function(result) { bgOld.source = result.url; });
+            } else {
+                bgOld.source = stage.prevSource;
+            }
             bgOld.opacity = 1;
             stage.prevSource = Wallpaper.source;
-            stage.awaitingReady = Wallpaper.source !== "";
             driftAnim.stop();
             bgNew.scale = 1;
             bgNew.x = 0;
             bgNew.y = 0;
             bgNew.opacity = 1;
+
+            // bgNew (a plain Image) can never reach Ready for a video path —
+            // it errors out instead — so the usual onStatusChanged trigger
+            // for playTransition() would never fire. Skip the wait and go
+            // straight to the transition, whose own video short-circuit
+            // below finishes it immediately.
+            if (Wallpaper.isVideo) {
+                stage.awaitingReady = false;
+                stage.playTransition();
+            } else {
+                stage.awaitingReady = Wallpaper.source !== "";
+            }
         }
 
         function playTransition() {
             stage.awaitingReady = false;
             stage.transitioning = true;
             fadeOld.restart();
+
+            if (Wallpaper.isVideo || stage.outgoingWasVideo) {
+                stage.transitionFinished();
+                return;
+            }
 
             switch (stage.pickStyle()) {
             case "blur": blurModule.play(); break;
