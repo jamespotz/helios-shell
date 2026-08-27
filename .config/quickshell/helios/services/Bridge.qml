@@ -2,6 +2,7 @@ pragma Singleton
 import QtQuick
 
 QtObject {
+    property bool locked: false
     property bool launcherOpen: false
     property bool powerMenuOpen: false
     property bool keybindsOpen: false

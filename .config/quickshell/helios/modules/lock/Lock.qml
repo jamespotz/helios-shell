@@ -18,6 +18,7 @@ import "../../components"
 Loader {
     id: root
     active: false
+    onActiveChanged: Bridge.locked = active
 
     Connections {
         target: Bridge
