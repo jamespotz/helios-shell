@@ -59,6 +59,26 @@ Loader {
                         text: Qt.formatDateTime(clock.date, Config.timeFormat)
                     }
 
+                    Row {
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        spacing: 6
+                        visible: Weather.available
+
+                        MaterialIcon {
+                            anchors.verticalCenter: parent.verticalCenter
+                            icon: Weather.icon
+                            color: Colors.accent
+                            font.pixelSize: 15
+                        }
+
+                        StyledText {
+                            anchors.verticalCenter: parent.verticalCenter
+                            font.pixelSize: Config.fontSize + 1
+                            color: Colors.subtext
+                            text: Math.round(Weather.tempC) + "°  " + Weather.condition
+                        }
+                    }
+
                     Rectangle {
                         width: 260
                         height: 46

@@ -1,6 +1,8 @@
 import QtQuick
 import QtMultimedia
 import Qt5Compat.GraphicalEffects
+import Quickshell
+import Quickshell.Io
 import "../../services"
 import "../../components"
 
@@ -262,6 +264,21 @@ Item {
 
                         readonly property bool selected: Wallpaper.path === modelData
                         readonly property bool isVideoThumb: ["mp4", "webm", "mkv", "mov"].includes(modelData.split(".").pop().toLowerCase())
+                        readonly property string videoThumbPath: Quickshell.env("HOME") + "/.cache/helios/wallpaper-thumbs/" + modelData.replace(/[^A-Za-z0-9]/g, "_") + ".jpg"
+                        property bool videoThumbReady: false
+
+                        // One-shot frame grab, cached by sanitized path — cheap
+                        // and only ever runs once per video (subsequent opens
+                        // of this panel just hit the cached jpg).
+                        Process {
+                            running: thumb.isVideoThumb
+                            command: ["sh", "-c",
+                                "mkdir -p \"$(dirname '" + thumb.videoThumbPath + "')\" && " +
+                                "{ [ -f '" + thumb.videoThumbPath + "' ] || " +
+                                "ffmpeg -y -loglevel error -ss 00:00:00.5 -i '" + thumb.modelData + "' " +
+                                "-frames:v 1 -vf scale=320:-1 '" + thumb.videoThumbPath + "'; }"]
+                            onExited: thumb.videoThumbReady = true
+                        }
 
                         // Soft accent glow behind the selected tile — same
                         // "today" halo language used everywhere else, instead
@@ -282,10 +299,14 @@ Item {
                             visible: false
                         }
 
+                        readonly property bool showPlaceholder: thumb.isVideoThumb && (!thumb.videoThumbReady || img.status === Image.Error)
+
                         Image {
                             id: img
                             anchors.fill: mask
-                            source: "file://" + thumb.modelData
+                            source: thumb.isVideoThumb
+                                ? (thumb.videoThumbReady ? "file://" + thumb.videoThumbPath : "")
+                                : "file://" + thumb.modelData
                             fillMode: Image.PreserveAspectCrop
                             asynchronous: true
                             visible: false
@@ -296,36 +317,44 @@ Item {
                             anchors.fill: mask
                             source: img
                             maskSource: mask
-                            visible: !thumb.isVideoThumb
+                            visible: !thumb.showPlaceholder
                         }
 
+                        // Fallback while the frame grab runs (or if ffmpeg is
+                        // unavailable/fails) — same placeholder as before.
                         Rectangle {
                             anchors.fill: parent
                             radius: Colors.radiusSmall
                             color: Colors.surfaceHigh
-                            visible: thumb.isVideoThumb
+                            visible: thumb.showPlaceholder
 
                             MaterialIcon {
                                 anchors.centerIn: parent
-                                anchors.verticalCenterOffset: -8
                                 icon: "movie"
                                 font.pixelSize: 22
                                 opacity: 0.6
                             }
+                        }
 
-                            StyledText {
-                                anchors.horizontalCenter: parent.horizontalCenter
-                                anchors.bottom: parent.bottom
-                                anchors.bottomMargin: 6
-                                anchors.left: parent.left
-                                anchors.right: parent.right
-                                anchors.leftMargin: 6
-                                anchors.rightMargin: 6
-                                horizontalAlignment: Text.AlignHCenter
-                                elide: Text.ElideMiddle
-                                font.pixelSize: Config.fontSize - 3
-                                opacity: 0.7
-                                text: thumb.modelData.split("/").pop()
+                        // Video indicator — the thumbnail alone (a still
+                        // frame) can't tell photo and video apart.
+                        Rectangle {
+                            visible: thumb.isVideoThumb
+                            anchors.left: parent.left
+                            anchors.bottom: parent.bottom
+                            anchors.margins: 4
+                            width: 20
+                            height: 20
+                            radius: 10
+                            color: "black"
+                            opacity: 0.55
+
+                            MaterialIcon {
+                                anchors.centerIn: parent
+                                icon: "movie"
+                                filled: true
+                                font.pixelSize: 12
+                                color: "white"
                             }
                         }
 

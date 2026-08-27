@@ -10,6 +10,21 @@ Item {
     implicitWidth: 360
     implicitHeight: col.implicitHeight
 
+    property bool themeGridOpen: false
+    property bool schemeListOpen: false
+
+    readonly property var schemeDescriptions: ({
+        "scheme-tonal-spot": "Balanced, muted accent — the default.",
+        "scheme-vibrant": "Saturated colors pulled from the wallpaper.",
+        "scheme-expressive": "Wider hue range for stronger contrast.",
+        "scheme-fruit-salad": "Multiple accent hues across the UI.",
+        "scheme-rainbow": "Maximum hue variety, low saturation.",
+        "scheme-content": "Follows the dominant wallpaper color closely.",
+        "scheme-fidelity": "Closest match to the source image.",
+        "scheme-monochrome": "Single hue, varied by lightness only.",
+        "scheme-neutral": "Minimal saturation across all surfaces."
+    })
+
     Column {
         id: col
         width: parent.width
@@ -35,17 +50,67 @@ Item {
             }
         }
 
-        // ─── Preset themes section ───────────────────────────────────────
+        // ─── Theme section ────────────────────────────────────────────────
         Column {
             width: parent.width
             spacing: 10
 
             StyledText {
-                text: "Themes"
+                text: "Theme"
                 font.pixelSize: Config.fontSize - 1
                 font.weight: Font.DemiBold
                 font.capitalization: Font.AllUppercase
                 color: Colors.subtext
+            }
+
+            // Current theme, collapsed by default — click to reveal the grid
+            HoverRow {
+                width: parent.width
+                height: 44
+                highlighted: root.themeGridOpen
+                onClicked: root.themeGridOpen = !root.themeGridOpen
+
+                Row {
+                    anchors.left: parent.left
+                    anchors.leftMargin: 10
+                    anchors.verticalCenter: parent.verticalCenter
+                    spacing: 10
+
+                    Rectangle {
+                        width: 26
+                        height: 26
+                        radius: 13
+                        color: Colors.accent
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+
+                    Column {
+                        anchors.verticalCenter: parent.verticalCenter
+                        spacing: 1
+
+                        StyledText { text: Themes.currentLabel(); font.weight: Font.Medium }
+                        StyledText {
+                            text: Themes.presetOrder.length + " themes installed"
+                            font.pixelSize: Config.fontSize - 3
+                            color: Colors.subtext
+                        }
+                    }
+                }
+
+                Row {
+                    anchors.right: parent.right
+                    anchors.rightMargin: 10
+                    anchors.verticalCenter: parent.verticalCenter
+                    spacing: 4
+
+                    StyledText { text: "Change"; color: Colors.accent; font.weight: Font.Medium; anchors.verticalCenter: parent.verticalCenter }
+                    MaterialIcon {
+                        icon: root.themeGridOpen ? "expand_less" : "chevron_right"
+                        font.pixelSize: 15
+                        color: Colors.accent
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+                }
             }
 
             // Theme grid — 3 columns of rounded cards with color preview
@@ -53,6 +118,7 @@ Item {
                 width: parent.width
                 columns: 3
                 spacing: 8
+                visible: root.themeGridOpen
 
                 Repeater {
                     model: Themes.presetOrder
@@ -160,29 +226,40 @@ Item {
             }
         }
 
-        // ─── Dynamic theme section ───────────────────────────────────────
+        // ─── Match wallpaper colors ───────────────────────────────────────
         Column {
             width: parent.width
-            spacing: 12
+            spacing: 8
 
-            StyledText {
-                text: "Wallpaper"
-                font.pixelSize: Config.fontSize - 1
-                font.weight: Font.DemiBold
-                font.capitalization: Font.AllUppercase
-                color: Colors.subtext
-            }
-
-            // Dynamic theme button — prominent when active
-            PrimaryButton {
+            Row {
                 width: parent.width
-                icon: "auto_awesome"
-                text: Themes.generating ? "Generating…" : "Dynamic (from wallpaper)"
-                active: Themes.mode === "dynamic"
-                onClicked: Themes.applyDynamic()
+
+                Column {
+                    width: parent.width - matchToggle.width
+                    anchors.verticalCenter: parent.verticalCenter
+                    spacing: 1
+
+                    StyledText {
+                        font.weight: Font.Medium
+                        text: Themes.generating ? "Generating…" : "Match wallpaper colors"
+                    }
+                    StyledText {
+                        width: parent.width
+                        wrapMode: Text.WordWrap
+                        color: Colors.subtext
+                        font.pixelSize: Config.fontSize - 3
+                        text: "Generates the palette from your current wallpaper."
+                    }
+                }
+
+                Toggle {
+                    id: matchToggle
+                    anchors.verticalCenter: parent.verticalCenter
+                    checked: Themes.mode === "dynamic"
+                    onToggled: v => v ? Themes.applyDynamic() : Themes.applyPreset(Themes.presetName)
+                }
             }
 
-            // Error message
             StyledText {
                 visible: Themes.lastError.length > 0
                 width: parent.width
@@ -191,84 +268,115 @@ Item {
                 font.pixelSize: Config.fontSize - 2
                 text: Themes.lastError
             }
+        }
 
-            // ─── Palette options (only relevant when dynamic) ────────────
-            Rectangle {
+        // ─── Dark mode ────────────────────────────────────────────────────
+        Column {
+            width: parent.width
+            spacing: 10
+
+            Row {
                 width: parent.width
-                height: paletteCol.implicitHeight + 24
-                radius: 12
-                color: Colors.surfaceHigh
-                opacity: Themes.mode === "dynamic" ? 0.5 : 0.25
-                enabled: Themes.mode === "dynamic"
 
-                Behavior on opacity { NumberAnimation { duration: Config.animMedium } }
+                StyledText {
+                    width: parent.width - darkToggle.width
+                    anchors.verticalCenter: parent.verticalCenter
+                    font.weight: Font.Medium
+                    text: "Dark mode"
+                }
 
-                Column {
-                    id: paletteCol
-                    anchors.fill: parent
-                    anchors.margins: 12
-                    spacing: 12
+                Toggle {
+                    id: darkToggle
+                    anchors.verticalCenter: parent.verticalCenter
+                    checked: Themes.dynamicDark
+                    onToggled: v => Themes.setDynamicMode(v)
+                }
+            }
 
-                    // Dark/Light toggle row
-                    Row {
-                        width: parent.width
+            // Palette scheme — collapsed by default
+            HoverRow {
+                width: parent.width
+                height: 32
+                highlighted: root.schemeListOpen
+                onClicked: root.schemeListOpen = !root.schemeListOpen
 
-                        StyledText {
-                            width: parent.width - toggle.width
-                            anchors.verticalCenter: parent.verticalCenter
-                            font.weight: Font.Medium
-                            text: "Dark Mode"
-                        }
+                Row {
+                    anchors.left: parent.left
+                    anchors.leftMargin: 10
+                    anchors.verticalCenter: parent.verticalCenter
+                    spacing: 6
 
-                        Toggle {
-                            id: toggle
-                            anchors.verticalCenter: parent.verticalCenter
-                            checked: Themes.dynamicDark
-                            onToggled: v => Themes.setDynamicMode(v)
-                        }
+                    MaterialIcon {
+                        icon: root.schemeListOpen ? "expand_less" : "chevron_right"
+                        font.pixelSize: 13
+                        opacity: 0.6
+                        anchors.verticalCenter: parent.verticalCenter
                     }
-
-                    // Thin separator
-                    Rectangle {
-                        width: parent.width
-                        height: 0.5
-                        color: Colors.overlay
-                        opacity: 0.3
-                    }
-
-                    // Palette scheme label
                     StyledText {
-                        text: "Palette Scheme"
-                        font.pixelSize: Config.fontSize - 1
-                        font.weight: Font.Medium
+                        text: "Palette scheme"
                         color: Colors.subtext
+                        anchors.verticalCenter: parent.verticalCenter
                     }
+                }
+            }
 
-                    // Scheme chips — pill-shaped selectors
-                    Flow {
+            Column {
+                width: parent.width
+                spacing: 2
+                visible: root.schemeListOpen
+
+                Repeater {
+                    model: Themes.schemeOptions
+
+                    HoverRow {
+                        id: schemeRow
+                        required property var modelData
                         width: parent.width
-                        spacing: 6
+                        height: 46
+                        onClicked: Themes.setPaletteScheme(modelData.value)
 
-                        Repeater {
-                            model: Themes.schemeOptions
+                        Row {
+                            anchors.left: parent.left
+                            anchors.right: parent.right
+                            anchors.leftMargin: 10
+                            anchors.rightMargin: 10
+                            anchors.verticalCenter: parent.verticalCenter
+                            spacing: 10
 
-                            Chip {
-                                id: schemeChip
-                                required property var modelData
-                                active: Themes.paletteScheme === modelData.value
-                                text: modelData.label
-                                onClicked: Themes.setPaletteScheme(modelData.value)
+                            Rectangle {
+                                width: 14
+                                height: 14
+                                radius: 7
+                                anchors.verticalCenter: parent.verticalCenter
+                                color: "transparent"
+                                border.width: 1.5
+                                border.color: Themes.paletteScheme === schemeRow.modelData.value ? Colors.accent : Colors.overlay
 
-                                Repeater {
-                                    model: schemeChip.modelData.swatch
-                                    Rectangle {
-                                        required property string modelData
-                                        width: 7
-                                        height: 7
-                                        radius: 3.5
-                                        anchors.verticalCenter: parent.verticalCenter
-                                        color: modelData
-                                    }
+                                Rectangle {
+                                    anchors.centerIn: parent
+                                    width: 7
+                                    height: 7
+                                    radius: 3.5
+                                    color: Colors.accent
+                                    visible: Themes.paletteScheme === schemeRow.modelData.value
+                                }
+                            }
+
+                            Column {
+                                width: parent.width - 24
+                                spacing: 1
+
+                                StyledText {
+                                    text: schemeRow.modelData.label
+                                    font.weight: Font.Medium
+                                    color: Themes.paletteScheme === schemeRow.modelData.value ? Colors.accent : Colors.text
+                                }
+                                StyledText {
+                                    width: parent.width
+                                    wrapMode: Text.WordWrap
+                                    font.pixelSize: Config.fontSize - 3
+                                    color: Colors.subtext
+                                    text: root.schemeDescriptions[schemeRow.modelData.value] || ""
                                 }
                             }
                         }
