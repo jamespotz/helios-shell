@@ -39,8 +39,7 @@ QtObject {
                 appIcon: notification.appIcon || "",
                 desktopEntry: notification.desktopEntry || "",
                 senderPid: senderPid,
-                time: new Date(),
-                actions: notification.actions || undefined
+                time: new Date()
             }].concat(root.history).slice(0, root.historyMax);
 
             if (!root.dndActive) {
