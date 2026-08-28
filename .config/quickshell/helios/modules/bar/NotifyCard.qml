@@ -144,86 +144,94 @@ Item {
             }
         }
 
-        // Notification list
-        ListView {
-            id: groupList
+        // Notification list — wrapped so ScrollIndicator (anchors to its
+        // target's edges) is a sibling of the Flickable rather than a child
+        // inside it; Qt doesn't support a child anchoring to the Flickable
+        // it's inside (see components/ScrollIndicator.qml).
+        Item {
+            id: groupListWrap
             width: parent.width
             visible: root.count > 1
             height: visible ? Math.min(220, Math.max(0, root.count * 48)) : 0
-            clip: true
-            spacing: 4
-            model: root.list
-            boundsBehavior: Flickable.StopAtBounds
 
-            ScrollIndicator { target: groupList }
+            ListView {
+                id: groupList
+                anchors.fill: parent
+                clip: true
+                spacing: 4
+                model: root.list
+                boundsBehavior: Flickable.StopAtBounds
 
-            delegate: Rectangle {
-                id: row
-                required property var modelData
-                required property int index
+                delegate: Rectangle {
+                    id: row
+                    required property var modelData
+                    required property int index
 
-                width: groupList.width
-                height: 44
-                radius: Colors.radiusSmall
-                color: mouse.containsMouse ? Colors.surfaceHigh : "transparent"
-                opacity: mouse.containsMouse ? 0.6 : 1
+                    width: groupList.width
+                    height: 44
+                    radius: Colors.radiusSmall
+                    color: mouse.containsMouse ? Colors.surfaceHigh : "transparent"
+                    opacity: mouse.containsMouse ? 0.6 : 1
 
-                Behavior on color { ColorAnimation { duration: Config.animFast } }
+                    Behavior on color { ColorAnimation { duration: Config.animFast } }
 
-                MouseArea {
-                    id: mouse
-                    anchors.fill: parent
-                    hoverEnabled: true
-                }
+                    MouseArea {
+                        id: mouse
+                        anchors.fill: parent
+                        hoverEnabled: true
+                    }
 
-                Row {
-                    anchors.fill: parent
-                    anchors.leftMargin: 8
-                    anchors.rightMargin: 8
-                    spacing: 10
+                    Row {
+                        anchors.fill: parent
+                        anchors.leftMargin: 8
+                        anchors.rightMargin: 8
+                        spacing: 10
 
-                    // App icon — small rounded square
-                    Rectangle {
-                        width: 24
-                        height: 24
-                        radius: 6
-                        color: Colors.surfaceHigh
-                        anchors.verticalCenter: parent.verticalCenter
-                        clip: true
+                        // App icon — small rounded square
+                        Rectangle {
+                            width: 24
+                            height: 24
+                            radius: 6
+                            color: Colors.surfaceHigh
+                            anchors.verticalCenter: parent.verticalCenter
+                            clip: true
 
-                        Image {
-                            anchors.fill: parent
-                            anchors.margins: 1
-                            visible: source !== ""
-                            source: row.modelData.image || Quickshell.iconPath(row.modelData.appIcon, true)
-                            fillMode: Image.PreserveAspectFit
+                            Image {
+                                anchors.fill: parent
+                                anchors.margins: 1
+                                visible: source !== ""
+                                source: row.modelData.image || Quickshell.iconPath(row.modelData.appIcon, true)
+                                fillMode: Image.PreserveAspectFit
+                            }
                         }
-                    }
 
-                    StyledText {
-                        anchors.verticalCenter: parent.verticalCenter
-                        width: row.width - 24 - 10 - 16 - 28 - 28 - 30
-                        elide: Text.ElideRight
-                        font.pixelSize: Config.fontSize - 1
-                        text: row.modelData.summary
-                    }
+                        StyledText {
+                            anchors.verticalCenter: parent.verticalCenter
+                            width: row.width - 24 - 10 - 16 - 28 - 28 - 30
+                            elide: Text.ElideRight
+                            font.pixelSize: Config.fontSize - 1
+                            text: row.modelData.summary
+                        }
 
-                    IconButton {
-                        anchors.verticalCenter: parent.verticalCenter
-                        icon: "open_in_new"
-                        iconSize: 13
-                        visible: Notifications.hasDefaultAction(row.modelData)
-                        onClicked: Notifications.focusApp(row.modelData)
-                    }
+                        IconButton {
+                            anchors.verticalCenter: parent.verticalCenter
+                            icon: "open_in_new"
+                            iconSize: 13
+                            visible: Notifications.hasDefaultAction(row.modelData)
+                            onClicked: Notifications.focusApp(row.modelData)
+                        }
 
-                    IconButton {
-                        anchors.verticalCenter: parent.verticalCenter
-                        icon: "close"
-                        iconSize: 13
-                        onClicked: Notifications.dismiss(row.modelData)
+                        IconButton {
+                            anchors.verticalCenter: parent.verticalCenter
+                            icon: "close"
+                            iconSize: 13
+                            onClicked: Notifications.dismiss(row.modelData)
+                        }
                     }
                 }
             }
+
+            ScrollIndicator { target: groupList }
         }
     }
 }

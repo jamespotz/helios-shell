@@ -58,98 +58,107 @@ Item {
             font.pixelSize: Config.fontSize - 2
         }
 
-        ListView {
-            id: clipList
+        // Wraps the ListView so ScrollIndicator — which anchors to its
+        // target's edges — is a sibling of the Flickable rather than a
+        // child inside it; Qt doesn't support a child anchoring to the
+        // Flickable it's inside (see components/ScrollIndicator.qml).
+        Item {
+            id: clipListWrap
             width: parent.width
             visible: Clipboard.items.length > 0
             height: Math.min(280, Math.max(0, Clipboard.items.length * 46))
-            clip: true
-            spacing: 2
-            model: Clipboard.items
-            boundsBehavior: Flickable.StopAtBounds
 
-            ScrollIndicator { target: clipList }
+            ListView {
+                id: clipList
+                anchors.fill: parent
+                clip: true
+                spacing: 2
+                model: Clipboard.items
+                boundsBehavior: Flickable.StopAtBounds
 
-            delegate: HoverRow {
-                id: row
-                required property var modelData
-                required property int index
+                delegate: HoverRow {
+                    id: row
+                    required property var modelData
+                    required property int index
 
-                readonly property string thumbPath: Quickshell.env("HOME") + "/.cache/helios/clip-thumbs/" + modelData.id + ".img"
-                property string thumbSource: ""
+                    readonly property string thumbPath: Quickshell.env("HOME") + "/.cache/helios/clip-thumbs/" + modelData.id + ".img"
+                    property string thumbSource: ""
 
-                width: clipList.width
-                height: 44
-                onClicked: { Clipboard.copy(row.modelData.line); Bridge.closeIsland(); }
+                    width: clipList.width
+                    height: 44
+                    onClicked: { Clipboard.copy(row.modelData.line); Bridge.closeIsland(); }
 
-                Process {
-                    id: thumbDecoder
-                    command: ["sh", "-c",
-                        "[ -f \"$2\" ] || { mkdir -p \"$(dirname \"$2\")\" && printf '%s' \"$1\" | cliphist decode > \"$2\"; }",
-                        "_", row.modelData.line, row.thumbPath]
-                    onExited: {
-                        row.thumbSource = "file://" + row.thumbPath;
-                        Clipboard.markThumbReady(row.modelData.id);
-                    }
-                }
-
-                Component.onCompleted: {
-                    if (!row.modelData.isImage) return;
-                    if (Clipboard.readyThumbs[row.modelData.id]) {
-                        row.thumbSource = "file://" + row.thumbPath;
-                    } else {
-                        thumbDecoder.running = true;
-                    }
-                }
-
-                Row {
-                    anchors.fill: parent
-                    anchors.margins: 6
-                    spacing: 8
-
-                    Rectangle {
-                        visible: row.modelData.isImage
-                        width: 32
-                        height: 32
-                        radius: Colors.radiusSmall
-                        color: Colors.surfaceHigh
-                        clip: true
-                        anchors.verticalCenter: parent.verticalCenter
-
-                        Image {
-                            anchors.fill: parent
-                            visible: row.thumbSource !== ""
-                            source: row.thumbSource
-                            fillMode: Image.PreserveAspectCrop
-                            asynchronous: true
-                            cache: false
+                    Process {
+                        id: thumbDecoder
+                        command: ["sh", "-c",
+                            "[ -f \"$2\" ] || { mkdir -p \"$(dirname \"$2\")\" && printf '%s' \"$1\" | cliphist decode > \"$2\"; }",
+                            "_", row.modelData.line, row.thumbPath]
+                        onExited: {
+                            row.thumbSource = "file://" + row.thumbPath;
+                            Clipboard.markThumbReady(row.modelData.id);
                         }
                     }
 
-                    StyledText {
-                        anchors.verticalCenter: parent.verticalCenter
-                        width: parent.width - 16 - 8 - (row.modelData.isImage ? 40 : 0)
-                        elide: Text.ElideRight
-                        text: row.modelData.preview
+                    Component.onCompleted: {
+                        if (!row.modelData.isImage) return;
+                        if (Clipboard.readyThumbs[row.modelData.id]) {
+                            row.thumbSource = "file://" + row.thumbPath;
+                        } else {
+                            thumbDecoder.running = true;
+                        }
                     }
 
-                    MaterialIcon {
-                        anchors.verticalCenter: parent.verticalCenter
-                        icon: "close"
-                        font.pixelSize: 14
-                        opacity: row.hovering ? 1 : 0
-                        Behavior on opacity { NumberAnimation { duration: Config.animFast } }
+                    Row {
+                        anchors.fill: parent
+                        anchors.margins: 6
+                        spacing: 8
 
-                        MouseArea {
-                            anchors.fill: parent
-                            anchors.margins: -6
-                            cursorShape: Qt.PointingHandCursor
-                            enabled: row.hovering
-                            onClicked: Clipboard.remove(row.modelData.line)
+                        Rectangle {
+                            visible: row.modelData.isImage
+                            width: 32
+                            height: 32
+                            radius: Colors.radiusSmall
+                            color: Colors.surfaceHigh
+                            clip: true
+                            anchors.verticalCenter: parent.verticalCenter
+
+                            Image {
+                                anchors.fill: parent
+                                visible: row.thumbSource !== ""
+                                source: row.thumbSource
+                                fillMode: Image.PreserveAspectCrop
+                                asynchronous: true
+                                cache: false
+                            }
+                        }
+
+                        StyledText {
+                            anchors.verticalCenter: parent.verticalCenter
+                            width: parent.width - 16 - 8 - (row.modelData.isImage ? 40 : 0)
+                            elide: Text.ElideRight
+                            text: row.modelData.preview
+                        }
+
+                        MaterialIcon {
+                            anchors.verticalCenter: parent.verticalCenter
+                            icon: "close"
+                            font.pixelSize: 14
+                            opacity: row.hovering ? 1 : 0
+                            Behavior on opacity { NumberAnimation { duration: Config.animFast } }
+
+                            MouseArea {
+                                anchors.fill: parent
+                                anchors.margins: -6
+                                cursorShape: Qt.PointingHandCursor
+                                enabled: row.hovering
+                                onClicked: Clipboard.remove(row.modelData.line)
+                            }
                         }
                     }
                 }
             }
+
+            ScrollIndicator { target: clipList }
         }
     }
 

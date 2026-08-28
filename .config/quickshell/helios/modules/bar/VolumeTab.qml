@@ -135,68 +135,77 @@ Item {
             font.pixelSize: Config.fontSize - 2
         }
 
-        ListView {
-            id: deviceList
+        // Wrapped so ScrollIndicator (anchors to its target's edges) is a
+        // sibling of the Flickable rather than a child inside it; Qt
+        // doesn't support a child anchoring to the Flickable it's inside
+        // (see components/ScrollIndicator.qml).
+        Item {
+            id: deviceListWrap
             width: parent.width
             visible: root.activeDevices.length > 0
             height: Math.min(220, Math.max(0, root.activeDevices.length * 44))
-            clip: true
-            spacing: 2
-            model: root.activeDevices
-            boundsBehavior: Flickable.StopAtBounds
 
-            ScrollIndicator { target: deviceList }
+            ListView {
+                id: deviceList
+                anchors.fill: parent
+                clip: true
+                spacing: 2
+                model: root.activeDevices
+                boundsBehavior: Flickable.StopAtBounds
 
-            delegate: HoverRow {
-                id: devRow
-                required property var modelData
-                required property int index
+                delegate: HoverRow {
+                    id: devRow
+                    required property var modelData
+                    required property int index
 
-                readonly property bool isDefault: root.activeDefault && root.activeDefault.id === modelData.id
+                    readonly property bool isDefault: root.activeDefault && root.activeDefault.id === modelData.id
 
-                width: deviceList.width
-                height: 40
-                highlighted: isDefault
-                onClicked: {
-                    if (root.isOutput) Pipewire.preferredDefaultAudioSink = devRow.modelData;
-                    else Pipewire.preferredDefaultAudioSource = devRow.modelData;
-                }
+                    width: deviceList.width
+                    height: 40
+                    highlighted: isDefault
+                    onClicked: {
+                        if (root.isOutput) Pipewire.preferredDefaultAudioSink = devRow.modelData;
+                        else Pipewire.preferredDefaultAudioSource = devRow.modelData;
+                    }
 
-                Row {
-                    anchors.fill: parent
-                    anchors.margins: 6
-                    spacing: 8
+                    Row {
+                        anchors.fill: parent
+                        anchors.margins: 6
+                        spacing: 8
 
-                    Rectangle {
-                        width: 28
-                        height: 28
-                        radius: Colors.radiusSmall
-                        color: Colors.surfaceHigh
-                        anchors.verticalCenter: parent.verticalCenter
+                        Rectangle {
+                            width: 28
+                            height: 28
+                            radius: Colors.radiusSmall
+                            color: Colors.surfaceHigh
+                            anchors.verticalCenter: parent.verticalCenter
+
+                            MaterialIcon {
+                                anchors.centerIn: parent
+                                icon: root.iconForNode(devRow.modelData)
+                                font.pixelSize: 15
+                            }
+                        }
+
+                        StyledText {
+                            anchors.verticalCenter: parent.verticalCenter
+                            width: devRow.width - 28 - 16 - 22
+                            elide: Text.ElideRight
+                            text: devRow.modelData.description || devRow.modelData.nickname || devRow.modelData.name
+                        }
 
                         MaterialIcon {
-                            anchors.centerIn: parent
-                            icon: root.iconForNode(devRow.modelData)
-                            font.pixelSize: 15
+                            anchors.verticalCenter: parent.verticalCenter
+                            visible: devRow.isDefault
+                            icon: "check"
+                            color: Colors.accent
+                            font.pixelSize: 16
                         }
-                    }
-
-                    StyledText {
-                        anchors.verticalCenter: parent.verticalCenter
-                        width: devRow.width - 28 - 16 - 22
-                        elide: Text.ElideRight
-                        text: devRow.modelData.description || devRow.modelData.nickname || devRow.modelData.name
-                    }
-
-                    MaterialIcon {
-                        anchors.verticalCenter: parent.verticalCenter
-                        visible: devRow.isDefault
-                        icon: "check"
-                        color: Colors.accent
-                        font.pixelSize: 16
                     }
                 }
             }
+
+            ScrollIndicator { target: deviceList }
         }
     }
 }

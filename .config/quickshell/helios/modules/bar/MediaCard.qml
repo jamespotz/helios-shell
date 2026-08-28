@@ -1,6 +1,6 @@
 import QtQuick
 import Quickshell.Services.Mpris
-import Qt5Compat.GraphicalEffects
+import QtQuick.Effects
 import "../../services"
 import "../../components"
 
@@ -60,7 +60,7 @@ Item {
             width: parent.width
             spacing: 16
 
-            // Album art — circular using OpacityMask
+            // Album art — circular using MultiEffect's mask
             Item {
                 width: 96
                 height: 96
@@ -101,9 +101,10 @@ Item {
                     asynchronous: true
                 }
 
-                OpacityMask {
+                MultiEffect {
                     anchors.fill: artCircleMask
                     source: artImage
+                    maskEnabled: true
                     maskSource: artCircleMask
                     visible: !!(root.player && root.player.trackArtUrl)
                 }

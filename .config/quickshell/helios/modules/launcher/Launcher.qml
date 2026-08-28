@@ -114,33 +114,39 @@ PanelWindow {
         const raw = searchField.text.trim();
         // "/em" or "/emoji", optionally followed by a search term.
         const emojiPrefix = raw.match(/^\/em(?:oji)?(?:\s+(.*))?$/i);
+        let newResults;
         if (emojiPrefix) {
             launcher.emojiMode = true;
-            results = Emoji.search(emojiPrefix[1] || "", 9);
-            return;
-        }
-        launcher.emojiMode = false;
+            newResults = Emoji.search(emojiPrefix[1] || "", 9);
+        } else {
+            launcher.emojiMode = false;
 
-        const query = raw.toLowerCase();
-        const all = launcher.allApps;
-        if (!query) {
-            // No query: lead with whatever's actually used most (Spotlight-
-            // style "frequently used" ranking) instead of DesktopEntries'
-            // arbitrary filesystem-scan order.
-            results = all.slice().sort((a, b) => {
-                return launcher.countFor(b.name) - launcher.countFor(a.name) || a.name.localeCompare(b.name);
-            }).slice(0, 9);
-            return;
+            const query = raw.toLowerCase();
+            const all = launcher.allApps;
+            if (!query) {
+                // No query: lead with whatever's actually used most (Spotlight-
+                // style "frequently used" ranking) instead of DesktopEntries'
+                // arbitrary filesystem-scan order.
+                newResults = all.slice().sort((a, b) => {
+                    return launcher.countFor(b.name) - launcher.countFor(a.name) || a.name.localeCompare(b.name);
+                }).slice(0, 9);
+            } else {
+                newResults = all.map(e => ({ entry: e, score: launcher.matchScore(e, query) }))
+                    .filter(m => m.score > 0)
+                    .sort((a, b) => {
+                        return b.score - a.score
+                            || launcher.countFor(b.entry.name) - launcher.countFor(a.entry.name)
+                            || a.entry.name.localeCompare(b.entry.name);
+                    })
+                    .map(m => m.entry)
+                    .slice(0, 9);
+            }
         }
-        results = all.map(e => ({ entry: e, score: launcher.matchScore(e, query) }))
-            .filter(m => m.score > 0)
-            .sort((a, b) => {
-                return b.score - a.score
-                    || launcher.countFor(b.entry.name) - launcher.countFor(a.entry.name)
-                    || a.entry.name.localeCompare(b.entry.name);
-            })
-            .map(m => m.entry)
-            .slice(0, 9);
+        results = newResults;
+        // Results reorder/shrink on every keystroke — clamp the arrow-key
+        // selection so it can't point past the new array (was: stale index
+        // survived a narrowing refresh, so Enter indexed out of bounds).
+        resultList.currentIndex = results.length > 0 ? Math.min(resultList.currentIndex, results.length - 1) : 0;
     }
 
     // Launch an app — wraps terminal apps (btop, nvim, etc.) in the

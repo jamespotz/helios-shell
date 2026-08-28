@@ -78,119 +78,127 @@ Item {
             StyledText { text: "No notifications yet"; color: Colors.subtext; anchors.horizontalCenter: parent.horizontalCenter }
         }
 
-        // History list
-        ListView {
-            id: historyList
+        // History list — wrapped so ScrollIndicator (anchors to its target's
+        // edges) is a sibling of the Flickable rather than a child inside
+        // it; Qt doesn't support a child anchoring to the Flickable it's
+        // inside (see components/ScrollIndicator.qml).
+        Item {
+            id: historyListWrap
             width: parent.width
             visible: Notifications.history.length > 0
             height: Math.min(320, Notifications.history.length * 68)
-            clip: true
-            spacing: 4
-            model: Notifications.history
-            boundsBehavior: Flickable.StopAtBounds
 
-            ScrollIndicator { target: historyList }
+            ListView {
+                id: historyList
+                anchors.fill: parent
+                clip: true
+                spacing: 4
+                model: Notifications.history
+                boundsBehavior: Flickable.StopAtBounds
 
-            delegate: Rectangle {
-                id: histRow
-                required property var modelData
-                required property int index
+                delegate: Rectangle {
+                    id: histRow
+                    required property var modelData
+                    required property int index
 
-                width: historyList.width
-                height: 64
-                radius: 10
-                color: histHover.hovered ? Colors.surfaceHigh : "transparent"
+                    width: historyList.width
+                    height: 64
+                    radius: 10
+                    color: histHover.hovered ? Colors.surfaceHigh : "transparent"
 
-                // Truncate to a fixed character budget rather than relying on
-                // single-line width-elide, which cropped long bodies after
-                // only a handful of characters.
-                function truncate(text, max) {
-                    return text.length > max ? text.slice(0, max).replace(/\s+$/, "") + "…" : text;
-                }
-
-                HoverHandler { id: histHover }
-
-                // Open app on click — relaunches via its .desktop entry, then
-                // falls back to the PID resolver (see Notifications.qml). No
-                // dedicated icon: the resolver's hit rate for CLI notifiers
-                // is too low to promise via a button, so the whole row is
-                // just clickable and silently no-ops if nothing resolves.
-                MouseArea {
-                    anchors.fill: parent
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: Notifications.openApp(histRow.modelData)
-                }
-
-                Row {
-                    anchors.fill: parent
-                    anchors.leftMargin: 8
-                    anchors.rightMargin: 8
-                    spacing: 10
-
-                    // App icon placeholder
-                    Rectangle {
-                        width: 32
-                        height: 32
-                        radius: 8
-                        color: Colors.surfaceHigh
-                        anchors.verticalCenter: parent.verticalCenter
-
-                        MaterialIcon {
-                            anchors.centerIn: parent
-                            icon: "notifications"
-                            font.pixelSize: 16
-                            color: Colors.subtext
-                        }
+                    // Truncate to a fixed character budget rather than relying on
+                    // single-line width-elide, which cropped long bodies after
+                    // only a handful of characters.
+                    function truncate(text, max) {
+                        return text.length > max ? text.slice(0, max).replace(/\s+$/, "") + "…" : text;
                     }
 
-                    // Content
-                    Column {
-                        anchors.verticalCenter: parent.verticalCenter
-                        width: histRow.width - 16 - 32 - 60 - 20
-                        spacing: 2
+                    HoverHandler { id: histHover }
 
-                        StyledText {
-                            width: parent.width
-                            elide: Text.ElideRight
-                            font.weight: Font.Medium
-                            font.pixelSize: Config.fontSize - 1
-                            text: histRow.modelData.summary || ""
-                        }
-
-                        StyledText {
-                            visible: (histRow.modelData.body || "").length > 0
-                            width: parent.width
-                            wrapMode: Text.WordWrap
-                            maximumLineCount: 2
-                            elide: Text.ElideRight
-                            font.pixelSize: Config.fontSize - 2
-                            color: Colors.subtext
-                            text: histRow.truncate(histRow.modelData.body || "", 150)
-                        }
+                    // Open app on click — relaunches via its .desktop entry, then
+                    // falls back to the PID resolver (see Notifications.qml). No
+                    // dedicated icon: the resolver's hit rate for CLI notifiers
+                    // is too low to promise via a button, so the whole row is
+                    // just clickable and silently no-ops if nothing resolves.
+                    MouseArea {
+                        anchors.fill: parent
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: Notifications.openApp(histRow.modelData)
                     }
 
-                    // Time
-                    StyledText {
-                        anchors.verticalCenter: parent.verticalCenter
-                        width: 60
-                        horizontalAlignment: Text.AlignRight
-                        font.pixelSize: Config.fontSize - 3
-                        color: Colors.subtext
-                        text: {
-                            if (!histRow.modelData.time) return "";
-                            const t = histRow.modelData.time;
-                            const now = new Date();
-                            const diffMs = now - t;
-                            const diffMin = Math.floor(diffMs / 60000);
-                            if (diffMin < 1) return "now";
-                            if (diffMin < 60) return diffMin + "m";
-                            const diffH = Math.floor(diffMin / 60);
-                            if (diffH < 24) return diffH + "h";
-                            return Qt.formatDate(t, "MMM d");
+                    Row {
+                        anchors.fill: parent
+                        anchors.leftMargin: 8
+                        anchors.rightMargin: 8
+                        spacing: 10
+
+                        // App icon placeholder
+                        Rectangle {
+                            width: 32
+                            height: 32
+                            radius: 8
+                            color: Colors.surfaceHigh
+                            anchors.verticalCenter: parent.verticalCenter
+
+                            MaterialIcon {
+                                anchors.centerIn: parent
+                                icon: "notifications"
+                                font.pixelSize: 16
+                                color: Colors.subtext
+                            }
+                        }
+
+                        // Content
+                        Column {
+                            anchors.verticalCenter: parent.verticalCenter
+                            width: histRow.width - 16 - 32 - 60 - 20
+                            spacing: 2
+
+                            StyledText {
+                                width: parent.width
+                                elide: Text.ElideRight
+                                font.weight: Font.Medium
+                                font.pixelSize: Config.fontSize - 1
+                                text: histRow.modelData.summary || ""
+                            }
+
+                            StyledText {
+                                visible: (histRow.modelData.body || "").length > 0
+                                width: parent.width
+                                wrapMode: Text.WordWrap
+                                maximumLineCount: 2
+                                elide: Text.ElideRight
+                                font.pixelSize: Config.fontSize - 2
+                                color: Colors.subtext
+                                text: histRow.truncate(histRow.modelData.body || "", 150)
+                            }
+                        }
+
+                        // Time
+                        StyledText {
+                            anchors.verticalCenter: parent.verticalCenter
+                            width: 60
+                            horizontalAlignment: Text.AlignRight
+                            font.pixelSize: Config.fontSize - 3
+                            color: Colors.subtext
+                            text: {
+                                if (!histRow.modelData.time) return "";
+                                const t = histRow.modelData.time;
+                                const now = new Date();
+                                const diffMs = now - t;
+                                const diffMin = Math.floor(diffMs / 60000);
+                                if (diffMin < 1) return "now";
+                                if (diffMin < 60) return diffMin + "m";
+                                const diffH = Math.floor(diffMin / 60);
+                                if (diffH < 24) return diffH + "h";
+                                return Qt.formatDate(t, "MMM d");
+                            }
                         }
                     }
                 }
             }
+
+            ScrollIndicator { target: historyList }
         }
 
         // Count footer

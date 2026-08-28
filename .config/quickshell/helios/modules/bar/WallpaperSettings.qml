@@ -1,6 +1,6 @@
 import QtQuick
 import QtMultimedia
-import Qt5Compat.GraphicalEffects
+import QtQuick.Effects
 import Quickshell
 import Quickshell.Io
 import "../../services"
@@ -230,170 +230,181 @@ Item {
             text: "Choose Wallpaper"
         }
 
-        Flickable {
-            id: thumbFlick
+        // Wrapped so ScrollIndicator (anchors to its target's edges) is a
+        // sibling of the Flickable rather than a child inside it; Qt
+        // doesn't support a child anchoring to the Flickable it's inside
+        // (see components/ScrollIndicator.qml).
+        Item {
+            id: thumbFlickWrap
             width: parent.width
             height: Math.min(200, grid.implicitHeight)
-            contentWidth: width
-            contentHeight: grid.implicitHeight
-            clip: true
-            boundsBehavior: Flickable.StopAtBounds
 
-            ScrollIndicator { target: thumbFlick }
+            Flickable {
+                id: thumbFlick
+                anchors.fill: parent
+                contentWidth: width
+                contentHeight: grid.implicitHeight
+                clip: true
+                boundsBehavior: Flickable.StopAtBounds
 
-            // Fewer, bigger tiles than before (3 columns, not 4) — reads
-            // closer to macOS's own wallpaper picker than a dense grid.
-            Grid {
-                id: grid
-                width: parent.width
-                columns: 3
-                spacing: 8
+                // Fewer, bigger tiles than before (3 columns, not 4) — reads
+                // closer to macOS's own wallpaper picker than a dense grid.
+                Grid {
+                    id: grid
+                    width: parent.width
+                    columns: 3
+                    spacing: 8
 
-                readonly property real cellWidth: (width - (columns - 1) * spacing) / columns
-                readonly property real cellHeight: cellWidth * 0.62
+                    readonly property real cellWidth: (width - (columns - 1) * spacing) / columns
+                    readonly property real cellHeight: cellWidth * 0.62
 
-                Repeater {
-                    model: Wallpaper.images
+                    Repeater {
+                        model: Wallpaper.images
 
-                    Item {
-                        id: thumb
-                        required property string modelData
+                        Item {
+                            id: thumb
+                            required property string modelData
 
-                        width: grid.cellWidth
-                        height: grid.cellHeight
+                            width: grid.cellWidth
+                            height: grid.cellHeight
 
-                        readonly property bool selected: Wallpaper.path === modelData
-                        readonly property bool isVideoThumb: ["mp4", "webm", "mkv", "mov"].includes(modelData.split(".").pop().toLowerCase())
-                        readonly property string videoThumbPath: Quickshell.env("HOME") + "/.cache/helios/wallpaper-thumbs/" + modelData.replace(/[^A-Za-z0-9]/g, "_") + ".jpg"
-                        property bool videoThumbReady: false
+                            readonly property bool selected: Wallpaper.path === modelData
+                            readonly property bool isVideoThumb: ["mp4", "webm", "mkv", "mov"].includes(modelData.split(".").pop().toLowerCase())
+                            readonly property string videoThumbPath: Quickshell.env("HOME") + "/.cache/helios/wallpaper-thumbs/" + modelData.replace(/[^A-Za-z0-9]/g, "_") + ".jpg"
+                            property bool videoThumbReady: false
 
-                        // One-shot frame grab, cached by sanitized path — cheap
-                        // and only ever runs once per video (subsequent opens
-                        // of this panel just hit the cached jpg).
-                        Process {
-                            running: thumb.isVideoThumb
-                            command: ["sh", "-c",
-                                "mkdir -p \"$(dirname '" + thumb.videoThumbPath + "')\" && " +
-                                "{ [ -f '" + thumb.videoThumbPath + "' ] || " +
-                                "ffmpeg -y -loglevel error -ss 00:00:00.5 -i '" + thumb.modelData + "' " +
-                                "-frames:v 1 -vf scale=320:-1 '" + thumb.videoThumbPath + "'; }"]
-                            onExited: thumb.videoThumbReady = true
-                        }
-
-                        // Soft accent glow behind the selected tile — same
-                        // "today" halo language used everywhere else, instead
-                        // of relying on the hard border alone.
-                        Rectangle {
-                            visible: thumb.selected
-                            anchors.fill: parent
-                            anchors.margins: -4
-                            radius: Colors.radiusLarge
-                            color: Colors.accent
-                            opacity: 0.25
-                        }
-
-                        Rectangle {
-                            id: mask
-                            anchors.fill: parent
-                            radius: Colors.radiusSmall
-                            visible: false
-                        }
-
-                        readonly property bool showPlaceholder: thumb.isVideoThumb && (!thumb.videoThumbReady || img.status === Image.Error)
-
-                        Image {
-                            id: img
-                            anchors.fill: mask
-                            source: thumb.isVideoThumb
-                                ? (thumb.videoThumbReady ? "file://" + thumb.videoThumbPath : "")
-                                : "file://" + thumb.modelData
-                            fillMode: Image.PreserveAspectCrop
-                            asynchronous: true
-                            visible: false
-                            sourceSize: Qt.size(grid.cellWidth * 2, grid.cellHeight * 2)
-                        }
-
-                        OpacityMask {
-                            anchors.fill: mask
-                            source: img
-                            maskSource: mask
-                            visible: !thumb.showPlaceholder
-                        }
-
-                        // Fallback while the frame grab runs (or if ffmpeg is
-                        // unavailable/fails) — same placeholder as before.
-                        Rectangle {
-                            anchors.fill: parent
-                            radius: Colors.radiusSmall
-                            color: Colors.surfaceHigh
-                            visible: thumb.showPlaceholder
-
-                            MaterialIcon {
-                                anchors.centerIn: parent
-                                icon: "movie"
-                                font.pixelSize: 22
-                                opacity: 0.6
+                            // One-shot frame grab, cached by sanitized path — cheap
+                            // and only ever runs once per video (subsequent opens
+                            // of this panel just hit the cached jpg).
+                            Process {
+                                running: thumb.isVideoThumb
+                                command: ["sh", "-c",
+                                    "mkdir -p \"$(dirname '" + thumb.videoThumbPath + "')\" && " +
+                                    "{ [ -f '" + thumb.videoThumbPath + "' ] || " +
+                                    "ffmpeg -y -loglevel error -ss 00:00:00.5 -i '" + thumb.modelData + "' " +
+                                    "-frames:v 1 -vf scale=320:-1 '" + thumb.videoThumbPath + "'; }"]
+                                onExited: thumb.videoThumbReady = true
                             }
-                        }
 
-                        // Video indicator — the thumbnail alone (a still
-                        // frame) can't tell photo and video apart.
-                        Rectangle {
-                            visible: thumb.isVideoThumb
-                            anchors.left: parent.left
-                            anchors.bottom: parent.bottom
-                            anchors.margins: 4
-                            width: 20
-                            height: 20
-                            radius: 10
-                            color: "black"
-                            opacity: 0.55
+                            // Soft accent glow behind the selected tile — same
+                            // "today" halo language used everywhere else, instead
+                            // of relying on the hard border alone.
+                            Rectangle {
+                                visible: thumb.selected
+                                anchors.fill: parent
+                                anchors.margins: -4
+                                radius: Colors.radiusLarge
+                                color: Colors.accent
+                                opacity: 0.25
+                            }
+
+                            Rectangle {
+                                id: mask
+                                anchors.fill: parent
+                                radius: Colors.radiusSmall
+                                visible: false
+                                layer.enabled: true
+                            }
+
+                            readonly property bool showPlaceholder: thumb.isVideoThumb && (!thumb.videoThumbReady || img.status === Image.Error)
+
+                            Image {
+                                id: img
+                                anchors.fill: mask
+                                source: thumb.isVideoThumb
+                                    ? (thumb.videoThumbReady ? "file://" + thumb.videoThumbPath : "")
+                                    : "file://" + thumb.modelData
+                                fillMode: Image.PreserveAspectCrop
+                                asynchronous: true
+                                visible: false
+                                sourceSize: Qt.size(grid.cellWidth * 2, grid.cellHeight * 2)
+                            }
+
+                            MultiEffect {
+                                anchors.fill: mask
+                                source: img
+                                maskEnabled: true
+                                maskSource: mask
+                                visible: !thumb.showPlaceholder
+                            }
+
+                            // Fallback while the frame grab runs (or if ffmpeg is
+                            // unavailable/fails) — same placeholder as before.
+                            Rectangle {
+                                anchors.fill: parent
+                                radius: Colors.radiusSmall
+                                color: Colors.surfaceHigh
+                                visible: thumb.showPlaceholder
+
+                                MaterialIcon {
+                                    anchors.centerIn: parent
+                                    icon: "movie"
+                                    font.pixelSize: 22
+                                    opacity: 0.6
+                                }
+                            }
+
+                            // Video indicator — the thumbnail alone (a still
+                            // frame) can't tell photo and video apart.
+                            Rectangle {
+                                visible: thumb.isVideoThumb
+                                anchors.left: parent.left
+                                anchors.bottom: parent.bottom
+                                anchors.margins: 4
+                                width: 20
+                                height: 20
+                                radius: 10
+                                color: "black"
+                                opacity: 0.55
+
+                                MaterialIcon {
+                                    anchors.centerIn: parent
+                                    icon: "movie"
+                                    filled: true
+                                    font.pixelSize: 12
+                                    color: "white"
+                                }
+                            }
+
+                            Rectangle {
+                                anchors.fill: parent
+                                radius: Colors.radiusSmall
+                                color: "transparent"
+                                border.width: thumb.selected ? 2 : 0
+                                border.color: Colors.accent
+                            }
 
                             MaterialIcon {
-                                anchors.centerIn: parent
-                                icon: "movie"
+                                visible: thumb.selected
+                                anchors.top: parent.top
+                                anchors.right: parent.right
+                                anchors.margins: 4
+                                icon: "check_circle"
                                 filled: true
-                                font.pixelSize: 12
-                                color: "white"
+                                font.pixelSize: 16
+                                color: Colors.accent
                             }
-                        }
 
-                        Rectangle {
-                            anchors.fill: parent
-                            radius: Colors.radiusSmall
-                            color: "transparent"
-                            border.width: thumb.selected ? 2 : 0
-                            border.color: Colors.accent
-                        }
+                            Rectangle {
+                                anchors.fill: parent
+                                radius: Colors.radiusSmall
+                                color: Colors.overlay
+                                opacity: thumbHover.hovered && !thumb.selected ? 0.25 : 0
+                            }
 
-                        MaterialIcon {
-                            visible: thumb.selected
-                            anchors.top: parent.top
-                            anchors.right: parent.right
-                            anchors.margins: 4
-                            icon: "check_circle"
-                            filled: true
-                            font.pixelSize: 16
-                            color: Colors.accent
-                        }
+                            HoverHandler { id: thumbHover }
 
-                        Rectangle {
-                            anchors.fill: parent
-                            radius: Colors.radiusSmall
-                            color: Colors.overlay
-                            opacity: thumbHover.hovered && !thumb.selected ? 0.25 : 0
-                        }
-
-                        HoverHandler { id: thumbHover }
-
-                        MouseArea {
-                            anchors.fill: parent
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: Wallpaper.setPath(thumb.modelData)
+                            MouseArea {
+                                anchors.fill: parent
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: Wallpaper.setPath(thumb.modelData)
+                            }
                         }
                     }
                 }
             }
+
+            ScrollIndicator { target: thumbFlick }
         }
     }
 }

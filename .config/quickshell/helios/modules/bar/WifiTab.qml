@@ -14,8 +14,15 @@ Item {
 
     // "orbit" is the focused single-network view matching Bluetooth's; "list"
     // is the scannable flat network list, still the better view when nothing
-    // is connected yet.
-    property string viewMode: root.connectedNetwork ? "orbit" : "list"
+    // is connected yet. viewOverride tracks an explicit "Switch View" click
+    // separately from the binding below (an imperative `viewMode = "list"`
+    // used to overwrite the binding directly, permanently pinning the tab to
+    // list view even after a later reconnect) and is cleared whenever the
+    // connection state changes so a reconnect always lands back on orbit.
+    property bool viewOverride: false
+    readonly property string viewMode: root.viewOverride ? "list" : (root.connectedNetwork ? "orbit" : "list")
+
+    onConnectedNetworkChanged: root.viewOverride = false
 
     property bool addNetworkOpen: false
     property string addSecurity: "wpa"
@@ -81,221 +88,40 @@ Item {
         }
 
         // --- Orbit view: focused view of the connected network -----------------
-        Item {
+        OrbitPanel {
             id: orbitView
-            width: parent.width
-            height: 460
             visible: root.viewMode === "orbit" && Networking.wifiEnabled
+            active: root.viewMode === "orbit" && Networking.wifiEnabled
 
-            Item {
-                id: orbitCenter
-                anchors.centerIn: parent
-                width: 1
-                height: 1
+            centerIcon: "wifi"
+            centerTitle: root.connectedNetwork ? root.connectedNetwork.ssid : "No network"
+            centerSubtitle: root.connectedNetwork ? "Connected" : "Not connected"
 
-                // Drives the satellite cards around the outer ring — cards
-                // travel the circle but stay upright (position-only, no
-                // rotation on the cards themselves) so their text stays
-                // readable throughout. Paused when the view isn't visible.
-                property real orbitAngle: 0
-                NumberAnimation on orbitAngle {
-                    running: orbitView.visible
-                    from: 0
-                    to: 360
-                    duration: 60000
-                    loops: Animation.Infinite
+            scanLabel: "Scan Networks"
+            onScanClicked: root.wn.scan()
+            onSwitchViewClicked: root.viewOverride = true
+
+            infoCards: [
+                {
+                    angle: 180, width: 180, icon: "dns", monospace: true,
+                    value: root.wn.wifiDevice && root.wn.wifiDevice.address ? root.wn.wifiDevice.address : "—",
+                    label: "IP Address"
+                },
+                {
+                    angle: 0, width: 180, monospace: false,
+                    icon: !root.connectedNetwork ? "wifi_off"
+                        : root.connectedNetwork.signal > 70 ? "wifi"
+                        : root.connectedNetwork.signal > 40 ? "wifi_2_bar" : "wifi_1_bar",
+                    value: root.connectedNetwork ? root.connectedNetwork.signal + "%" : "—",
+                    label: "Signal"
+                },
+                {
+                    angle: 90, width: 190, monospace: false,
+                    icon: root.connectedNetwork && root.connectedNetwork.secured ? "lock" : "lock_open",
+                    value: !root.connectedNetwork ? "—" : (root.connectedNetwork.secured ? root.connectedNetwork.security : "Open"),
+                    label: "Security"
                 }
-
-                Repeater {
-                    model: [90, 140, 190]
-                    Rectangle {
-                        required property int modelData
-                        anchors.centerIn: parent
-                        width: modelData * 2
-                        height: width
-                        radius: width / 2
-                        color: "transparent"
-                        border.width: 1
-                        border.color: Colors.overlay
-                        opacity: 0.25
-                    }
-                }
-
-                Rectangle {
-                    id: centerCircle
-                    anchors.centerIn: parent
-                    width: 150
-                    height: 150
-                    radius: 75
-                    color: Colors.secondary
-
-                    Column {
-                        anchors.centerIn: parent
-                        spacing: 4
-                        MaterialIcon {
-                            icon: "wifi"
-                            font.pixelSize: 40
-                            color: Colors.secondaryText
-                            anchors.horizontalCenter: parent.horizontalCenter
-                        }
-                        StyledText {
-                            text: root.connectedNetwork ? root.connectedNetwork.ssid : "No network"
-                            color: Colors.secondaryText
-                            font.bold: true
-                            anchors.horizontalCenter: parent.horizontalCenter
-                        }
-                        StyledText {
-                            text: root.connectedNetwork ? "Connected" : "Not connected"
-                            color: Colors.secondaryText
-                            opacity: 0.75
-                            font.pixelSize: Config.fontSize - 2
-                            anchors.horizontalCenter: parent.horizontalCenter
-                        }
-                    }
-                }
-
-                // --- Satellite cards ---------------------------------------------
-                Rectangle {
-                    id: scanCard
-                    width: 190
-                    height: 56
-                    radius: Colors.radiusLarge
-                    color: Colors.surfaceHigh
-                    readonly property real orbitBaseAngle: -90
-                    x: 190 * Math.cos((orbitCenter.orbitAngle + orbitBaseAngle) * Math.PI / 180) - width / 2
-                    y: 190 * Math.sin((orbitCenter.orbitAngle + orbitBaseAngle) * Math.PI / 180) - height / 2
-
-                    Row {
-                        anchors.left: parent.left
-                        anchors.leftMargin: 12
-                        anchors.verticalCenter: parent.verticalCenter
-                        spacing: 10
-
-                        MaterialIcon { icon: "search"; anchors.verticalCenter: parent.verticalCenter }
-                        Column {
-                            spacing: 2
-                            StyledText { text: "Scan Networks"; font.bold: true; font.pixelSize: Config.fontSize - 1 }
-                            StyledText { text: "Switch View"; opacity: 0.6; font.pixelSize: Config.fontSize - 3 }
-                        }
-                    }
-
-                    Rectangle {
-                        anchors.fill: parent
-                        radius: parent.radius
-                        color: Colors.surfaceHigh
-                        opacity: scanCardHover.hovered ? 0.15 : 0
-                    }
-
-                    HoverHandler { id: scanCardHover }
-
-                    MouseArea {
-                        anchors.fill: parent
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: root.wn.scan()
-                    }
-                    MouseArea {
-                        // "Switch View" label only
-                        height: 18
-                        anchors.left: parent.left
-                        anchors.leftMargin: 40
-                        anchors.bottom: parent.bottom
-                        anchors.bottomMargin: 6
-                        width: 90
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: root.viewMode = "list"
-                    }
-                }
-
-                Rectangle {
-                    width: 180
-                    height: 56
-                    radius: Colors.radiusLarge
-                    color: Colors.surfaceHigh
-                    readonly property real orbitBaseAngle: 180
-                    x: 190 * Math.cos((orbitCenter.orbitAngle + orbitBaseAngle) * Math.PI / 180) - width / 2
-                    y: 190 * Math.sin((orbitCenter.orbitAngle + orbitBaseAngle) * Math.PI / 180) - height / 2
-
-                    Row {
-                        anchors.left: parent.left
-                        anchors.leftMargin: 12
-                        anchors.verticalCenter: parent.verticalCenter
-                        spacing: 10
-                        MaterialIcon { icon: "dns"; anchors.verticalCenter: parent.verticalCenter }
-                        Column {
-                            spacing: 2
-                            StyledText {
-                                text: root.wn.wifiDevice && root.wn.wifiDevice.address ? root.wn.wifiDevice.address : "—"
-                                font.bold: true
-                                font.family: Config.monoFontFamily
-                                font.pixelSize: Config.fontSize - 2
-                            }
-                            StyledText { text: "IP Address"; opacity: 0.6; font.pixelSize: Config.fontSize - 3 }
-                        }
-                    }
-                }
-
-                Rectangle {
-                    width: 180
-                    height: 56
-                    radius: Colors.radiusLarge
-                    color: Colors.surfaceHigh
-                    readonly property real orbitBaseAngle: 0
-                    x: 190 * Math.cos((orbitCenter.orbitAngle + orbitBaseAngle) * Math.PI / 180) - width / 2
-                    y: 190 * Math.sin((orbitCenter.orbitAngle + orbitBaseAngle) * Math.PI / 180) - height / 2
-
-                    Row {
-                        anchors.left: parent.left
-                        anchors.leftMargin: 12
-                        anchors.verticalCenter: parent.verticalCenter
-                        spacing: 10
-                        MaterialIcon {
-                            anchors.verticalCenter: parent.verticalCenter
-                            icon: !root.connectedNetwork ? "wifi_off"
-                                : root.connectedNetwork.signal > 70 ? "wifi"
-                                : root.connectedNetwork.signal > 40 ? "wifi_2_bar" : "wifi_1_bar"
-                        }
-                        Column {
-                            spacing: 2
-                            StyledText {
-                                text: root.connectedNetwork ? root.connectedNetwork.signal + "%" : "—"
-                                font.bold: true
-                                font.pixelSize: Config.fontSize - 1
-                            }
-                            StyledText { text: "Signal"; opacity: 0.6; font.pixelSize: Config.fontSize - 3 }
-                        }
-                    }
-                }
-
-                Rectangle {
-                    width: 190
-                    height: 56
-                    radius: Colors.radiusLarge
-                    color: Colors.surfaceHigh
-                    readonly property real orbitBaseAngle: 90
-                    x: 190 * Math.cos((orbitCenter.orbitAngle + orbitBaseAngle) * Math.PI / 180) - width / 2
-                    y: 190 * Math.sin((orbitCenter.orbitAngle + orbitBaseAngle) * Math.PI / 180) - height / 2
-
-                    Row {
-                        anchors.left: parent.left
-                        anchors.leftMargin: 12
-                        anchors.verticalCenter: parent.verticalCenter
-                        spacing: 10
-                        MaterialIcon {
-                            icon: root.connectedNetwork && root.connectedNetwork.secured ? "lock" : "lock_open"
-                            anchors.verticalCenter: parent.verticalCenter
-                        }
-                        Column {
-                            spacing: 2
-                            StyledText {
-                                text: !root.connectedNetwork ? "—" : (root.connectedNetwork.secured ? root.connectedNetwork.security : "Open")
-                                font.bold: true
-                                font.pixelSize: Config.fontSize - 1
-                            }
-                            StyledText { text: "Security"; opacity: 0.6; font.pixelSize: Config.fontSize - 3 }
-                        }
-                    }
-                }
-            }
+            ]
         }
 
         StyledText {
@@ -306,90 +132,9 @@ Item {
         }
 
         // --- Bottom bar: Wi-Fi / Bluetooth switch + power -----------------------
-        Row {
+        IslandModeSwitcher {
             width: parent.width
             visible: root.viewMode === "orbit"
-            spacing: 10
-
-            Rectangle {
-                width: parent.width - 44 - 10
-                height: 44
-                radius: 22
-                color: Colors.surfaceHigh
-
-                Row {
-                    anchors.fill: parent
-                    anchors.margins: 3
-
-                    Rectangle {
-                        width: parent.width / 2
-                        height: parent.height
-                        radius: 19
-                        color: Bridge.islandTab === "wifi" ? Colors.surface : "transparent"
-
-                        Row {
-                            anchors.centerIn: parent
-                            spacing: 6
-                            MaterialIcon { icon: "wifi"; font.pixelSize: 15; anchors.verticalCenter: parent.verticalCenter }
-                            StyledText { text: "Wi-Fi"; anchors.verticalCenter: parent.verticalCenter }
-                        }
-
-                        Rectangle {
-                            anchors.fill: parent
-                            radius: parent.radius
-                            color: Colors.surfaceHigh
-                            opacity: wifiPillHover.hovered && Bridge.islandTab !== "wifi" ? 0.25 : 0
-                        }
-
-                        HoverHandler { id: wifiPillHover }
-
-                        MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: Bridge.setIslandTab("wifi") }
-                    }
-
-                    Rectangle {
-                        width: parent.width / 2
-                        height: parent.height
-                        radius: 19
-                        color: Bridge.islandTab === "bluetooth" ? Colors.secondary : "transparent"
-
-                        Row {
-                            anchors.centerIn: parent
-                            spacing: 6
-                            MaterialIcon {
-                                icon: "bluetooth"
-                                font.pixelSize: 15
-                                color: Bridge.islandTab === "bluetooth" ? Colors.secondaryText : Colors.text
-                                anchors.verticalCenter: parent.verticalCenter
-                            }
-                            StyledText {
-                                text: "Bluetooth"
-                                color: Bridge.islandTab === "bluetooth" ? Colors.secondaryText : Colors.text
-                                anchors.verticalCenter: parent.verticalCenter
-                            }
-                        }
-
-                        Rectangle {
-                            anchors.fill: parent
-                            radius: parent.radius
-                            color: Colors.surfaceHigh
-                            opacity: btPillHover.hovered && Bridge.islandTab !== "bluetooth" ? 0.25 : 0
-                        }
-
-                        HoverHandler { id: btPillHover }
-
-                        MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: Bridge.setIslandTab("bluetooth") }
-                    }
-                }
-            }
-
-            IconButton {
-                width: 44
-                height: 44
-                active: true
-                icon: "power_settings_new"
-                iconSize: 18
-                onClicked: Bridge.togglePowerMenu()
-            }
         }
 
         StyledText {
@@ -399,159 +144,168 @@ Item {
             font.pixelSize: Config.fontSize - 2
         }
 
-        ListView {
-            id: networkList
+        // Wrapped so ScrollIndicator (anchors to its target's edges) is a
+        // sibling of the Flickable rather than a child inside it; Qt
+        // doesn't support a child anchoring to the Flickable it's inside
+        // (see components/ScrollIndicator.qml).
+        Item {
+            id: networkListWrap
             width: parent.width
             visible: root.viewMode === "list" && Networking.wifiEnabled
             // contentHeight (not a row-count*46 estimate) so an expanded
             // network's password box/error text — which the estimate never
             // accounted for — isn't clipped off by an undersized viewport.
-            height: visible ? Math.min(260, contentHeight) : 0
-            clip: true
-            spacing: 2
-            model: root.wn.networks
-            boundsBehavior: Flickable.StopAtBounds
+            height: visible ? Math.min(260, networkList.contentHeight) : 0
 
-            ScrollIndicator { target: networkList }
+            ListView {
+                id: networkList
+                anchors.fill: parent
+                clip: true
+                spacing: 2
+                model: root.wn.networks
+                boundsBehavior: Flickable.StopAtBounds
 
-            delegate: Column {
-                id: netRow
-                required property var modelData
-                required property int index
+                delegate: Column {
+                    id: netRow
+                    required property var modelData
+                    required property int index
 
-                readonly property bool known: root.wn.isKnown(modelData.ssid)
-                readonly property bool needsPassword: root.wn.expandedNetwork === modelData.ssid
-                property bool passwordVisible: false
+                    readonly property bool known: root.wn.isKnown(modelData.ssid)
+                    readonly property bool needsPassword: root.wn.expandedNetwork === modelData.ssid
+                    property bool passwordVisible: false
 
-                width: networkList.width
-                spacing: 4
+                    width: networkList.width
+                    spacing: 4
 
-                HoverRow {
-                    id: card
-                    width: parent.width
-                    highlighted: netRow.modelData.connected
-                    onClicked: root.wn.activate(netRow.modelData)
+                    HoverRow {
+                        id: card
+                        width: parent.width
+                        highlighted: netRow.modelData.connected
+                        onClicked: root.wn.activate(netRow.modelData)
 
-                    Row {
-                        anchors.fill: parent
-                        anchors.margins: 6
-                        spacing: 8
+                        Row {
+                            anchors.fill: parent
+                            anchors.margins: 6
+                            spacing: 8
 
-                        MaterialIcon {
-                            anchors.verticalCenter: parent.verticalCenter
-                            icon: netRow.modelData.signal > 70 ? "wifi"
-                                : netRow.modelData.signal > 40 ? "wifi_2_bar" : "wifi_1_bar"
-                            font.pixelSize: 16
-                        }
+                            MaterialIcon {
+                                anchors.verticalCenter: parent.verticalCenter
+                                icon: netRow.modelData.signal > 70 ? "wifi"
+                                    : netRow.modelData.signal > 40 ? "wifi_2_bar" : "wifi_1_bar"
+                                font.pixelSize: 16
+                            }
 
-                        StyledText {
-                            anchors.verticalCenter: parent.verticalCenter
-                            width: parent.width - 16 - 16 - (netRow.modelData.secured ? 16 : 0) - (netRow.known ? 22 : 0) - 16 - 24
-                            elide: Text.ElideRight
-                            text: netRow.modelData.ssid
-                        }
+                            StyledText {
+                                anchors.verticalCenter: parent.verticalCenter
+                                width: parent.width - 16 - 16 - (netRow.modelData.secured ? 16 : 0) - (netRow.known ? 22 : 0) - 16 - 24
+                                elide: Text.ElideRight
+                                text: netRow.modelData.ssid
+                            }
 
-                        MaterialIcon {
-                            anchors.verticalCenter: parent.verticalCenter
-                            visible: netRow.modelData.secured
-                            icon: "lock"
-                            font.pixelSize: 14
-                        }
+                            MaterialIcon {
+                                anchors.verticalCenter: parent.verticalCenter
+                                visible: netRow.modelData.secured
+                                icon: "lock"
+                                font.pixelSize: 14
+                            }
 
-                        MaterialIcon {
-                            anchors.verticalCenter: parent.verticalCenter
-                            visible: netRow.modelData.connected
-                            icon: "check"
-                            font.pixelSize: 16
-                        }
+                            MaterialIcon {
+                                anchors.verticalCenter: parent.verticalCenter
+                                visible: netRow.modelData.connected
+                                icon: "check"
+                                font.pixelSize: 16
+                            }
 
-                        MaterialIcon {
-                            anchors.verticalCenter: parent.verticalCenter
-                            visible: netRow.known
-                            icon: "delete"
-                            font.pixelSize: 14
-                            // Only surfaces on hover — an always-on delete icon
-                            // next to every known network reads as clutter;
-                            // Apple's own Wi-Fi menu keeps per-row actions
-                            // hidden until you're actually pointed at the row.
-                            opacity: card.hovering ? 1 : 0
-                            Behavior on opacity { NumberAnimation { duration: Config.animFast } }
+                            MaterialIcon {
+                                anchors.verticalCenter: parent.verticalCenter
+                                visible: netRow.known
+                                icon: "delete"
+                                font.pixelSize: 14
+                                // Only surfaces on hover — an always-on delete icon
+                                // next to every known network reads as clutter;
+                                // Apple's own Wi-Fi menu keeps per-row actions
+                                // hidden until you're actually pointed at the row.
+                                opacity: card.hovering ? 1 : 0
+                                Behavior on opacity { NumberAnimation { duration: Config.animFast } }
 
-                            MouseArea {
-                                anchors.fill: parent
-                                anchors.margins: -2
-                                cursorShape: Qt.PointingHandCursor
-                                enabled: card.hovering
-                                onClicked: root.wn.forget(netRow.modelData.ssid)
+                                MouseArea {
+                                    anchors.fill: parent
+                                    anchors.margins: -2
+                                    cursorShape: Qt.PointingHandCursor
+                                    enabled: card.hovering
+                                    onClicked: root.wn.forget(netRow.modelData.ssid)
+                                }
                             }
                         }
                     }
-                }
 
-                StyledText {
-                    visible: netRow.needsPassword && root.wn.connectError.length > 0
-                    text: root.wn.connectError
-                    color: Colors.danger
-                    font.pixelSize: Config.fontSize - 3
-                    leftPadding: 4
-                }
+                    StyledText {
+                        visible: netRow.needsPassword && root.wn.connectError.length > 0
+                        text: root.wn.connectError
+                        color: Colors.danger
+                        font.pixelSize: Config.fontSize - 3
+                        leftPadding: 4
+                    }
 
-                Column {
-                    width: parent.width
-                    visible: netRow.needsPassword
-                    spacing: 8
-
-                    Row {
+                    Column {
                         width: parent.width
-                        spacing: 6
+                        visible: netRow.needsPassword
+                        spacing: 8
 
-                        Rectangle {
-                            width: parent.width - 32 - 6
-                            height: 32
-                            radius: height / 2
-                            color: Colors.surfaceHigh
+                        Row {
+                            width: parent.width
+                            spacing: 6
 
-                            TextInput {
-                                id: pwInput
-                                anchors.fill: parent
-                                anchors.leftMargin: 12
-                                anchors.rightMargin: 32
-                                color: Colors.text
-                                font.family: Config.fontFamily
-                                font.pixelSize: Config.fontSize
-                                echoMode: netRow.passwordVisible ? TextInput.Normal : TextInput.Password
-                                clip: true
-                                focus: netRow.needsPassword
-                                Keys.onReturnPressed: root.wn.submitPassword(netRow.modelData.ssid, pwInput.text)
+                            Rectangle {
+                                width: parent.width - 32 - 6
+                                height: 32
+                                radius: height / 2
+                                color: Colors.surfaceHigh
+
+                                TextInput {
+                                    id: pwInput
+                                    anchors.fill: parent
+                                    anchors.leftMargin: 12
+                                    anchors.rightMargin: 32
+                                    color: Colors.text
+                                    font.family: Config.fontFamily
+                                    font.pixelSize: Config.fontSize
+                                    echoMode: netRow.passwordVisible ? TextInput.Normal : TextInput.Password
+                                    clip: true
+                                    focus: netRow.needsPassword
+                                    Keys.onReturnPressed: root.wn.submitPassword(netRow.modelData.ssid, pwInput.text)
+                                }
+
+                                IconButton {
+                                    anchors.right: parent.right
+                                    anchors.rightMargin: 1
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    icon: netRow.passwordVisible ? "visibility_off" : "visibility"
+                                    iconSize: 15
+                                    onClicked: netRow.passwordVisible = !netRow.passwordVisible
+                                }
                             }
 
                             IconButton {
-                                anchors.right: parent.right
-                                anchors.rightMargin: 1
-                                anchors.verticalCenter: parent.verticalCenter
-                                icon: netRow.passwordVisible ? "visibility_off" : "visibility"
-                                iconSize: 15
-                                onClicked: netRow.passwordVisible = !netRow.passwordVisible
+                                icon: "close"
+                                onClicked: root.wn.expandedNetwork = ""
                             }
                         }
 
-                        IconButton {
-                            icon: "close"
-                            onClicked: root.wn.expandedNetwork = ""
+                        PrimaryButton {
+                            width: parent.width
+                            height: 32
+                            active: true
+                            tint: Colors.secondary
+                            tintText: Colors.secondaryText
+                            text: "Join"
+                            onClicked: root.wn.submitPassword(netRow.modelData.ssid, pwInput.text)
                         }
-                    }
-
-                    PrimaryButton {
-                        width: parent.width
-                        height: 32
-                        active: true
-                        tint: Colors.secondary
-                        tintText: Colors.secondaryText
-                        text: "Join"
-                        onClicked: root.wn.submitPassword(netRow.modelData.ssid, pwInput.text)
                     }
                 }
             }
+
+            ScrollIndicator { target: networkList }
         }
 
         // --- Manually add a (usually hidden) network ------------------------

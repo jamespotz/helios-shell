@@ -1,7 +1,7 @@
 import QtQuick
 import Quickshell
 import Quickshell.Services.Mpris
-import Qt5Compat.GraphicalEffects
+import QtQuick.Effects
 import "../../services"
 import "../../components"
 
@@ -87,9 +87,10 @@ Item {
                 asynchronous: true
             }
 
-            OpacityMask {
+            MultiEffect {
                 anchors.fill: idleArtMask
                 source: idleArtImg
+                maskEnabled: true
                 maskSource: idleArtMask
                 visible: !!(root.player && root.player.trackArtUrl)
             }

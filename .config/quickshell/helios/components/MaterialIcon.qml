@@ -5,6 +5,7 @@ Text {
     property string icon: ""
     property bool filled: false
 
+    textFormat: Text.PlainText
     text: icon
     font.family: Config.iconFontFamily
     font.pixelSize: 18

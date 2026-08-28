@@ -84,213 +84,40 @@ Item {
         }
 
         // --- Orbit view: focused view of the connected device ------------------
-        Item {
+        OrbitPanel {
             id: orbitView
-            width: parent.width
-            height: 460
             visible: root.viewMode === "orbit" && Bluetooth.powered
+            active: root.viewMode === "orbit" && Bluetooth.powered
 
-            Item {
-                id: orbitCenter
-                anchors.centerIn: parent
-                width: 1
-                height: 1
+            centerIcon: "headset"
+            centerTitle: root.connectedDevice ? root.connectedDevice.name : "No device"
+            centerSubtitle: root.connectedDevice ? "Connected" : "Not connected"
 
-                // Drives the satellite cards around the outer ring — cards
-                // travel the circle but stay upright (position-only, no
-                // rotation on the cards themselves) so their text stays
-                // readable throughout. Paused when the view isn't visible.
-                property real orbitAngle: 0
-                NumberAnimation on orbitAngle {
-                    running: orbitView.visible
-                    from: 0
-                    to: 360
-                    duration: 60000
-                    loops: Animation.Infinite
+            scanLabel: Bluetooth.scanning ? "Scanning…" : "Scan Devices"
+            onScanClicked: Bluetooth.scanning ? Bluetooth.stopDiscovery() : Bluetooth.startDiscovery()
+            onSwitchViewClicked: root.viewMode = "list"
+
+            infoCards: [
+                {
+                    angle: 180, width: 180, icon: "dns", monospace: true,
+                    value: root.connectedDevice ? root.connectedDevice.address : "—",
+                    label: "MAC Address"
+                },
+                {
+                    angle: 0, width: 180, icon: "battery_full", monospace: false,
+                    value: root.connectedDevice && root.connectedDevice.batteryAvailable
+                        ? Math.round(root.connectedDevice.battery * 100) + "%" : "—",
+                    label: "Battery"
+                },
+                {
+                    angle: 90, width: 190, icon: "graphic_eq", monospace: false,
+                    // Bluez doesn't expose a codec/audio-profile string
+                    // through this service today — placeholder until
+                    // that's wired up (likely via WirePlumber).
+                    value: "None",
+                    label: "Audio Profile"
                 }
-
-                Repeater {
-                    model: [90, 140, 190]
-                    Rectangle {
-                        required property int modelData
-                        anchors.centerIn: parent
-                        width: modelData * 2
-                        height: width
-                        radius: width / 2
-                        color: "transparent"
-                        border.width: 1
-                        border.color: Colors.overlay
-                        opacity: 0.25
-                    }
-                }
-
-                Rectangle {
-                    id: centerCircle
-                    anchors.centerIn: parent
-                    width: 150
-                    height: 150
-                    radius: 75
-                    color: Colors.secondary
-
-                    Column {
-                        anchors.centerIn: parent
-                        spacing: 4
-                        MaterialIcon {
-                            icon: "headset"
-                            font.pixelSize: 40
-                            color: Colors.secondaryText
-                            anchors.horizontalCenter: parent.horizontalCenter
-                        }
-                        StyledText {
-                            text: root.connectedDevice ? root.connectedDevice.name : "No device"
-                            color: Colors.secondaryText
-                            font.bold: true
-                            anchors.horizontalCenter: parent.horizontalCenter
-                        }
-                        StyledText {
-                            text: root.connectedDevice ? "Connected" : "Not connected"
-                            color: Colors.secondaryText
-                            opacity: 0.75
-                            font.pixelSize: Config.fontSize - 2
-                            anchors.horizontalCenter: parent.horizontalCenter
-                        }
-                    }
-                }
-
-                // --- Satellite cards ---------------------------------------------
-                Rectangle {
-                    id: scanCard
-                    width: 190
-                    height: 56
-                    radius: Colors.radiusLarge
-                    color: Colors.surfaceHigh
-                    readonly property real orbitBaseAngle: -90
-                    x: 190 * Math.cos((orbitCenter.orbitAngle + orbitBaseAngle) * Math.PI / 180) - width / 2
-                    y: 190 * Math.sin((orbitCenter.orbitAngle + orbitBaseAngle) * Math.PI / 180) - height / 2
-
-                    Row {
-                        anchors.left: parent.left
-                        anchors.leftMargin: 12
-                        anchors.verticalCenter: parent.verticalCenter
-                        spacing: 10
-
-                        MaterialIcon { icon: "search"; anchors.verticalCenter: parent.verticalCenter }
-                        Column {
-                            spacing: 2
-                            StyledText { text: "Scan Devices"; font.bold: true; font.pixelSize: Config.fontSize - 1 }
-                            StyledText { text: "Switch View"; opacity: 0.6; font.pixelSize: Config.fontSize - 3 }
-                        }
-                    }
-
-                    Rectangle {
-                        anchors.fill: parent
-                        radius: parent.radius
-                        color: Colors.surfaceHigh
-                        opacity: scanCardHover.hovered ? 0.15 : 0
-                    }
-
-                    HoverHandler { id: scanCardHover }
-
-                    MouseArea {
-                        anchors.fill: parent
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: Bluetooth.scanning ? Bluetooth.stopDiscovery() : Bluetooth.startDiscovery()
-                    }
-                    MouseArea {
-                        // "Switch View" label only
-                        height: 18
-                        anchors.left: parent.left
-                        anchors.leftMargin: 40
-                        anchors.bottom: parent.bottom
-                        anchors.bottomMargin: 6
-                        width: 90
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: root.viewMode = "list"
-                    }
-                }
-
-                Rectangle {
-                    width: 180
-                    height: 56
-                    radius: Colors.radiusLarge
-                    color: Colors.surfaceHigh
-                    readonly property real orbitBaseAngle: 180
-                    x: 190 * Math.cos((orbitCenter.orbitAngle + orbitBaseAngle) * Math.PI / 180) - width / 2
-                    y: 190 * Math.sin((orbitCenter.orbitAngle + orbitBaseAngle) * Math.PI / 180) - height / 2
-
-                    Row {
-                        anchors.left: parent.left
-                        anchors.leftMargin: 12
-                        anchors.verticalCenter: parent.verticalCenter
-                        spacing: 10
-                        MaterialIcon { icon: "dns"; anchors.verticalCenter: parent.verticalCenter }
-                        Column {
-                            spacing: 2
-                            StyledText {
-                                text: root.connectedDevice ? root.connectedDevice.address : "—"
-                                font.bold: true
-                                font.family: Config.monoFontFamily
-                                font.pixelSize: Config.fontSize - 2
-                            }
-                            StyledText { text: "MAC Address"; opacity: 0.6; font.pixelSize: Config.fontSize - 3 }
-                        }
-                    }
-                }
-
-                Rectangle {
-                    width: 180
-                    height: 56
-                    radius: Colors.radiusLarge
-                    color: Colors.surfaceHigh
-                    readonly property real orbitBaseAngle: 0
-                    x: 190 * Math.cos((orbitCenter.orbitAngle + orbitBaseAngle) * Math.PI / 180) - width / 2
-                    y: 190 * Math.sin((orbitCenter.orbitAngle + orbitBaseAngle) * Math.PI / 180) - height / 2
-
-                    Row {
-                        anchors.left: parent.left
-                        anchors.leftMargin: 12
-                        anchors.verticalCenter: parent.verticalCenter
-                        spacing: 10
-                        MaterialIcon { icon: "battery_full"; anchors.verticalCenter: parent.verticalCenter }
-                        Column {
-                            spacing: 2
-                            StyledText {
-                                text: root.connectedDevice && root.connectedDevice.batteryAvailable
-                                    ? Math.round(root.connectedDevice.battery * 100) + "%" : "—"
-                                font.bold: true
-                                font.pixelSize: Config.fontSize - 1
-                            }
-                            StyledText { text: "Battery"; opacity: 0.6; font.pixelSize: Config.fontSize - 3 }
-                        }
-                    }
-                }
-
-                Rectangle {
-                    width: 190
-                    height: 56
-                    radius: Colors.radiusLarge
-                    color: Colors.surfaceHigh
-                    readonly property real orbitBaseAngle: 90
-                    x: 190 * Math.cos((orbitCenter.orbitAngle + orbitBaseAngle) * Math.PI / 180) - width / 2
-                    y: 190 * Math.sin((orbitCenter.orbitAngle + orbitBaseAngle) * Math.PI / 180) - height / 2
-
-                    Row {
-                        anchors.left: parent.left
-                        anchors.leftMargin: 12
-                        anchors.verticalCenter: parent.verticalCenter
-                        spacing: 10
-                        MaterialIcon { icon: "graphic_eq"; anchors.verticalCenter: parent.verticalCenter }
-                        Column {
-                            spacing: 2
-                            // Bluez doesn't expose a codec/audio-profile string
-                            // through this service today — placeholder until
-                            // that's wired up (likely via WirePlumber).
-                            StyledText { text: "None"; font.bold: true; font.pixelSize: Config.fontSize - 1 }
-                            StyledText { text: "Audio Profile"; opacity: 0.6; font.pixelSize: Config.fontSize - 3 }
-                        }
-                    }
-                }
-            }
+            ]
         }
 
         StyledText {
@@ -301,90 +128,9 @@ Item {
         }
 
         // --- Bottom bar: Wi-Fi / Bluetooth switch + power -----------------------
-        Row {
+        IslandModeSwitcher {
             width: parent.width
             visible: root.viewMode === "orbit"
-            spacing: 10
-
-            Rectangle {
-                width: parent.width - 44 - 10
-                height: 44
-                radius: 22
-                color: Colors.surfaceHigh
-
-                Row {
-                    anchors.fill: parent
-                    anchors.margins: 3
-
-                    Rectangle {
-                        width: parent.width / 2
-                        height: parent.height
-                        radius: 19
-                        color: Bridge.islandTab === "wifi" ? Colors.surface : "transparent"
-
-                        Row {
-                            anchors.centerIn: parent
-                            spacing: 6
-                            MaterialIcon { icon: "wifi"; font.pixelSize: 15; anchors.verticalCenter: parent.verticalCenter }
-                            StyledText { text: "Wi-Fi"; anchors.verticalCenter: parent.verticalCenter }
-                        }
-
-                        Rectangle {
-                            anchors.fill: parent
-                            radius: parent.radius
-                            color: Colors.surfaceHigh
-                            opacity: wifiPillHover.hovered && Bridge.islandTab !== "wifi" ? 0.25 : 0
-                        }
-
-                        HoverHandler { id: wifiPillHover }
-
-                        MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: Bridge.setIslandTab("wifi") }
-                    }
-
-                    Rectangle {
-                        width: parent.width / 2
-                        height: parent.height
-                        radius: 19
-                        color: Bridge.islandTab === "bluetooth" ? Colors.secondary : "transparent"
-
-                        Row {
-                            anchors.centerIn: parent
-                            spacing: 6
-                            MaterialIcon {
-                                icon: "bluetooth"
-                                font.pixelSize: 15
-                                color: Bridge.islandTab === "bluetooth" ? Colors.secondaryText : Colors.text
-                                anchors.verticalCenter: parent.verticalCenter
-                            }
-                            StyledText {
-                                text: "Bluetooth"
-                                color: Bridge.islandTab === "bluetooth" ? Colors.secondaryText : Colors.text
-                                anchors.verticalCenter: parent.verticalCenter
-                            }
-                        }
-
-                        Rectangle {
-                            anchors.fill: parent
-                            radius: parent.radius
-                            color: Colors.surfaceHigh
-                            opacity: btPillHover.hovered && Bridge.islandTab !== "bluetooth" ? 0.25 : 0
-                        }
-
-                        HoverHandler { id: btPillHover }
-
-                        MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: Bridge.setIslandTab("bluetooth") }
-                    }
-                }
-            }
-
-            IconButton {
-                width: 44
-                height: 44
-                active: true
-                icon: "power_settings_new"
-                iconSize: 18
-                onClicked: Bridge.togglePowerMenu()
-            }
         }
 
         // --- List view: Scan/Refresh + Pairing/Discoverable + My Devices / Nearby --

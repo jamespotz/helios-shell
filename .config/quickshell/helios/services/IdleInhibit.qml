@@ -9,11 +9,18 @@ import Quickshell.Io
 QtObject {
     id: root
 
-    property bool enabled: true
-    property int lockTimeout: 300      // seconds before lock (0 = never)
-    property int dpmsTimeout: 600      // seconds before DPMS off (0 = never)
-    property int dimTimeout: 240       // seconds before dimming (0 = never)
-    property bool inhibited: false     // temporary caffeine mode
+    // Aliased straight to the JsonAdapter's own properties (see
+    // services/Bridge.qml's liquidGlassEnabled fix for the full story)
+    // rather than mirrored into plain properties restored in
+    // Component.onCompleted — FileView loads asynchronously, so a
+    // Component.onCompleted snapshot read the adapter's compiled-in
+    // defaults before the real values had loaded from disk, silently
+    // resetting every persisted idle-inhibit setting on each shell restart.
+    property alias enabled: adapter.enabled
+    property alias lockTimeout: adapter.lockTimeout      // seconds before lock (0 = never)
+    property alias dpmsTimeout: adapter.dpmsTimeout      // seconds before DPMS off (0 = never)
+    property alias dimTimeout: adapter.dimTimeout        // seconds before dimming (0 = never)
+    property bool inhibited: false     // temporary caffeine mode — not persisted
 
     readonly property string configPath: Quickshell.env("HOME") + "/.config/hypr/hypridle-helios.conf"
     readonly property string helios: "quickshell -c helios ipc call"
@@ -125,21 +132,15 @@ QtObject {
             property int dpmsTimeout: 600
             property int dimTimeout: 240
         }
+
+        // Fires once the async load actually completes — the correct place
+        // to act on the *real* restored `enabled`, unlike Component.onCompleted
+        // (see the comment on the aliases above).
+        onLoaded: root._sync()
     }
 
-    property bool _loaded: false
-
-    Component.onCompleted: {
-        root.enabled = adapter.enabled;
-        root.lockTimeout = adapter.lockTimeout;
-        root.dpmsTimeout = adapter.dpmsTimeout;
-        root.dimTimeout = adapter.dimTimeout;
-        root._loaded = true;
-        root._sync();
-    }
-
-    onEnabledChanged: { if (root._loaded) { adapter.enabled = root.enabled; root.settingsFile.writeAdapter(); } }
-    onLockTimeoutChanged: { if (root._loaded) { adapter.lockTimeout = root.lockTimeout; root.settingsFile.writeAdapter(); } }
-    onDpmsTimeoutChanged: { if (root._loaded) { adapter.dpmsTimeout = root.dpmsTimeout; root.settingsFile.writeAdapter(); } }
-    onDimTimeoutChanged: { if (root._loaded) { adapter.dimTimeout = root.dimTimeout; root.settingsFile.writeAdapter(); } }
+    onEnabledChanged: root.settingsFile.writeAdapter()
+    onLockTimeoutChanged: root.settingsFile.writeAdapter()
+    onDpmsTimeoutChanged: root.settingsFile.writeAdapter()
+    onDimTimeoutChanged: root.settingsFile.writeAdapter()
 }
