@@ -3,6 +3,7 @@ import QtMultimedia
 import QtQuick.Effects
 import Quickshell
 import Quickshell.Io
+import Quickshell.Widgets
 import "../../services"
 import "../../components"
 
@@ -25,7 +26,7 @@ Item {
         spacing: 12
 
         // --- Hero preview ----------------------------------------------------
-        Rectangle {
+        ClippingRectangle {
             width: parent.width
             height: 160
             radius: Colors.radiusLarge
