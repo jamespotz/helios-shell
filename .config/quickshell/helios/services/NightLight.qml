@@ -107,7 +107,7 @@ QtObject {
     // Re-sync when the shared weather location resolves/changes so a
     // scheduled night light picks up sunset/sunrise for the right place
     // without requiring the shell to restart.
-    Connections {
+    property Connections weatherWatcher: Connections {
         target: Weather
         function onLatitudeChanged() { if (root.enabled && root.scheduled) root._sync(); }
         function onLongitudeChanged() { if (root.enabled && root.scheduled) root._sync(); }
