@@ -59,7 +59,7 @@ Item {
     property date now: new Date()
     Timer { interval: 1000; running: true; repeat: true; onTriggered: root.now = new Date() }
 
-    implicitWidth: 880
+    implicitWidth: 660
     implicitHeight: Weather.available ? (contentCol.implicitHeight + 24) : 200
 
     // ═══════════════════════════════════════════════════════════════════

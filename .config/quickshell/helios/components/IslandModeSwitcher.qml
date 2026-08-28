@@ -22,13 +22,22 @@ Row {
                 width: parent.width / 2
                 height: parent.height
                 radius: 19
-                color: Bridge.islandTab === "wifi" ? Colors.surface : "transparent"
+                color: Bridge.islandTab === "wifi" ? Colors.secondary : "transparent"
 
                 Row {
                     anchors.centerIn: parent
                     spacing: 6
-                    MaterialIcon { icon: "wifi"; font.pixelSize: 15; anchors.verticalCenter: parent.verticalCenter }
-                    StyledText { text: "Wi-Fi"; anchors.verticalCenter: parent.verticalCenter }
+                    MaterialIcon { 
+                      icon: "wifi"
+                      font.pixelSize: 15
+                      color: Bridge.islandTab === "wifi" ? Colors.secondaryText : Colors.text
+                      anchors.verticalCenter: parent.verticalCenter 
+                    }
+                    StyledText { 
+                      text: "Wi-Fi" 
+                      color: Bridge.islandTab === "wifi" ? Colors.secondaryText : Colors.text
+                      anchors.verticalCenter: parent.verticalCenter 
+                    }
                 }
 
                 Rectangle {
