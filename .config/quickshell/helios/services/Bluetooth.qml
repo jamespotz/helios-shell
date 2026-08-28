@@ -108,8 +108,15 @@ QtObject {
         const pending = list.filter(d => d.trusted && !d.connected && !d.pairing);
         if (pending.length === 0) return;
 
+        // Only actually fire Pair()/Connect() at a device BlueZ has recently
+        // seen advertise (nonzero RSSI) — that's the only "is this thing
+        // physically nearby" signal exposed over D-Bus. Without this check
+        // an out-of-range trusted device gets a failing Connect() call every
+        // cooldown window forever instead of just waiting quietly.
+        const nearby = pending.filter(d => d.rssi !== 0);
+
         const now = Date.now();
-        const dev = pending.find(d => (now - (root.lastReconnectAttempt[d.path] || 0)) >= root.reconnectCooldownMs);
+        const dev = nearby.find(d => (now - (root.lastReconnectAttempt[d.path] || 0)) >= root.reconnectCooldownMs);
         if (dev) {
             root.lastReconnectAttempt[dev.path] = now;
             // Paired devices just need a Connect(); devices that lost their
@@ -121,7 +128,9 @@ QtObject {
 
         // Keep discovery alive while any trusted device is still missing —
         // classic BT devices only show up in GetManagedObjects once BlueZ
-        // has actually seen them via an active inquiry.
+        // has actually seen them via an active inquiry, and RSSI (used above
+        // to gate connect attempts on proximity) only gets populated/
+        // refreshed that same way.
         if (!root.scanning) root.startDiscovery();
     }
 
