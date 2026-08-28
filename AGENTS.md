@@ -79,6 +79,10 @@ Reuse existing:
 
 Do not introduce a new visual pattern when the shell already has one for the same problem.
 
+## After Adding New Component
+
+Run `link.sh` to symlink new components.
+
 ## Final Rule
 
 When choosing between solutions, prefer the one that is:

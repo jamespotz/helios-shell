@@ -10,7 +10,7 @@ import "../services"
 Item {
     id: root
 
-    property bool active: false  // drives the ring rotation; pause when hidden
+    property bool active: false  // drives the orbit rotation; pause when hidden
 
     property string centerIcon
     property string centerTitle
@@ -49,18 +49,39 @@ Item {
             loops: Animation.Infinite
         }
 
+        // Drives the sway of every rope tether — one shared phase so all
+        // ropes stay in lockstep timing-wise while each offsets it
+        // differently (see OrbitRope.phaseOffset) for an organic look.
+        property real wavePhase: 0
+        NumberAnimation on wavePhase {
+            running: root.active
+            from: 0
+            to: Math.PI * 2
+            duration: 4000
+            loops: Animation.Infinite
+        }
+
+        OrbitRope {
+            anchors.centerIn: parent
+            width: 400
+            height: 400
+            targetX: 190 * Math.cos((orbitCenter.orbitAngle - 90) * Math.PI / 180)
+            targetY: 190 * Math.sin((orbitCenter.orbitAngle - 90) * Math.PI / 180)
+            wavePhase: orbitCenter.wavePhase
+            phaseOffset: -90 * Math.PI / 180
+        }
+
         Repeater {
-            model: [90, 140, 190]
-            Rectangle {
-                required property int modelData
+            model: root.infoCards
+            OrbitRope {
+                required property var modelData
                 anchors.centerIn: parent
-                width: modelData * 2
-                height: width
-                radius: width / 2
-                color: "transparent"
-                border.width: 1
-                border.color: Colors.overlay
-                opacity: 0.25
+                width: 400
+                height: 400
+                targetX: 190 * Math.cos((orbitCenter.orbitAngle + modelData.angle) * Math.PI / 180)
+                targetY: 190 * Math.sin((orbitCenter.orbitAngle + modelData.angle) * Math.PI / 180)
+                wavePhase: orbitCenter.wavePhase
+                phaseOffset: modelData.angle * Math.PI / 180
             }
         }
 
