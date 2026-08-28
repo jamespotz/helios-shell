@@ -103,7 +103,7 @@ Item {
                 width: parent.width - schedToggle.width - 10
                 anchors.verticalCenter: parent.verticalCenter
                 StyledText { text: "Sunset to Sunrise"; font.weight: Font.Medium }
-                StyledText { text: "Automatically enable based on location"; font.pixelSize: Config.fontSize - 2; color: Colors.subtext }
+                StyledText { text: "Uses the location set in Weather"; font.pixelSize: Config.fontSize - 2; color: Colors.subtext }
             }
 
             Toggle {
@@ -116,12 +116,12 @@ Item {
 
         // Location hint
         StyledText {
-            visible: NightLight.enabled && NightLight.scheduled && NightLight.latitude === 0
+            visible: NightLight.enabled && NightLight.scheduled && Weather.latitude === 0 && Weather.longitude === 0
             width: parent.width
             wrapMode: Text.WordWrap
             font.pixelSize: Config.fontSize - 2
             color: Colors.warning
-            text: "Set latitude/longitude via IPC: quickshell -c helios ipc call nightlight location <lat> <lon>"
+            text: "No location set — set one in Weather settings to enable scheduling."
         }
     }
 }

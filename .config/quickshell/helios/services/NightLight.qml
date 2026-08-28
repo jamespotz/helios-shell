@@ -5,7 +5,8 @@ import Quickshell.Io
 
 // Night light / color temperature service — manages wlsunset process.
 // Supports manual toggle with a configurable temperature (1000K–6500K)
-// and an auto-schedule mode (sunset-to-sunrise via latitude/longitude).
+// and an auto-schedule mode (sunset-to-sunrise using the same lat/long
+// as the Weather service's resolved location — see Weather.qml).
 QtObject {
     id: root
 
@@ -19,8 +20,6 @@ QtObject {
     property alias enabled: adapter.enabled
     property alias temperature: adapter.temperature
     property alias scheduled: adapter.scheduled
-    property alias latitude: adapter.latitude
-    property alias longitude: adapter.longitude
 
     property int dayTemp: 6500      // Kelvin (neutral daylight) — not persisted
 
@@ -42,10 +41,8 @@ QtObject {
         if (root.enabled) root._sync();
     }
 
-    function setScheduled(v, lat, lon) {
+    function setScheduled(v) {
         root.scheduled = v;
-        if (lat !== undefined) root.latitude = lat;
-        if (lon !== undefined) root.longitude = lon;
         if (root.enabled) root._sync();
     }
 
@@ -70,8 +67,8 @@ QtObject {
             // In manual mode, force permanent night by setting sunset in the
             // past and sunrise far in the future. wlsunset uses 24h format.
             const args = ["wlsunset", "-T", String(root.dayTemp), "-t", String(root.temperature)];
-            if (root.scheduled && root.latitude !== 0 && root.longitude !== 0) {
-                args.push("-l", String(root.latitude), "-L", String(root.longitude));
+            if (root.scheduled && Weather.latitude !== 0 && Weather.longitude !== 0) {
+                args.push("-l", String(Weather.latitude), "-L", String(Weather.longitude));
             } else {
                 // Manual "always night" mode: sunset at 00:01, sunrise at 23:59
                 // This makes wlsunset think it's permanently past sunset.
@@ -95,8 +92,6 @@ QtObject {
             property bool enabled: false
             property int temperature: 4000
             property bool scheduled: false
-            property real latitude: 0.0
-            property real longitude: 0.0
         }
 
         // Fires once the async load actually completes — the correct place
@@ -108,6 +103,13 @@ QtObject {
     onEnabledChanged: root.settingsFile.writeAdapter()
     onTemperatureChanged: root.settingsFile.writeAdapter()
     onScheduledChanged: root.settingsFile.writeAdapter()
-    onLatitudeChanged: root.settingsFile.writeAdapter()
-    onLongitudeChanged: root.settingsFile.writeAdapter()
+
+    // Re-sync when the shared weather location resolves/changes so a
+    // scheduled night light picks up sunset/sunrise for the right place
+    // without requiring the shell to restart.
+    Connections {
+        target: Weather
+        function onLatitudeChanged() { if (root.enabled && root.scheduled) root._sync(); }
+        function onLongitudeChanged() { if (root.enabled && root.scheduled) root._sync(); }
+    }
 }

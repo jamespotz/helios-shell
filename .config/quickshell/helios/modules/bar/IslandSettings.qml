@@ -278,7 +278,7 @@ Item {
                 wrapMode: Text.WordWrap
                 opacity: 0.6
                 font.pixelSize: Config.fontSize - 2
-                text: "City name, or \"lat,long\". Leave empty to auto-detect from this machine's IP."
+                text: "City name, or \"lat,long\". Leave empty to auto-detect from this machine's IP. Also used for Night Light's sunset-to-sunrise schedule."
             }
 
             SettingsCard {

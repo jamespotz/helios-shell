@@ -158,7 +158,7 @@ ShellRoot {
         function on() { NightLight.setEnabled(true) }
         function off() { NightLight.setEnabled(false) }
         function temp(value: int) { NightLight.setTemperature(value) }
-        function location(lat: real, lon: real) { NightLight.setScheduled(true, lat, lon) }
+        function schedule(enabled: bool) { NightLight.setScheduled(enabled) }
     }
 
     IpcHandler {

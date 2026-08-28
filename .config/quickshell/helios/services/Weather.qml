@@ -17,6 +17,8 @@ QtObject {
     property real feelsLikeC: 0
     property string condition: ""
     property string location: ""
+    property real latitude: 0
+    property real longitude: 0
     property real minTempC: 0
     property real maxTempC: 0
     property int humidity: 0
@@ -157,6 +159,9 @@ QtObject {
     }
 
     function _fetchForecast(lat, lon) {
+        root.latitude = lat;
+        root.longitude = lon;
+
         const url = "https://api.open-meteo.com/v1/forecast?latitude=" + lat + "&longitude=" + lon
             + "&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m"
             + "&hourly=temperature_2m,weather_code,precipitation_probability"
