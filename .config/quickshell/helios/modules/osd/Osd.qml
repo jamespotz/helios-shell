@@ -28,6 +28,7 @@ PanelWindow {
     property string kind: "volume"
     property real level: 0
     property bool muted: false
+    property string message: ""
 
     PwObjectTracker { objects: [Pipewire.defaultAudioSink] }
 
@@ -40,13 +41,28 @@ PanelWindow {
         hideTimer.restart();
     }
 
+    // Text toast — no level bar — used by kinds like "bluetooth" that report
+    // a one-off event instead of an adjustable value.
+    function showMessage(newKind, text) {
+        kind = newKind;
+        message = text;
+        hideTimer.restart();
+    }
+
     Connections {
         target: osd.sink ? osd.sink.audio : null
         function onVolumeChanged() { osd.show("volume", osd.sink.audio.volume, osd.sink.audio.muted) }
         function onMutedChanged() { osd.show("volume", osd.sink.audio.volume, osd.sink.audio.muted) }
     }
 
-    Timer { id: hideTimer; interval: 1500 }
+    Connections {
+        target: Bluetooth
+        function onDeviceAutoConnected(name) { osd.showMessage("bluetooth", name + " connected") }
+    }
+
+    // Bluetooth toasts carry a device name to read, so give them a bit
+    // longer on screen than the volume/brightness level bars.
+    Timer { id: hideTimer; interval: osd.kind === "bluetooth" ? 2500 : 1500 }
 
     Process {
         id: brightnessGet
@@ -93,12 +109,22 @@ PanelWindow {
 
             MaterialIcon {
                 anchors.verticalCenter: parent.verticalCenter
-                icon: osd.kind === "brightness" ? "brightness_6"
+                icon: osd.kind === "bluetooth" ? "bluetooth_connected"
+                    : osd.kind === "brightness" ? "brightness_6"
                     : osd.muted ? "volume_off"
                     : osd.level > 0.5 ? "volume_up" : "volume_down"
             }
 
+            StyledText {
+                visible: osd.kind === "bluetooth"
+                width: parent.width - 30 - 12
+                anchors.verticalCenter: parent.verticalCenter
+                text: osd.message
+                elide: Text.ElideRight
+            }
+
             Rectangle {
+                visible: osd.kind !== "bluetooth"
                 width: parent.width - 30 - 12
                 height: 6
                 radius: 3

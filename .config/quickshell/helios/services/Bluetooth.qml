@@ -34,6 +34,7 @@ QtObject {
 
     property string lastError: ""
     signal errorOccurred(string action, string message)
+    signal deviceAutoConnected(string name)
 
     function open() { root.active = true; root.refreshAll(); }
     function close() { root.active = false; }
@@ -89,6 +90,13 @@ QtObject {
     property var lastReconnectAttempt: ({})
     readonly property int reconnectCooldownMs: 20000
 
+    // Set right before firing the Pair()/Connect() call below, so
+    // connectProc's onExited can tell an auto-triggered connect apart from
+    // a user-initiated one (same shared Process either way) and only emit
+    // deviceAutoConnected for the former.
+    property string autoConnectPath: ""
+    property string autoConnectName: ""
+
     property Timer backgroundPollTimer: Timer {
         interval: 15000
         running: root.available
@@ -119,6 +127,8 @@ QtObject {
         const dev = nearby.find(d => (now - (root.lastReconnectAttempt[d.path] || 0)) >= root.reconnectCooldownMs);
         if (dev) {
             root.lastReconnectAttempt[dev.path] = now;
+            root.autoConnectPath = dev.path;
+            root.autoConnectName = dev.name || dev.alias;
             // Paired devices just need a Connect(); devices that lost their
             // bond (like the R60i) need a fresh Pair() — pairDevice() already
             // chains into connectDevice() on success.
@@ -237,17 +247,24 @@ QtObject {
     }
 
     function connectDevice(path) {
+        connectProc.targetPath = path;
         connectProc.command = ["busctl", "--system", "call", "org.bluez", path, "org.bluez.Device1", "Connect"];
         connectProc.running = false;
         connectProc.running = true;
     }
 
     property Process connectProc: Process {
+        property string targetPath: ""
         property string errText: ""
         stderr: StdioCollector { onStreamFinished: connectProc.errText = text }
         onExited: (exitCode) => {
             root.pairingPath = "";
-            if (exitCode !== 0) root.reportError("connect", connectProc.errText);
+            if (exitCode !== 0) {
+                root.reportError("connect", connectProc.errText);
+            } else if (connectProc.targetPath !== "" && connectProc.targetPath === root.autoConnectPath) {
+                root.deviceAutoConnected(root.autoConnectName);
+            }
+            if (connectProc.targetPath === root.autoConnectPath) root.autoConnectPath = "";
             root.refreshAll(); // always re-read Paired/Connected from BlueZ, win or lose
         }
     }
