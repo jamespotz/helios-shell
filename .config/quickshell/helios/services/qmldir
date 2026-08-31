@@ -24,3 +24,4 @@ singleton Equalizer 1.0 Equalizer.qml
 singleton Emoji 1.0 Emoji.qml
 singleton SystemStats 1.0 SystemStats.qml
 singleton BatteryHistory 1.0 BatteryHistory.qml
+singleton MprisHelpers 1.0 MprisHelpers.qml
