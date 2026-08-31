@@ -620,5 +620,33 @@ Item {
                 }
             }
         }
+
+        // --- Battery (laptop only) -------------------------------------------
+        Column {
+            width: parent.width
+            spacing: 6
+            visible: BatteryHistory.available
+
+            Item {
+                width: parent.width
+                height: 16
+                StyledText { anchors.left: parent.left; text: "Battery"; font.bold: true; font.pixelSize: Config.fontSize - 2 }
+                StyledText {
+                    anchors.right: parent.right
+                    text: BatteryHistory.samples.length > 0
+                        ? BatteryHistory.samples[BatteryHistory.samples.length - 1].percent + "%" : "—"
+                    opacity: 0.5
+                    font.pixelSize: Config.fontSize - 3
+                    font.family: Config.monoFontFamily
+                }
+            }
+
+            Sparkline {
+                width: parent.width
+                barHeight: 28
+                values: BatteryHistory.samples.map(s => s.percent)
+                barColor: Colors.accent
+            }
+        }
     }
 }
