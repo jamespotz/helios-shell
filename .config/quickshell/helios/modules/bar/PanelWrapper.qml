@@ -82,6 +82,7 @@ Item {
                             { tab: "recorder", icon: "videocam" },
                             { tab: "screenshot", icon: "screenshot_monitor" },
                             { tab: "weather", icon: "cloud" },
+                            { tab: "calendar", icon: "calendar_month" },
                             { tab: "activity", icon: "bar_chart" },
                             { tab: "system", icon: "memory" },
                             { tab: "notifications", icon: "history" },
@@ -145,7 +146,7 @@ Item {
                         : Bridge.islandTab === "recorder" ? recorderTab
                         : Bridge.islandTab === "screenshot" ? screenshotTab
                         : Bridge.islandTab === "weather" ? weatherTab
-                        : Bridge.islandTab === "calendar" ? weatherTab
+                        : Bridge.islandTab === "calendar" ? calendarTab
                         : Bridge.islandTab === "activity" ? activityTab
                         : Bridge.islandTab === "system" ? systemTab
                         : Bridge.islandTab === "notifications" ? notificationsTab
@@ -176,6 +177,7 @@ Item {
     Component { id: recorderTab; ScreenRecorderTab {} }
     Component { id: screenshotTab; ScreenshotTab {} }
     Component { id: weatherTab; WeatherPanel {} }
+    Component { id: calendarTab; CalendarTab {} }
     Component { id: activityTab; ActivityTab {} }
     Component { id: systemTab; SystemMonitorTab {} }
     Component { id: notificationsTab; NotificationHistoryTab {} }
