@@ -136,6 +136,19 @@ Item {
                     text: root.player && root.player.trackArtist ? root.player.trackArtist : ""
                 }
 
+                // Live audio visualizer — same normalized cava signal
+                // IdleBump.qml's visualizer runs on (Cava.bars are raw
+                // 0..Cava.maxRange values, so they get scaled to the 0..1
+                // MiniVisualizer expects).
+                MiniVisualizer {
+                    visible: !!(root.player && root.player.isPlaying)
+                    active: Cava.anyPlaying
+                    levels: active ? Cava.bars.map(v => v / Cava.maxRange) : []
+                    barColor: Colors.accent
+                    maxHeight: 14
+                    topPadding: 4
+                }
+
                 Row {
                     spacing: 6
                     topPadding: 2
