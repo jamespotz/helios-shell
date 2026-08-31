@@ -19,6 +19,7 @@ QtObject {
     property var disk: ({ read_mb: 0, write_mb: 0 })
     property var network: ({ sent_mb: 0, received_mb: 0 })
     property var gpu: null // null when no GPU / nvidia-smi unavailable
+    property var processes: [] // [{ pid, name, cpu_percent, memory_percent }], hottest first
 
     // Derived network throughput. system-info.py only reports cumulative
     // byte counters, so the per-second rate (and its short history, for the
@@ -80,6 +81,7 @@ QtObject {
                         root.disk = data.disk;
                         root.network = data.network;
                         root.gpu = data.gpu;
+                        root.processes = data.processes || [];
                         root.ready = true;
 
                         const now = Date.now();

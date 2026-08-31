@@ -566,5 +566,59 @@ Item {
                 barColor: Colors.accent
             }
         }
+
+        // --- Top processes ----------------------------------------------------
+        Column {
+            width: parent.width
+            spacing: 8
+            visible: root.stats.processes.length > 0
+
+            StyledText { text: "Top Processes"; font.bold: true; font.pixelSize: Config.fontSize - 1 }
+
+            Column {
+                width: parent.width
+                spacing: 2
+
+                Repeater {
+                    model: root.stats.processes
+
+                    Item {
+                        required property var modelData
+                        width: parent.width
+                        height: 28
+
+                        Row {
+                            anchors.fill: parent
+                            spacing: 10
+
+                            StyledText {
+                                anchors.verticalCenter: parent.verticalCenter
+                                width: parent.width - 130
+                                elide: Text.ElideRight
+                                text: modelData.name
+                            }
+                            StyledText {
+                                anchors.verticalCenter: parent.verticalCenter
+                                width: 55
+                                horizontalAlignment: Text.AlignRight
+                                text: modelData.cpu_percent.toFixed(1) + "%"
+                                color: root.levelColor(modelData.cpu_percent, 50, 80)
+                                font.family: Config.monoFontFamily
+                                font.pixelSize: Config.fontSize - 2
+                            }
+                            StyledText {
+                                anchors.verticalCenter: parent.verticalCenter
+                                width: 55
+                                horizontalAlignment: Text.AlignRight
+                                text: modelData.memory_percent.toFixed(1) + "%"
+                                opacity: 0.5
+                                font.pixelSize: Config.fontSize - 3
+                                font.family: Config.monoFontFamily
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 }
