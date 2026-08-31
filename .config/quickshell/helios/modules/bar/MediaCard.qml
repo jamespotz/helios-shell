@@ -63,17 +63,19 @@ Item {
         spacing: 16
 
         // --- Now playing ---------------------------------------------------
-        Row {
+        Item {
             width: parent.width
-            spacing: 16
+            height: Math.max(96, infoColumn.implicitHeight)
 
             // Album art — use the same rounded clipping primitive as the
             // wallpaper preview. ClippingRectangle keeps the source image in
             // the normal scene graph; the previous hidden Image + MultiEffect
             // mask produced an empty texture and leaked the image elsewhere.
             ClippingRectangle {
+                id: albumArt
                 width: 96
                 height: 96
+                anchors.left: parent.left
                 anchors.verticalCenter: parent.verticalCenter
                 radius: width / 2
                 color: Colors.surfaceHigh
@@ -100,9 +102,31 @@ Item {
                 }
             }
 
+            // Live audio visualizer — same normalized cava signal
+            // IdleBump.qml's visualizer runs on (Cava.bars are raw
+            // 0..Cava.maxRange values, so they get scaled to the 0..1
+            // MiniVisualizer expects). Pinned to the top-right corner so it
+            // doesn't compete with the title/artist text for vertical space.
+            MiniVisualizer {
+                id: visualizer
+                anchors.bottom: parent.bottom
+                anchors.right: parent.right
+                visible: !!(root.player && root.player.isPlaying)
+                active: Cava.anyPlaying
+                levels: visible && active ? Cava.bars.map(v => v / Cava.maxRange) : []
+                barColor: Colors.accent
+                maxHeight: 14
+                bottomPadding: 4
+                barWidth: 4
+            }
+
             Column {
+                id: infoColumn
+                anchors.left: albumArt.right
+                anchors.leftMargin: 16
+                anchors.right: visualizer.left
+                anchors.rightMargin: 16
                 anchors.verticalCenter: parent.verticalCenter
-                width: parent.width - 96 - 16
                 spacing: 6
 
                 StyledText {
@@ -117,19 +141,6 @@ Item {
                     elide: Text.ElideRight
                     opacity: 0.6
                     text: root.player && root.player.trackArtist ? root.player.trackArtist : ""
-                }
-
-                // Live audio visualizer — same normalized cava signal
-                // IdleBump.qml's visualizer runs on (Cava.bars are raw
-                // 0..Cava.maxRange values, so they get scaled to the 0..1
-                // MiniVisualizer expects).
-                MiniVisualizer {
-                    visible: !!(root.player && root.player.isPlaying)
-                    active: Cava.anyPlaying
-                    levels: active ? Cava.bars.map(v => v / Cava.maxRange) : []
-                    barColor: Colors.accent
-                    maxHeight: 14
-                    topPadding: 4
                 }
 
                 Row {

@@ -9,6 +9,7 @@ Row {
     property color barColor: Colors.text
     property var levels: []
     property int maxHeight: 10
+    property int barWidth: 2
 
     spacing: 2
 
@@ -16,7 +17,7 @@ Row {
         model: root.levels.length
 
         Rectangle {
-            width: 2
+            width: root.barWidth
             radius: 1
             color: root.barColor
             anchors.bottom: parent ? parent.bottom : undefined
