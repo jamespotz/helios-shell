@@ -7,6 +7,13 @@ Item {
 
     readonly property var devices: Bluetooth.devices
     readonly property var connectedDevice: root.devices.find(d => d.connected) || null
+    readonly property var audioProfile: root.connectedDevice
+        ? BluetoothAudio.profileForAddress(root.connectedDevice.address) : null
+    readonly property string audioProfileLabel: root.audioProfile
+        ? (root.audioProfile.profile
+            ? (root.audioProfile.codec + " · " + root.audioProfile.profile)
+            : root.audioProfile.codec)
+        : "Unknown"
     // Trusted, not just Paired: some devices (confirmed for the Soundcore
     // R60i NC) never persist a real bond — BlueZ reports Paired: false the
     // moment they disconnect, even though Trusted (the actual "this is my
@@ -111,10 +118,7 @@ Item {
                 },
                 {
                     angle: 90, width: 190, icon: "graphic_eq", monospace: false,
-                    // Bluez doesn't expose a codec/audio-profile string
-                    // through this service today — placeholder until
-                    // that's wired up (likely via WirePlumber).
-                    value: "None",
+                    value: root.audioProfileLabel,
                     label: "Audio Profile"
                 }
             ]
