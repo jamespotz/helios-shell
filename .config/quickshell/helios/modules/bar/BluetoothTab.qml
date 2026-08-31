@@ -10,10 +10,8 @@ Item {
     readonly property var audioProfile: root.connectedDevice
         ? BluetoothAudio.profileForAddress(root.connectedDevice.address) : null
     readonly property string audioProfileLabel: root.audioProfile
-        ? (root.audioProfile.profile
-            ? (root.audioProfile.codec + " · " + root.audioProfile.profile)
-            : root.audioProfile.codec)
-        : "Unknown"
+        ? [root.audioProfile.codec, root.audioProfile.profile].filter(part => !!part).join(" · ")
+        : "—"
     // Trusted, not just Paired: some devices (confirmed for the Soundcore
     // R60i NC) never persist a real bond — BlueZ reports Paired: false the
     // moment they disconnect, even though Trusted (the actual "this is my

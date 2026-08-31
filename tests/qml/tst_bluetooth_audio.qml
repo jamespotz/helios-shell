@@ -67,6 +67,37 @@ ShellRoot {
         root.compare(result.profile, "");
     }
 
+    function test_extractProfilePolishesCompoundCodecLabels() {
+        const result = BluetoothAudio.extractProfile({ "api.bluez5.codec": "sbc_xq" });
+        root.compare(result.codec, "SBC-XQ");
+    }
+
+    // Regression test for the final-review C1 finding: bluez5 sink nodes on
+    // this machine have no device.bus key at all (only device.api=bluez5 and
+    // api.bluez5.address), so the classifier must not require device.bus.
+    function test_isBluetoothSinkPropsRecognizesRealBluez5Node() {
+        root.verify(BluetoothAudio.isBluetoothSinkProps({
+            "device.api": "bluez5",
+            "api.bluez5.address": "34:09:C9:A5:6B:2A",
+            "api.bluez5.codec": "sbc_xq",
+            "api.bluez5.profile": "a2dp-sink"
+        }), "expected a real bluez5 node with no device.bus to be recognized");
+    }
+
+    function test_isBluetoothSinkPropsRecognizesDeviceBusFallback() {
+        root.verify(BluetoothAudio.isBluetoothSinkProps({ "device.bus": "bluetooth" }),
+            "expected device.bus === bluetooth to still be accepted as a fallback signal");
+    }
+
+    function test_isBluetoothSinkPropsRejectsNonBluetoothNodes() {
+        root.verify(!BluetoothAudio.isBluetoothSinkProps({}),
+            "expected empty properties to be rejected");
+        root.verify(!BluetoothAudio.isBluetoothSinkProps({ "device.bus": "pci" }),
+            "expected a non-bluetooth device.bus to be rejected");
+        root.verify(!BluetoothAudio.isBluetoothSinkProps(null),
+            "expected null properties to be rejected");
+    }
+
     Component.onCompleted: {
         try {
             root.test_normalizeAddressStripsColonsAndCase();
@@ -74,6 +105,10 @@ ShellRoot {
             root.test_extractProfileReturnsNullWithoutCodecOrProfile();
             root.test_extractProfileCombinesCodecAndProfile();
             root.test_extractProfileHandlesCodecOnly();
+            root.test_extractProfilePolishesCompoundCodecLabels();
+            root.test_isBluetoothSinkPropsRecognizesRealBluez5Node();
+            root.test_isBluetoothSinkPropsRecognizesDeviceBusFallback();
+            root.test_isBluetoothSinkPropsRejectsNonBluetoothNodes();
             root.pass();
         } catch (error) {
             root.reportFailure(error);
