@@ -49,10 +49,28 @@ ShellRoot {
         root.compare(Calendar.eventsByDate(null), {});
     }
 
+    function test_sanitizeSubscriptionTrimsAndValidates() {
+        root.compare(Calendar.sanitizeSubscription("  Work  ", "  https://example.com/cal.ics  "), { label: "Work", url: "https://example.com/cal.ics" });
+        root.compare(Calendar.sanitizeSubscription("", "https://example.com/cal.ics"), null);
+        root.compare(Calendar.sanitizeSubscription("Work", ""), null);
+        root.compare(Calendar.sanitizeSubscription("   ", "   "), null);
+    }
+
+    function test_generateSubscriptionIdAvoidsCollisionAndIsNonEmpty() {
+        const existing = [{ id: "sub-fixed", label: "x", url: "y" }];
+        const id = Calendar.generateSubscriptionId(existing);
+        root.verify(id.length > 0, "generated id was empty");
+        root.verify(id !== "sub-fixed", "generated id collided with an existing one");
+        const id2 = Calendar.generateSubscriptionId(existing);
+        root.verify(id !== id2, "two calls produced the same id");
+    }
+
     Component.onCompleted: {
         try {
             root.test_eventsByDateGroupsAndPreservesOrder();
             root.test_eventsByDateHandlesEmptyInput();
+            root.test_sanitizeSubscriptionTrimsAndValidates();
+            root.test_generateSubscriptionIdAvoidsCollisionAndIsNonEmpty();
             root.pass();
         } catch (error) {
             root.reportFailure(error);
