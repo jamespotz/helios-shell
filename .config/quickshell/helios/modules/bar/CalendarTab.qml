@@ -126,7 +126,13 @@ Item {
 
                             width: col.width / 7
                             height: width
-                            visible: modelData > 0
+                            // Leading/trailing blank cells (modelData === 0)
+                            // must still occupy their column so day 1 lands
+                            // under the correct weekday — hiding them with
+                            // `visible` collapses them out of the Row
+                            // positioner and shifts the whole month left.
+                            opacity: modelData > 0 ? 1 : 0
+                            enabled: modelData > 0
 
                             // Today: solid accent circle
                             Rectangle {

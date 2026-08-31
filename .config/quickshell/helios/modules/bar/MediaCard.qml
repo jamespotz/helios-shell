@@ -1,6 +1,6 @@
 import QtQuick
 import Quickshell.Services.Mpris
-import QtQuick.Effects
+import Quickshell.Widgets
 import "../../services"
 import "../../components"
 
@@ -67,53 +67,36 @@ Item {
             width: parent.width
             spacing: 16
 
-            // Album art — circular using MultiEffect's mask
-            Item {
+            // Album art — use the same rounded clipping primitive as the
+            // wallpaper preview. ClippingRectangle keeps the source image in
+            // the normal scene graph; the previous hidden Image + MultiEffect
+            // mask produced an empty texture and leaked the image elsewhere.
+            ClippingRectangle {
                 width: 96
                 height: 96
                 anchors.verticalCenter: parent.verticalCenter
+                radius: width / 2
+                color: Colors.surfaceHigh
+                border.width: 1
+                border.color: Colors.overlay
+                clip: true
 
-                Rectangle {
-                    id: artBg
-                    anchors.fill: parent
-                    radius: width / 2
-                    color: Colors.surfaceHigh
-                    border.width: 1
-                    border.color: Colors.overlay
-
-                    MaterialIcon {
-                        anchors.centerIn: parent
-                        visible: !(root.player && root.player.trackArtUrl)
-                        icon: "music_note"
-                        font.pixelSize: 34
-                        opacity: 0.7
-                    }
-                }
-
-                Rectangle {
-                    id: artCircleMask
-                    anchors.fill: parent
-                    anchors.margins: 1
-                    radius: width / 2
-                    visible: false
+                MaterialIcon {
+                    anchors.centerIn: parent
+                    visible: !(root.player && root.player.trackArtUrl)
+                    icon: "music_note"
+                    font.pixelSize: 34
+                    opacity: 0.7
                 }
 
                 Image {
                     id: artImage
                     anchors.fill: parent
                     anchors.margins: 1
-                    visible: false
+                    visible: !!(root.player && root.player.trackArtUrl)
                     source: root.player && root.player.trackArtUrl ? root.player.trackArtUrl : ""
                     fillMode: Image.PreserveAspectCrop
                     asynchronous: true
-                }
-
-                MultiEffect {
-                    anchors.fill: artCircleMask
-                    source: artImage
-                    maskEnabled: true
-                    maskSource: artCircleMask
-                    visible: !!(root.player && root.player.trackArtUrl)
                 }
             }
 

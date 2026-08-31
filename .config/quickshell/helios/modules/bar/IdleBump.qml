@@ -1,7 +1,7 @@
 import QtQuick
 import Quickshell
 import Quickshell.Services.Mpris
-import QtQuick.Effects
+import Quickshell.Widgets
 import "../../services"
 import "../../components"
 
@@ -50,49 +50,34 @@ Item {
             width: Math.min(implicitWidth, 120)
         }
 
-        // Now-playing: album art thumbnail in a circle
-        Item {
+        // Now-playing: album art thumbnail in a circle. Uses
+        // ClippingRectangle (the same rounded-image primitive the wallpaper
+        // preview uses) rather than a hidden Image + MultiEffect mask, which
+        // rendered nothing.
+        ClippingRectangle {
             visible: root.mediaPlaying && Config.showIdleMedia
             width: 20
             height: 20
             anchors.verticalCenter: parent.verticalCenter
+            radius: width / 2
+            color: Colors.surfaceHigh
+            clip: true
 
-            Rectangle {
-                anchors.fill: parent
-                radius: width / 2
-                color: Colors.surfaceHigh
-
-                MaterialIcon {
-                    anchors.centerIn: parent
-                    visible: !(root.player && root.player.trackArtUrl)
-                    icon: "music_note"
-                    font.pixelSize: 11
-                    color: Colors.subtext
-                }
-            }
-
-            Rectangle {
-                id: idleArtMask
-                anchors.fill: parent
-                radius: width / 2
-                visible: false
+            MaterialIcon {
+                anchors.centerIn: parent
+                visible: !(root.player && root.player.trackArtUrl)
+                icon: "music_note"
+                font.pixelSize: 11
+                color: Colors.subtext
             }
 
             Image {
                 id: idleArtImg
                 anchors.fill: parent
-                visible: false
+                visible: !!(root.player && root.player.trackArtUrl)
                 source: root.player && root.player.trackArtUrl ? root.player.trackArtUrl : ""
                 fillMode: Image.PreserveAspectCrop
                 asynchronous: true
-            }
-
-            MultiEffect {
-                anchors.fill: idleArtMask
-                source: idleArtImg
-                maskEnabled: true
-                maskSource: idleArtMask
-                visible: !!(root.player && root.player.trackArtUrl)
             }
         }
 

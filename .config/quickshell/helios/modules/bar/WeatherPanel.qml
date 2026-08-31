@@ -326,7 +326,12 @@ Item {
 
                                             width: calCol.width / 7
                                             height: width
-                                            visible: modelData > 0
+                                            // Blank pad cells must keep their
+                                            // column (see CalendarTab.qml) —
+                                            // `visible` would collapse them
+                                            // and shift the month left.
+                                            opacity: modelData > 0 ? 1 : 0
+                                            enabled: modelData > 0
 
                                             // Today: solid accent circle
                                             Rectangle {
