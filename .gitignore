@@ -1,2 +1,11 @@
 docs
 __pycache__
+
+# /teach skill workspace (personal QML learning materials, not shell code)
+/MISSION.md
+/RESOURCES.md
+/NOTES.md
+/lessons/
+/reference/
+/assets/
+/learning-records/

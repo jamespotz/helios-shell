@@ -10,9 +10,23 @@ import Quickshell.Services.Mpris
 QtObject {
     id: root
 
-    readonly property int barCount: 5
+    readonly property int barCount: 16
     readonly property int maxRange: 8
     property var bars: Array(barCount).fill(0)
+
+    function downsample(values, count) {
+        if (values.length <= count) return values;
+        const bucket = values.length / count;
+        const out = [];
+        for (let i = 0; i < count; i++) {
+            const start = Math.floor(i * bucket);
+            const end = Math.floor((i + 1) * bucket);
+            let sum = 0;
+            for (let j = start; j < end; j++) sum += values[j];
+            out.push(sum / Math.max(1, end - start));
+        }
+        return out;
+    }
 
     readonly property bool anyPlaying: {
         const players = Mpris.players ? Mpris.players.values : [];
