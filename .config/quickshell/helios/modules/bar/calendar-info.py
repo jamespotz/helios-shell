@@ -19,10 +19,16 @@ from gi.repository import EDataServer, ECal, ICalGLib  # noqa: E402
 import json
 import datetime
 import os
+import urllib.parse
 import urllib.request
 
 
 WINDOW_DAYS = 180
+
+# Generous for any real calendar feed. Bounds total transfer size so a
+# slow or huge feed can't stall a refresh or bloat memory. The 10s socket
+# timeout below only bounds individual reads, not total transfer time.
+MAX_ICS_BYTES = 5 * 1024 * 1024
 
 
 def fmt(dt):
@@ -109,7 +115,7 @@ def event_from_span(component, span, label):
     # offset. Timed events convert to local time for display, matching
     # how a calendar app shows events in the viewer's own timezone.
     if is_all_day:
-        d = datetime.datetime.utcfromtimestamp(start_epoch)
+        d = datetime.datetime.fromtimestamp(start_epoch, datetime.timezone.utc)
         return {
             "summary": component.get_summary() or "(no title)",
             "date": "%04d-%02d-%02d" % (d.year, d.month, d.day),
@@ -146,12 +152,29 @@ def collect_subscription_events(subscriptions):
         if not url:
             continue
 
+        # Reject anything but http(s) before opening it. urlopen() will
+        # happily hand back a local file's contents for a file:// URL (or
+        # worse for other schemes urllib supports), and the URL here is
+        # whatever the user typed into the subscription field.
+        scheme = urllib.parse.urlparse(url).scheme
+        if scheme not in ("http", "https"):
+            errors.append(
+                {"id": sub_id, "label": label, "message": "only http/https URLs are supported"}
+            )
+            continue
+
         try:
             req = urllib.request.Request(
                 url, headers={"User-Agent": "helios-shell-calendar/1.0"}
             )
             with urllib.request.urlopen(req, timeout=10) as resp:
-                raw = resp.read().decode("utf-8", errors="replace")
+                raw_bytes = resp.read(MAX_ICS_BYTES + 1)
+                if len(raw_bytes) > MAX_ICS_BYTES:
+                    errors.append(
+                        {"id": sub_id, "label": label, "message": "feed too large (over 5 MB)"}
+                    )
+                    continue
+                raw = raw_bytes.decode("utf-8", errors="replace")
         except Exception as e:
             errors.append({"id": sub_id, "label": label, "message": str(e)})
             continue

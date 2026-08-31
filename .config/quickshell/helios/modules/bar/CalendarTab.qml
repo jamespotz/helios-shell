@@ -328,7 +328,12 @@ Item {
 
             StyledText {
                 visible: root.selectedDayEvents.length === 0
-                text: "No events"
+                // A refresh now involves real network fetches (up to 10s each,
+                // subscriptions fetched sequentially). Without this, an empty
+                // result during a slow refresh reads as "no events exist"
+                // rather than "still loading," even though local events sit
+                // in that same empty window.
+                text: Calendar.ready ? "No events" : "Loading…"
                 opacity: 0.5
                 font.pixelSize: Config.fontSize - 2
             }
