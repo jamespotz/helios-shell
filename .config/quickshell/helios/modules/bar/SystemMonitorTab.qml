@@ -539,5 +539,32 @@ Item {
                 }
             }
         }
+
+        // --- Network activity sparkline --------------------------------------
+        Column {
+            width: parent.width
+            spacing: 6
+            visible: root.stats.networkReceivedHistory.length > 1
+
+            Item {
+                width: parent.width
+                height: 16
+                StyledText { anchors.left: parent.left; text: "Network Activity"; font.bold: true; font.pixelSize: Config.fontSize - 2 }
+                StyledText {
+                    anchors.right: parent.right
+                    text: "↓ " + root.stats.networkRate.receivedKBs.toFixed(1) + " KB/s · ↑ " + root.stats.networkRate.sentKBs.toFixed(1) + " KB/s"
+                    opacity: 0.5
+                    font.pixelSize: Config.fontSize - 3
+                    font.family: Config.monoFontFamily
+                }
+            }
+
+            Sparkline {
+                width: parent.width
+                barHeight: 28
+                values: root.stats.networkReceivedHistory
+                barColor: Colors.accent
+            }
+        }
     }
 }
