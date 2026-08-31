@@ -25,3 +25,4 @@ singleton Emoji 1.0 Emoji.qml
 singleton SystemStats 1.0 SystemStats.qml
 singleton BatteryHistory 1.0 BatteryHistory.qml
 singleton MprisHelpers 1.0 MprisHelpers.qml
+singleton Calendar 1.0 Calendar.qml
