@@ -12,6 +12,7 @@ README.md
 ^unlink\.sh$
 ^\.linkignore$
 \docs
+^tests/
 \.claude
 AGENTS.md
 CLAUDE.md

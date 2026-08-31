@@ -115,11 +115,9 @@ Item {
 
                     HoverHandler { id: histHover }
 
-                    // Open app on click — relaunches via its .desktop entry, then
-                    // falls back to the PID resolver (see Notifications.qml). No
-                    // dedicated icon: the resolver's hit rate for CLI notifiers
-                    // is too low to promise via a button, so the whole row is
-                    // just clickable and silently no-ops if nothing resolves.
+                    // Open app on click. A running window is focused first;
+                    // otherwise its desktop entry is launched. The click is a
+                    // no-op when neither target can be resolved.
                     MouseArea {
                         anchors.fill: parent
                         cursorShape: Qt.PointingHandCursor
