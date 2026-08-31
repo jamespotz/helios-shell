@@ -3,6 +3,7 @@ singleton Colors 1.0 Colors.qml
 singleton Bluetooth 1.0 Bluetooth.qml
 singleton Config 1.0 Config.qml
 singleton Bridge 1.0 Bridge.qml
+singleton AppLaunch 1.0 AppLaunch.qml
 singleton Notifications 1.0 Notifications.qml
 singleton Weather 1.0 Weather.qml
 singleton Activity 1.0 Activity.qml

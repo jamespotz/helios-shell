@@ -100,10 +100,10 @@ ShellRoot {
 
     function test_hyprland056FocusRequestUsesWindowAddress() {
         root.compare(
-            Notifications._focusRequest("0xAbC123"),
+            AppLaunch._focusRequest("0xAbC123"),
             'hl.dsp.focus({ window = "address:0xAbC123" })'
         );
-        root.compare(Notifications._focusRequest(""), "");
+        root.compare(AppLaunch._focusRequest(""), "");
     }
 
     function test_actionSchedulesBoundedFocusRetries() {
@@ -120,11 +120,11 @@ ShellRoot {
             appName: "Missing"
         }), "action was not handled");
         root.verify(invoked, "action was not invoked before scheduling focus");
-        root.compare(Notifications._pendingFocusDesktopEntry, "org.example.Missing");
-        root.compare(Notifications._pendingFocusAppName, "Missing");
-        root.compare(Notifications._focusAttemptsRemaining, 3);
-        root.verify(Notifications._actionFocusTimer.running, "focus retry timer was not started");
-        Notifications._actionFocusTimer.stop();
+        root.compare(AppLaunch._pendingDesktopEntry, "org.example.Missing");
+        root.compare(AppLaunch._pendingAppName, "Missing");
+        root.compare(AppLaunch._attemptsRemaining, 3);
+        root.verify(AppLaunch._retryTimer.running, "focus retry timer was not started");
+        AppLaunch._retryTimer.stop();
     }
 
     function runHyprlandIntegrationTest() {
@@ -165,7 +165,7 @@ ShellRoot {
 
         onTriggered: {
             attempts++;
-            const resolvedAddress = Notifications._windowAddress(
+            const resolvedAddress = AppLaunch.windowAddress(
                 root.integrationTargetClass,
                 root.integrationTargetClass
             );

@@ -10,6 +10,13 @@ Item {
     implicitWidth: 340
     implicitHeight: col.implicitHeight
 
+    // Truncates to a fixed character budget rather than relying on
+    // single-line width-elide, which cropped long bodies after only a
+    // handful of characters.
+    function truncate(text, max) {
+        return text.length > max ? text.slice(0, max).replace(/\s+$/, "") + "…" : text;
+    }
+
     Column {
         id: col
         width: parent.width
@@ -106,13 +113,6 @@ Item {
                     radius: 10
                     color: histHover.hovered ? Colors.surfaceHigh : "transparent"
 
-                    // Truncate to a fixed character budget rather than relying on
-                    // single-line width-elide, which cropped long bodies after
-                    // only a handful of characters.
-                    function truncate(text, max) {
-                        return text.length > max ? text.slice(0, max).replace(/\s+$/, "") + "…" : text;
-                    }
-
                     HoverHandler { id: histHover }
 
                     // Open app on click. A running window is focused first;
@@ -168,7 +168,7 @@ Item {
                                 elide: Text.ElideRight
                                 font.pixelSize: Config.fontSize - 2
                                 color: Colors.subtext
-                                text: histRow.truncate(histRow.modelData.body || "", 150)
+                                text: root.truncate(histRow.modelData.body || "", 150)
                             }
                         }
 

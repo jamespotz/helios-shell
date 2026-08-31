@@ -33,6 +33,12 @@ PanelWindow {
     readonly property int padH: mode === "idle" ? 0 : 18
     readonly property int padV: mode === "idle" ? 0 : 10
 
+    // The one seam for "something is temporarily covering the island, so
+    // its close/collapse triggers should hold off" — right now that's just
+    // the custom tray menu, but a future reason to suppress adds one clause
+    // here instead of a new copy of the check at another call site.
+    readonly property bool suppressCollapse: Bridge.trayMenuOpen
+
     // Top, not Overlay: the bar is a persistent panel, and popups (launcher,
     // OSD, power menu, keybind cheatsheet) need to render strictly above it.
     // wlr-layer-shell only guarantees stacking order *between* layers
@@ -77,32 +83,8 @@ PanelWindow {
         // while the menu is still visible; a genuine hover return still
         // cancels this timer normally (see hoverTracker.onHoveredChanged).
         onTriggered: {
-            if (Bridge.trayMenuOpen) { hoverCollapseTimer.restart(); return; }
+            if (bar.suppressCollapse) { hoverCollapseTimer.restart(); return; }
             bar.hovering = false;
-        }
-    }
-
-    Timer {
-        id: notifyTimer
-        interval: 5000
-        onTriggered: {
-            // Hovering the card pauses the auto-dismiss instead of losing it.
-            if (bar.mode === "notify" && content.item && content.item.hovering) {
-                notifyTimer.restart();
-                return;
-            }
-            // Only the single-notification view auto-dismisses — a group
-            // stays put until the user clears it, so nothing gets lost
-            // unread underneath a newer one.
-            if (Notifications.list.length === 1) Notifications.dismiss(Notifications.list[0]);
-        }
-    }
-
-    Connections {
-        target: Notifications
-        function onListChanged() {
-            if (Notifications.list.length === 1) notifyTimer.restart();
-            else notifyTimer.stop();
         }
     }
 
@@ -130,7 +112,7 @@ PanelWindow {
         windows: [bar]
         active: false
         onCleared: {
-            if (Bridge.trayMenuOpen) return;
+            if (bar.suppressCollapse) return;
             if (bar.panelOpen) Bridge.closeIsland();
         }
     }
@@ -142,7 +124,7 @@ PanelWindow {
     Connections {
         target: Bridge
         function onTrayMenuOpenChanged() {
-            if (!Bridge.trayMenuOpen && bar.panelOpen) {
+            if (!bar.suppressCollapse && bar.panelOpen) {
                 focusGrab.active = false;
                 focusGrabDelay.restart();
             }

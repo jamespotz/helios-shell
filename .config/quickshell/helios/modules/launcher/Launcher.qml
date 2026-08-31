@@ -149,26 +149,13 @@ PanelWindow {
         resultList.currentIndex = results.length > 0 ? Math.min(resultList.currentIndex, results.length - 1) : 0;
     }
 
-    // Launch an app — wraps terminal apps (btop, nvim, etc.) in the
-    // configured terminal emulator. ExtraApps entries already handle this
-    // in their own execute(), but Quickshell's native DesktopEntry.execute()
-    // does NOT spawn a terminal even when runInTerminal is true.
+    // Launch an app — ExtraApps entries already handle terminal wrapping in
+    // their own execute(); AppLaunch.launch() does the same for a plain
+    // DesktopEntry, whose native execute() does not spawn a terminal even
+    // when runInTerminal is true.
     function launchApp(entry) {
         launcher.recordLaunch(entry.name);
-        if (entry.runInTerminal) {
-            // entry.command is the parsed Exec as a list
-            const cmd = entry.command || [];
-            if (cmd.length > 0) {
-                const args = [Config.terminal, "-e"].concat(cmd);
-                Quickshell.execDetached(args);
-            } else {
-                // Fallback: try executing the raw exec string
-                const exec = (entry.execString || "").replace(/%[fFuUdDnNickvm]/g, "").trim();
-                if (exec) Quickshell.execDetached([Config.terminal, "-e", "sh", "-c", exec]);
-            }
-        } else {
-            entry.execute();
-        }
+        AppLaunch.launch(entry);
     }
 
     // Runs a Desktop Action (the context menu's entries, e.g. Ghostty's

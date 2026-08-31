@@ -15,10 +15,37 @@ Item {
 
     readonly property bool hovering: hoverTracker.hovered
 
+    function iconSource(notification) {
+        return notification.image || Quickshell.iconPath(notification.appIcon, true);
+    }
+
     implicitWidth: Config.notifyWidth
     implicitHeight: col.implicitHeight
 
     HoverHandler { id: hoverTracker }
+
+    // Auto-dismiss the single-notification view after a pause — a group
+    // stays put until cleared, see the Row below. Hovering pauses the
+    // countdown instead of losing it. This timer only exists while a
+    // notification is actually on screen, so nothing ticks down for one
+    // arriving behind an open panel.
+    Timer {
+        id: autoDismissTimer
+        interval: 5000
+        onTriggered: {
+            if (root.hovering) { autoDismissTimer.restart(); return; }
+            if (root.count === 1) Notifications.dismiss(root.list[0]);
+        }
+    }
+
+    onCountChanged: {
+        if (root.count === 1) autoDismissTimer.restart();
+        else autoDismissTimer.stop();
+    }
+
+    Component.onCompleted: {
+        if (root.count === 1) autoDismissTimer.restart();
+    }
 
     Column {
         id: col
@@ -44,7 +71,7 @@ Item {
                     anchors.fill: parent
                     anchors.margins: 2
                     visible: root.count === 1 && source !== ""
-                    source: root.count === 1 ? (root.list[0].image || Quickshell.iconPath(root.list[0].appIcon, true)) : ""
+                    source: root.count === 1 ? root.iconSource(root.list[0]) : ""
                     fillMode: Image.PreserveAspectFit
                 }
             }
@@ -200,7 +227,7 @@ Item {
                                 anchors.fill: parent
                                 anchors.margins: 1
                                 visible: source !== ""
-                                source: row.modelData.image || Quickshell.iconPath(row.modelData.appIcon, true)
+                                source: root.iconSource(row.modelData)
                                 fillMode: Image.PreserveAspectFit
                             }
                         }
