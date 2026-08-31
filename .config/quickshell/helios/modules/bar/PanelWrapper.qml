@@ -87,7 +87,7 @@ Item {
                             { tab: "notifications", icon: "history" },
                             { tab: "nightlight", icon: "nightlight" },
                             { tab: "display", icon: "monitor" },
-                            { tab: "idle", icon: "bedtime" },
+                            { tab: "idlelock", icon: "bedtime" },
                             { tab: "wallpaper", icon: "wallpaper" },
                             { tab: "theme", icon: "palette" },
                             { tab: "power", icon: powerIcon },
@@ -151,7 +151,7 @@ Item {
                         : Bridge.islandTab === "notifications" ? notificationsTab
                         : Bridge.islandTab === "nightlight" ? nightlightTab
                         : Bridge.islandTab === "display" ? displayTab
-                        : Bridge.islandTab === "idle" ? idleTab
+                        : Bridge.islandTab === "idlelock" ? idleTab
                         : Bridge.islandTab === "wallpaper" ? wallpaperTab
                         : Bridge.islandTab === "theme" ? themeTab
                         : Bridge.islandTab === "island" ? islandTab
