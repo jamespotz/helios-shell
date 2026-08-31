@@ -7,9 +7,16 @@ import "../../components"
 Item {
     id: root
 
-    readonly property var player: {
-        const players = Mpris.players ? Mpris.players.values : [];
-        return players.find(p => p.isPlaying) || players.find(p => p.canControl) || players[0] || null;
+    readonly property var activePlayers: Mpris.players ? Mpris.players.values : []
+    property string selectedPlayerId: ""
+    readonly property var player: MprisHelpers.selectPlayer(root.activePlayers, root.selectedPlayerId)
+
+    // Drop a pinned selection once that player disappears (app closed, dbus
+    // name released) instead of silently freezing on a dead player.
+    onActivePlayersChanged: {
+        if (root.selectedPlayerId && !root.activePlayers.some(p => p.dbusName === root.selectedPlayerId)) {
+            root.selectedPlayerId = "";
+        }
     }
 
     readonly property var connectedDevice: Bluetooth.devices.find(d => d.connected) || null
@@ -178,6 +185,24 @@ Item {
             }
         }
 
+        // --- Player switcher (only when more than one source is active) -----
+        Row {
+            width: parent.width
+            spacing: 6
+            visible: root.activePlayers.length > 1
+
+            Repeater {
+                model: root.activePlayers
+
+                Chip {
+                    required property var modelData
+                    text: modelData.identity || "Player"
+                    active: !!(root.player && root.player.dbusName === modelData.dbusName)
+                    onClicked: root.selectedPlayerId = modelData.dbusName
+                }
+            }
+        }
+
         Column {
             width: parent.width
             spacing: 4
@@ -217,8 +242,16 @@ Item {
 
         Row {
             anchors.horizontalCenter: parent.horizontalCenter
-            spacing: 28
+            spacing: 20
 
+            IconButton {
+                icon: "shuffle"
+                iconSize: 17
+                visible: !!(root.player && root.player.shuffleSupported)
+                active: !!(root.player && root.player.shuffle)
+                anchors.verticalCenter: parent.verticalCenter
+                onClicked: if (root.player) root.player.shuffle = !root.player.shuffle
+            }
             IconButton {
                 icon: "skip_previous"
                 iconSize: 19
@@ -239,6 +272,14 @@ Item {
                 iconSize: 19
                 anchors.verticalCenter: parent.verticalCenter
                 onClicked: if (root.player && root.player.canGoNext) root.player.next()
+            }
+            IconButton {
+                icon: root.player && root.player.loopState === MprisLoopState.Track ? "repeat_one" : "repeat"
+                iconSize: 17
+                visible: !!(root.player && root.player.loopSupported)
+                active: !!(root.player && root.player.loopState !== MprisLoopState.None)
+                anchors.verticalCenter: parent.verticalCenter
+                onClicked: if (root.player) root.player.loopState = MprisHelpers.nextLoopState(root.player.loopState)
             }
         }
 
