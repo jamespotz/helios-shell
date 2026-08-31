@@ -10,6 +10,7 @@ Rectangle {
     property alias text: input.text
     property alias cursorPosition: input.cursorPosition
     property string placeholder: "Search…"
+    property string icon: "search"
     property int inputPixelSize: Config.fontSize
 
     signal accepted()
@@ -30,7 +31,7 @@ Rectangle {
         spacing: 10
 
         MaterialIcon {
-            icon: "search"
+            icon: root.icon
             font.pixelSize: 18
             color: Colors.subtext
             anchors.verticalCenter: parent.verticalCenter

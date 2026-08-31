@@ -15,6 +15,7 @@ Item {
     property date viewDate: new Date()
     readonly property date today: new Date()
     property date selectedDate: root.today
+    property bool manageOpen: false
 
     function shiftMonth(delta) {
         const d = new Date(root.viewDate);
@@ -73,11 +74,126 @@ Item {
                 font.bold: true
                 text: root.viewDate.toLocaleDateString(Qt.locale(), "MMMM yyyy")
             }
-            IconButton {
+            Row {
                 anchors.right: parent.right
                 anchors.verticalCenter: parent.verticalCenter
-                icon: "chevron_right"
-                onClicked: root.shiftMonth(1)
+                spacing: 2
+
+                IconButton {
+                    icon: "tune"
+                    active: root.manageOpen
+                    onClicked: root.manageOpen = !root.manageOpen
+                }
+                IconButton {
+                    icon: "chevron_right"
+                    onClicked: root.shiftMonth(1)
+                }
+            }
+        }
+
+        // --- Manage calendars (subscriptions) --------------------------------
+        Column {
+            width: parent.width
+            spacing: 10
+            visible: root.manageOpen
+            height: root.manageOpen ? implicitHeight : 0
+            clip: true
+
+            StyledText { text: "Calendars"; font.bold: true; font.pixelSize: Config.fontSize - 1 }
+
+            StyledText {
+                visible: Calendar.subscriptions.length === 0
+                text: "No subscribed calendars yet"
+                opacity: 0.5
+                font.pixelSize: Config.fontSize - 2
+            }
+
+            Column {
+                width: parent.width
+                spacing: 4
+                visible: Calendar.subscriptions.length > 0
+
+                Repeater {
+                    model: Calendar.subscriptions
+
+                    Item {
+                        id: subRow
+                        required property var modelData
+                        readonly property var error: Calendar.subscriptionErrors.find(e => e.id === subRow.modelData.id) || null
+
+                        width: parent.width
+                        height: 32
+
+                        Row {
+                            anchors.fill: parent
+                            spacing: 8
+
+                            MaterialIcon {
+                                visible: !!subRow.error
+                                icon: "warning"
+                                font.pixelSize: 14
+                                color: Colors.warning
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+                            Column {
+                                width: parent.width - (subRow.error ? 18 : 0) - 32
+                                anchors.verticalCenter: parent.verticalCenter
+                                StyledText {
+                                    width: parent.width
+                                    elide: Text.ElideRight
+                                    text: subRow.modelData.label
+                                }
+                                StyledText {
+                                    visible: !!subRow.error
+                                    width: parent.width
+                                    elide: Text.ElideRight
+                                    text: subRow.error ? subRow.error.message : ""
+                                    color: Colors.warning
+                                    font.pixelSize: Config.fontSize - 4
+                                }
+                            }
+                            IconButton {
+                                anchors.verticalCenter: parent.verticalCenter
+                                icon: "close"
+                                iconSize: 14
+                                onClicked: Calendar.removeSubscription(subRow.modelData.id)
+                            }
+                        }
+                    }
+                }
+            }
+
+            Rectangle { width: parent.width; height: 1; color: Colors.overlay; opacity: 0.15 }
+
+            Column {
+                width: parent.width
+                spacing: 8
+
+                SearchField {
+                    id: labelField
+                    width: parent.width
+                    icon: "label"
+                    placeholder: "Name (e.g. Work)"
+                }
+                SearchField {
+                    id: urlField
+                    width: parent.width
+                    icon: "link"
+                    placeholder: "https://calendar.google.com/…/basic.ics"
+                    onAccepted: addButton.clicked()
+                }
+                PrimaryButton {
+                    id: addButton
+                    width: parent.width
+                    text: "Add Calendar"
+                    icon: "add"
+                    enabled: labelField.text.trim().length > 0 && urlField.text.trim().length > 0
+                    onClicked: {
+                        Calendar.addSubscription(labelField.text, urlField.text);
+                        labelField.text = "";
+                        urlField.text = "";
+                    }
+                }
             }
         }
 
