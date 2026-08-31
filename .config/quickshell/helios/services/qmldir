@@ -1,6 +1,7 @@
 module services
 singleton Colors 1.0 Colors.qml
 singleton Bluetooth 1.0 Bluetooth.qml
+singleton BluetoothAudio 1.0 BluetoothAudio.qml
 singleton Config 1.0 Config.qml
 singleton Bridge 1.0 Bridge.qml
 singleton AppLaunch 1.0 AppLaunch.qml
