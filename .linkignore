@@ -18,3 +18,10 @@ __pycache__
 \.claude
 AGENTS.md
 CLAUDE.md
+/MISSION.md
+/RESOURCES.md
+/NOTES.md
+/lessons/
+/reference/
+/assets/
+/learning-records/
