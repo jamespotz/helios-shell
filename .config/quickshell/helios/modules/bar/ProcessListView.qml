@@ -1,147 +1,137 @@
 import QtQuick
+import Quickshell
 import "../../services"
 import "../../components"
 
-// Full sortable/filterable process table for the System tab's "View All"
-// link — swapped in place of the dashboard by SystemMonitorTab.qml rather
-// than living as its own tab. Backed by SystemStats.state.processes, which
-// SystemMonitorTab switches into "full" mode (all processes, capped at
-// 1000, with cmdline/user) for as long as this view stays visible.
 Item {
     id: root
-
     signal backRequested()
 
-    // A pid or process name this shell can't afford to lose. Checked before
-    // a row is even allowed to arm — Terminate/Kill stay visible but refuse
-    // to do anything for these, rather than letting a fat-fingered double
-    // click take down the compositor or the shell itself.
-    function isProtected(modelData) {
-        if (modelData.pid === 1) return true;
-        const n = modelData.name.toLowerCase();
-        return n.indexOf("quickshell") !== -1 || n.indexOf("hyprland") !== -1;
-    }
-
     property string searchText: ""
+    property string filterMode: "all"
     property string sortColumn: "cpu_percent"
-    property int sortDir: -1 // -1 descending, 1 ascending
+    property int sortDir: -1
+    readonly property string currentUser: Quickshell.env("USER")
+    readonly property int actionsWidth: 108
 
-    // Shared with ProcessRow's actionsRow so the CPU/Mem column headers stay
-    // aligned with the actual data cells regardless of button sizing.
-    readonly property int actionButtonWidth: 64
-    readonly property int actionsRowWidth: actionButtonWidth * 2 + 4
-
+    function isProtected(p) {
+        const name = p.name.toLowerCase();
+        return p.pid === 1 || name.indexOf("quickshell") !== -1 || name.indexOf("hyprland") !== -1;
+    }
+    function matchesMode(p) {
+        if (filterMode === "apps") return p.user === currentUser && p.cmdline.charAt(0) !== "[";
+        if (filterMode === "system") return p.user === "root";
+        if (filterMode === "background") return p.cpu_percent < 0.1;
+        return true;
+    }
     function toggleSort(column) {
-        if (root.sortColumn === column) {
-            root.sortDir = -root.sortDir;
-        } else {
-            root.sortColumn = column;
-            root.sortDir = (column === "pid" || column === "name") ? 1 : -1;
+        if (sortColumn === column) sortDir = -sortDir;
+        else {
+            sortColumn = column;
+            sortDir = column === "pid" || column === "name" ? 1 : -1;
         }
+    }
+    function memoryText(p) {
+        const mib = (SystemStats.state.memory.total_gb || 0) * 1024 * p.memory_percent / 100;
+        return mib >= 1024 ? (mib / 1024).toFixed(1) + " GB" : mib.toFixed(mib < 10 ? 1 : 0) + " MB";
     }
 
     readonly property var processedList: {
-        const q = root.searchText.trim().toLowerCase();
-        let list = SystemStats.state.processes;
-        if (q.length > 0) {
-            list = list.filter(p =>
-                p.name.toLowerCase().indexOf(q) !== -1 ||
-                (p.cmdline || "").toLowerCase().indexOf(q) !== -1 ||
-                String(p.pid).indexOf(q) !== -1
-            );
-        }
-        const col = root.sortColumn;
-        const dir = root.sortDir;
+        const query = searchText.trim().toLowerCase();
+        let list = SystemStats.state.processes.filter(p => matchesMode(p) && (query.length === 0
+            || p.name.toLowerCase().indexOf(query) !== -1
+            || (p.cmdline || "").toLowerCase().indexOf(query) !== -1
+            || String(p.pid).indexOf(query) !== -1));
+        const column = sortColumn;
+        const direction = sortDir;
         return list.slice().sort((a, b) => {
-            let av = a[col], bv = b[col];
-            if (typeof av === "string") return dir * av.toLowerCase().localeCompare(bv.toLowerCase());
-            return dir * (av - bv);
+            const av = a[column], bv = b[column];
+            return typeof av === "string"
+                ? direction * av.toLowerCase().localeCompare(bv.toLowerCase())
+                : direction * (av - bv);
         });
     }
 
     implicitWidth: 620
-    implicitHeight: outerCol.implicitHeight
+    implicitHeight: content.implicitHeight
 
     Column {
-        id: outerCol
+        id: content
         width: parent.width
-        spacing: 12
 
-        // --- Header: back + title + count -----------------------------------
         Item {
-            width: parent.width
-            height: 28
-
+            width: parent.width; height: 58
             IconButton {
-                id: backBtn
-                anchors.left: parent.left
-                anchors.verticalCenter: parent.verticalCenter
+                id: backButton
+                anchors.left: parent.left; anchors.top: parent.top
                 icon: "arrow_back"
                 onClicked: root.backRequested()
             }
-
-            StyledText {
-                anchors.left: backBtn.right
-                anchors.leftMargin: 8
-                anchors.verticalCenter: parent.verticalCenter
-                text: "All Processes"
-                font.bold: true
-                font.pixelSize: Config.fontSize - 1
+            Column {
+                anchors.left: backButton.right; anchors.leftMargin: 10; anchors.top: parent.top
+                spacing: 4
+                StyledText { text: "Process Explorer"; font.bold: true; font.pixelSize: Config.fontSize + 5 }
+                StyledText {
+                    text: SystemStats.state.processes.length + " processes  ·  "
+                        + SystemStats.state.cpu.usage_percent.toFixed(1) + "% CPU  ·  "
+                        + SystemStats.state.memory.used_gb.toFixed(1) + " GB in use"
+                    color: Colors.subtext; font.pixelSize: Config.fontSize - 2
+                }
             }
-
-            StyledText {
-                anchors.right: parent.right
-                anchors.verticalCenter: parent.verticalCenter
-                text: root.processedList.length + " / " + SystemStats.state.processes.length
-                opacity: 0.5
-                font.pixelSize: Config.fontSize - 3
-                font.family: Config.monoFontFamily
+            Rectangle {
+                anchors.right: parent.right; anchors.top: parent.top
+                width: 62; height: 28; radius: Colors.radiusSmall; color: Colors.surfaceHigh
+                Row {
+                    anchors.centerIn: parent; spacing: 7
+                    Rectangle { width: 7; height: 7; radius: 4; color: Colors.success; anchors.verticalCenter: parent.verticalCenter }
+                    StyledText { text: "Live"; color: Colors.subtext; font.pixelSize: Config.fontSize - 3 }
+                }
             }
         }
 
-        SearchField {
-            id: search
-            width: parent.width
-            placeholder: "Filter by name, command, or PID…"
-            onTextChanged: root.searchText = text
+        Item {
+            width: parent.width; height: 48
+            SearchField {
+                id: search
+                anchors.left: parent.left; anchors.verticalCenter: parent.verticalCenter
+                width: 270; height: 36; inputPixelSize: Config.fontSize - 2
+                placeholder: "Filter by name, PID, or command"
+                onTextChanged: root.searchText = text
+            }
+            SegmentedControl {
+                anchors.left: search.right; anchors.leftMargin: 10; anchors.right: parent.right
+                anchors.verticalCenter: parent.verticalCenter; height: 36
+                currentValue: root.filterMode
+                model: [
+                    { value: "all", label: "All" }, { value: "apps", label: "Apps" },
+                    { value: "system", label: "System" }, { value: "background", label: "Background" }
+                ]
+                onActivated: value => root.filterMode = value
+            }
         }
 
-        // --- Column headers ---------------------------------------------------
+        Rectangle { width: parent.width; height: 1; color: Colors.outline; opacity: 0.65 }
+        Item {
+            width: parent.width; height: 32
+            SortHeader { anchors.left: parent.left; anchors.leftMargin: 8; width: 46; label: "PID"; column: "pid" }
+            SortHeader { anchors.left: parent.left; anchors.leftMargin: 62; width: 90; label: "Program"; column: "name" }
+            SortHeader { anchors.left: parent.left; anchors.leftMargin: 160; anchors.right: memHeader.left; anchors.rightMargin: 10; label: "Command"; column: "cmdline" }
+            SortHeader { id: memHeader; anchors.right: cpuHeader.left; anchors.rightMargin: 10; width: 62; label: "Memory"; column: "memory_percent"; alignRight: true }
+            SortHeader { id: cpuHeader; anchors.right: parent.right; anchors.rightMargin: root.actionsWidth + 8; width: 72; label: "CPU"; column: "cpu_percent"; alignRight: true }
+        }
+
         Item {
             width: parent.width
-            height: 22
-
-            SortHeaderLabel { anchors.left: parent.left; anchors.leftMargin: 8; width: 44; label: "PID"; column: "pid" }
-            SortHeaderLabel { anchors.left: parent.left; anchors.leftMargin: 56; width: 100; label: "Program"; column: "name" }
-            SortHeaderLabel { anchors.right: cpuHeader.left; anchors.rightMargin: 8; anchors.left: parent.left; anchors.leftMargin: 160; label: "Command"; column: "cmdline" }
-            SortHeaderLabel { id: cpuHeader; anchors.right: memHeader.left; anchors.rightMargin: 8; width: 50; label: "CPU"; column: "cpu_percent"; alignRight: true }
-            SortHeaderLabel { id: memHeader; anchors.right: parent.right; anchors.rightMargin: 16 + root.actionsRowWidth; width: 50; label: "Mem"; column: "memory_percent"; alignRight: true }
-        }
-
-        StyledText {
-            visible: root.processedList.length === 0
-            text: SystemStats.state.processes.length === 0 ? "Loading processes…" : "No matching processes"
-            opacity: 0.6
-            font.pixelSize: Config.fontSize - 2
-        }
-
-        // Wraps the ListView so ScrollIndicator — which anchors to its
-        // target's edges — is a sibling of the Flickable rather than a
-        // child inside it (see components/ScrollIndicator.qml).
-        Item {
-            id: listWrap
-            width: parent.width
-            visible: root.processedList.length > 0
-            height: Math.min(360, root.processedList.length * 34)
-
+            height: root.processedList.length === 0 ? 76 : Math.min(378, root.processedList.length * 42)
+            StyledText {
+                anchors.centerIn: parent; visible: root.processedList.length === 0
+                text: SystemStats.state.processes.length === 0 ? "Loading processes…" : "No matching processes"
+                color: Colors.subtext
+            }
             ListView {
                 id: listView
-                anchors.fill: parent
-                clip: true
-                spacing: 1
-                model: root.processedList
-                boundsBehavior: Flickable.StopAtBounds
-
+                anchors.fill: parent; visible: root.processedList.length > 0
+                clip: true; model: root.processedList; boundsBehavior: Flickable.StopAtBounds
                 delegate: ProcessRow {
                     width: listView.width
                     required property var modelData
@@ -149,47 +139,48 @@ Item {
                     protected_: root.isProtected(modelData)
                 }
             }
-
             ScrollIndicator { target: listView }
+        }
+
+        Rectangle { width: parent.width; height: 1; color: Colors.outline; opacity: 0.65 }
+        Item {
+            width: parent.width; height: 30
+            StyledText {
+                anchors.left: parent.left; anchors.leftMargin: 8; anchors.verticalCenter: parent.verticalCenter
+                text: root.processedList.length + " shown  ·  " + SystemStats.state.processes.length + " running"
+                color: Colors.subtext; font.pixelSize: Config.fontSize - 3
+            }
+            StyledText {
+                anchors.right: parent.right; anchors.rightMargin: 8; anchors.verticalCenter: parent.verticalCenter
+                text: "Updated every 5s"; color: Colors.subtext; font.pixelSize: Config.fontSize - 3
+            }
         }
     }
 
-    component SortHeaderLabel: Item {
-        id: headerLabel
-        property string label: ""
-        property string column: ""
+    component SortHeader: Item {
+        id: header
+        property string label
+        property string column
         property bool alignRight: false
-        height: 22
-
-        StyledText {
-            id: labelText
-            anchors.right: headerLabel.alignRight ? parent.right : undefined
-            anchors.left: headerLabel.alignRight ? undefined : parent.left
-            anchors.verticalCenter: parent.verticalCenter
-            text: headerLabel.label
-            opacity: 0.5
-            font.bold: true
-            font.pixelSize: Config.fontSize - 3
-            color: root.sortColumn === headerLabel.column ? Colors.accent : Colors.text
+        height: 32
+        Row {
+            anchors.right: header.alignRight ? parent.right : undefined
+            anchors.left: header.alignRight ? undefined : parent.left
+            anchors.verticalCenter: parent.verticalCenter; spacing: 2
+            MaterialIcon {
+                visible: root.sortColumn === header.column
+                icon: root.sortDir === 1 ? "keyboard_arrow_up" : "keyboard_arrow_down"
+                font.pixelSize: 13; color: Colors.subtext
+            }
+            StyledText {
+                text: header.label
+                color: root.sortColumn === header.column ? Colors.text : Colors.subtext
+                font.bold: true; font.pixelSize: Config.fontSize - 3
+            }
         }
-
-        MaterialIcon {
-            visible: root.sortColumn === headerLabel.column
-            anchors.right: headerLabel.alignRight ? labelText.left : undefined
-            anchors.left: headerLabel.alignRight ? undefined : labelText.right
-            anchors.rightMargin: 2
-            anchors.leftMargin: 2
-            anchors.verticalCenter: parent.verticalCenter
-            icon: root.sortDir === 1 ? "arrow_upward" : "arrow_downward"
-            font.pixelSize: 11
-            color: Colors.accent
-        }
-
         MouseArea {
-            anchors.fill: parent
-            anchors.margins: -3
-            cursorShape: Qt.PointingHandCursor
-            onClicked: root.toggleSort(headerLabel.column)
+            anchors.fill: parent; cursorShape: Qt.PointingHandCursor
+            onClicked: root.toggleSort(header.column)
         }
     }
 
@@ -197,158 +188,93 @@ Item {
         id: row
         required property var processData
         required property bool protected_
-        height: 32
-
         property string armedAction: ""
         property string errorText: ""
+        height: 42
 
         Timer { id: armTimer; interval: 3000; onTriggered: row.armedAction = "" }
         Timer { id: errorTimer; interval: 2500; onTriggered: row.errorText = "" }
-
         Connections {
             target: SystemStats
             function onProcessKillResult(pid, success, message) {
-                if (pid !== row.processData.pid) return;
-                if (!success) {
-                    row.errorText = message.length > 0 ? message : "Failed";
-                    errorTimer.restart();
-                }
+                if (pid !== row.processData.pid || success) return;
+                row.errorText = message.length > 0 ? message : "Failed";
+                errorTimer.restart();
             }
         }
-
-        function pressTerm() {
-            if (row.protected_) { row.errorText = "Protected process"; errorTimer.restart(); return; }
-            if (row.armedAction === "term") { row.armedAction = ""; SystemStats.actOnProcess(row.processData.pid, "terminate"); }
-            else { row.armedAction = "term"; armTimer.restart(); }
-        }
-        function pressKill() {
-            if (row.protected_) { row.errorText = "Protected process"; errorTimer.restart(); return; }
-            if (row.armedAction === "kill") { row.armedAction = ""; SystemStats.actOnProcess(row.processData.pid, "forceStop"); }
-            else { row.armedAction = "kill"; armTimer.restart(); }
+        function act(action) {
+            if (protected_) { errorText = "Protected process"; errorTimer.restart(); return; }
+            if (armedAction === action) {
+                armedAction = "";
+                SystemStats.actOnProcess(processData.pid, action === "term" ? "terminate" : "forceStop");
+            } else { armedAction = action; armTimer.restart(); }
         }
 
         Rectangle {
             anchors.fill: parent
-            radius: Colors.radiusSmall
-            color: (row.errorText.length > 0 || row.armedAction.length > 0) ? Colors.danger : Colors.surfaceHigh
-            opacity: row.errorText.length > 0 ? 0.25 : (row.armedAction.length > 0 ? 0.18 : (rowHover.hovered ? 0.5 : 0))
-            Behavior on opacity { NumberAnimation { duration: Config.animFast; easing.type: Easing.OutCubic } }
+            color: row.errorText.length || row.armedAction.length ? Colors.danger : rowHover.hovered ? Colors.surfaceHigh : "transparent"
+            opacity: row.errorText.length ? 0.18 : row.armedAction.length ? 0.13 : rowHover.hovered ? 0.45 : 1
             Behavior on color { ColorAnimation { duration: Config.animFast; easing.type: Easing.OutCubic } }
         }
-
+        Rectangle { anchors.left: parent.left; anchors.right: parent.right; anchors.bottom: parent.bottom; height: 1; color: Colors.outline; opacity: 0.45 }
         HoverHandler { id: rowHover }
 
         StyledText {
-            anchors.left: parent.left
-            anchors.leftMargin: 8
-            anchors.verticalCenter: parent.verticalCenter
-            width: 44
-            text: String(row.processData.pid)
-            opacity: 0.6
-            font.family: Config.monoFontFamily
+            anchors.left: parent.left; anchors.leftMargin: 8; anchors.verticalCenter: parent.verticalCenter
+            width: 46; text: String(row.processData.pid); color: Colors.subtext
+            font.family: Config.monoFontFamily; font.pixelSize: Config.fontSize - 3
+        }
+        StyledText {
+            anchors.left: parent.left; anchors.leftMargin: 62; anchors.verticalCenter: parent.verticalCenter
+            width: 90; elide: Text.ElideRight
+            text: row.errorText.length ? row.errorText : row.processData.name
+            color: row.errorText.length ? Colors.danger : Colors.text
+            font.weight: Font.DemiBold; font.pixelSize: Config.fontSize - 2
+        }
+        StyledText {
+            anchors.left: parent.left; anchors.leftMargin: 160
+            anchors.right: memoryLabel.left; anchors.rightMargin: 10; anchors.verticalCenter: parent.verticalCenter
+            elide: Text.ElideRight; text: row.processData.cmdline; color: Colors.subtext
+            font.family: Config.monoFontFamily; font.pixelSize: Config.fontSize - 3
+        }
+        StyledText {
+            id: memoryLabel
+            anchors.right: cpuCell.left; anchors.rightMargin: 10; anchors.verticalCenter: parent.verticalCenter
+            width: 62; horizontalAlignment: Text.AlignRight; text: root.memoryText(row.processData)
             font.pixelSize: Config.fontSize - 3
         }
-
-        StyledText {
-            anchors.left: parent.left
-            anchors.leftMargin: 56
-            anchors.verticalCenter: parent.verticalCenter
-            width: 100
-            elide: Text.ElideRight
-            text: row.errorText.length > 0 ? row.errorText : row.processData.name
-            color: row.errorText.length > 0 ? Colors.danger : Colors.text
-            font.pixelSize: Config.fontSize - 2
-        }
-
-        StyledText {
-            id: cmdText
-            anchors.left: parent.left
-            anchors.leftMargin: 160
-            anchors.right: cpuText.left
-            anchors.rightMargin: 8
-            anchors.verticalCenter: parent.verticalCenter
-            elide: Text.ElideRight
-            opacity: 0.6
-            text: row.processData.cmdline
-            font.pixelSize: Config.fontSize - 3
-            font.family: Config.monoFontFamily
-
-            HoverHandler { id: cmdHover }
-
+        Item {
+            id: cpuCell
+            anchors.right: actions.left; anchors.rightMargin: 10; anchors.verticalCenter: parent.verticalCenter
+            width: 72; height: 20
             Rectangle {
-                visible: cmdHover.hovered && cmdText.truncated
-                anchors.bottom: parent.top
-                anchors.bottomMargin: 4
-                anchors.left: parent.left
-                width: tooltipText.implicitWidth + 16
-                height: tooltipText.implicitHeight + 10
-                radius: Colors.radiusSmall
-                color: Colors.surfaceHigh
-                z: 10
-
-                StyledText {
-                    id: tooltipText
-                    anchors.centerIn: parent
-                    text: row.processData.cmdline
-                    font.family: Config.monoFontFamily
-                    font.pixelSize: Config.fontSize - 3
+                anchors.left: parent.left; anchors.verticalCenter: parent.verticalCenter
+                width: 28; height: 4; radius: 2; color: Colors.surfaceHigh
+                Rectangle {
+                    width: Math.min(parent.width, parent.width * row.processData.cpu_percent / 100)
+                    height: parent.height; radius: parent.radius; color: Colors.accent
+                    Behavior on width { NumberAnimation { duration: Config.animFast; easing.type: Easing.OutCubic } }
                 }
             }
+            StyledText {
+                anchors.right: parent.right; anchors.verticalCenter: parent.verticalCenter
+                text: row.processData.cpu_percent.toFixed(1) + "%"
+                font.family: Config.monoFontFamily; font.pixelSize: Config.fontSize - 3
+            }
         }
-
-        StyledText {
-            id: cpuText
-            anchors.right: memText.left
-            anchors.rightMargin: 8
-            anchors.verticalCenter: parent.verticalCenter
-            width: 50
-            horizontalAlignment: Text.AlignRight
-            text: row.processData.cpu_percent.toFixed(1) + "%"
-            font.family: Config.monoFontFamily
-            font.pixelSize: Config.fontSize - 2
-        }
-
-        StyledText {
-            id: memText
-            anchors.right: actionsRow.left
-            anchors.rightMargin: 8
-            anchors.verticalCenter: parent.verticalCenter
-            width: 50
-            horizontalAlignment: Text.AlignRight
-            opacity: 0.6
-            text: row.processData.memory_percent.toFixed(1) + "%"
-            font.family: Config.monoFontFamily
-            font.pixelSize: Config.fontSize - 3
-        }
-
         Row {
-            id: actionsRow
-            anchors.right: parent.right
-            anchors.rightMargin: 8
-            anchors.verticalCenter: parent.verticalCenter
+            id: actions
+            anchors.right: parent.right; anchors.rightMargin: 4; anchors.verticalCenter: parent.verticalCenter
             spacing: 4
-            // Fixed-width buttons (label swaps to "Confirm?" rather than
-            // resizing) so hover/arm state never shifts the column layout.
-            opacity: (rowHover.hovered || row.armedAction.length > 0) ? 1 : 0
-            Behavior on opacity { NumberAnimation { duration: Config.animFast; easing.type: Easing.OutCubic } }
-
             PrimaryButton {
-                width: root.actionButtonWidth
-                height: 24
-                icon: row.armedAction === "term" ? "" : "stop_circle"
-                text: row.armedAction === "term" ? "Confirm?" : "End"
-                active: row.armedAction === "term"
-                tint: Colors.accent
-                onClicked: row.pressTerm()
+                width: 50; height: 28; text: row.armedAction === "term" ? "Sure?" : "End"
+                active: row.armedAction === "term"; tint: Colors.accent
+                onClicked: row.act("term")
             }
             PrimaryButton {
-                width: root.actionButtonWidth
-                height: 24
-                icon: row.armedAction === "kill" ? "" : "cancel"
-                text: row.armedAction === "kill" ? "Confirm?" : "Kill"
-                active: row.armedAction === "kill"
-                tint: Colors.danger
-                onClicked: row.pressKill()
+                width: 50; height: 28; text: row.armedAction === "kill" ? "Sure?" : "Kill"
+                active: row.armedAction === "kill"; tint: Colors.danger
+                onClicked: row.act("kill")
             }
         }
     }
