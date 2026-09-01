@@ -12,6 +12,8 @@ ShellRoot {
     readonly property string integrationTargetAddress: Quickshell.env("NOTIFICATIONS_TEST_ADDRESS") || ""
     property string activeAddressAtInvocation: ""
 
+    NotificationCore { id: notices; applicationAdapter: AppLaunch }
+
     readonly property Process _terminator: Process {
         command: ["sh", "-c", 'kill -TERM "$PPID"']
     }
@@ -55,7 +57,7 @@ ShellRoot {
             text: "Open",
             invoke: function() {}
         };
-        const entry = Notifications._historyEntry({
+        const entry = notices._record("test-1", {
             summary: "Build complete",
             body: "The application compiled successfully.",
             appName: "Builder",
@@ -94,7 +96,9 @@ ShellRoot {
             }
         });
 
-        root.verify(Notifications.focusApp(notification), "default action was not handled");
+        notices._liveById["test-action"] = notification;
+        root.verify(notices.open("test-action"), "default action was not handled");
+        delete notices._liveById["test-action"];
         root.verify(destroyed, "default action was not invoked");
     }
 
@@ -114,11 +118,13 @@ ShellRoot {
             invoke: function() { invoked = true; }
         };
 
-        root.verify(Notifications.focusApp({
+        notices._liveById["test-retry"] = {
             actions: [action],
             desktopEntry: "org.example.Missing",
             appName: "Missing"
-        }), "action was not handled");
+        };
+        root.verify(notices.open("test-retry"), "action was not handled");
+        delete notices._liveById["test-retry"];
         root.verify(invoked, "action was not invoked before scheduling focus");
         root.compare(AppLaunch._pendingDesktopEntry, "org.example.Missing");
         root.compare(AppLaunch._pendingAppName, "Missing");
@@ -141,11 +147,13 @@ ShellRoot {
             }
         };
 
-        root.verify(Notifications.focusApp({
+        notices._liveById["test-integration"] = {
             actions: [action],
             desktopEntry: root.integrationTargetClass,
             appName: root.integrationTargetClass
-        }), "integration action was not handled");
+        };
+        root.verify(notices.open("test-integration"), "integration action was not handled");
+        delete notices._liveById["test-integration"];
 
         root.verify(root.integrationActionInvoked, "integration action was not invoked");
         root.verify(

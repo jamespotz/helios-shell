@@ -5,103 +5,91 @@ import Quickshell.Io
 
 // Live CPU/memory/GPU/disk/network stats for modules/bar/SystemMonitorTab.qml,
 // sourced from the user's system-info.py helper (same directory as that tab)
-// which polls psutil + nvidia-smi and prints one pretty-printed JSON object
-// every 5s on stdout. start()/stop() are idempotent — the tab calls stop()
-// both when its "Pause live updates" toggle is used and when it closes, so
-// the python process (and its nvidia-smi child) only ever runs while the
-// tab is open and unpaused.
+// which polls psutil + nvidia-smi and prints one JSON snapshot per line.
+// The Python adapter owns sampling, rates, history, and process safety.
 QtObject {
     id: root
 
-    property bool ready: false
-    property var cpu: ({ usage_percent: 0, per_core: [], frequency_mhz: 0 })
-    property var memory: ({ usage_percent: 0, used_gb: 0, total_gb: 0 })
-    property var disk: ({ read_mb: 0, write_mb: 0 })
-    property var network: ({ sent_mb: 0, received_mb: 0 })
-    property var gpu: null // null when no GPU / nvidia-smi unavailable
-    property var processes: [] // [{ pid, name, cpu_percent, memory_percent }], hottest first
+    // [{ pid, name, cmdline, user, cpu_percent, memory_percent }], hottest
+    // first. Top 6 by default; setFullProcessMode(true) restarts the
+    // python helper with --full for the Process List view (all processes,
+    // capped at 1000) and back to the cheap top-6 snapshot when it closes.
+    property bool fullProcessMode: false
+    readonly property SystemMonitorCore _core: SystemMonitorCore {}
+    readonly property var state: root._core.state
 
-    // Derived network throughput. system-info.py only reports cumulative
-    // byte counters, so the per-second rate (and its short history, for the
-    // System tab's sparkline) is computed here from consecutive samples.
-    property var networkRate: ({ sentKBs: 0, receivedKBs: 0 })
-    property var networkSentHistory: []
-    property var networkReceivedHistory: []
-    readonly property int networkHistoryLength: 30
+    signal processKillResult(int pid, bool success, string message)
 
-    property real _lastNetworkSentMb: -1
-    property real _lastNetworkReceivedMb: -1
-    property real _lastNetworkSampleTime: 0
-
-    // Pure — exported for direct testing (tests/qml/tst_system_stats.qml).
-    function computeRateKBs(prevMb, currMb, dtSeconds) {
-        if (dtSeconds <= 0) return 0;
-        const deltaMb = Math.max(0, currMb - prevMb);
-        return (deltaMb * 1024) / dtSeconds;
+    function setActive(active) {
+        if (active) {
+            root._core.setStatus("starting");
+            proc.running = true;
+        } else {
+            proc.running = false;
+            root._core.setStatus("stopped");
+        }
     }
 
-    function pushHistory(history, value, maxLength) {
-        const next = history.concat([value]);
-        return next.length > maxLength ? next.slice(next.length - maxLength) : next;
+    function _processCommand() {
+        const base = ["python3", "-u", Quickshell.env("HOME") + "/.config/quickshell/helios/modules/bar/system-info.py"];
+        return root.fullProcessMode ? base.concat(["--full"]) : base;
     }
 
-    function start() { proc.running = true; }
-    function stop() {
-        proc.running = false;
-        root._buf = "";
-        root._depth = 0;
-        // Reset rate tracking so a paused-then-resumed tab doesn't compute a
-        // bogus rate across the gap.
-        root._lastNetworkSentMb = -1;
-        root._lastNetworkReceivedMb = -1;
-        root._lastNetworkSampleTime = 0;
+    // Restarts the python helper with/without --full. There's no live IPC
+    // channel into the running script, so switching modes means a brief
+    // (~one tick) data gap while it respawns — acceptable since this only
+    // happens when the Process List view opens/closes, not on a timer.
+    function setProcessDetail(full) {
+        if (root.fullProcessMode === full) return;
+        root.fullProcessMode = full;
+        const wasRunning = proc.running;
+        if (wasRunning) proc.running = false;
+        proc.command = root._processCommand();
+        if (wasRunning) proc.running = true;
     }
 
-    property string _buf: ""
-    property int _depth: 0
+    // Sends a signal to a pid from the Process List view. Refuses PID 1 as a
+    // baseline guardrail; the caller (ProcessListView) additionally refuses
+    // to arm the action at all for the shell's own process tree by name.
+    function actOnProcess(pid, action) {
+        if (killProc.running || (action !== "terminate" && action !== "forceStop")) return false;
+        killProc.targetPid = pid;
+        killProc.command = ["python3", "-u", Quickshell.env("HOME") + "/.config/quickshell/helios/modules/bar/system-info.py", "--signal", String(pid), action === "terminate" ? "terminate" : "forceStop"];
+        killProc._errBuf = "";
+        killProc.running = true;
+        return true;
+    }
+
+    property Process killProc: Process {
+        id: killProc
+        property int targetPid: -1
+        property string _errBuf: ""
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try { root._core.completeProcessAction(JSON.parse(text)); }
+                catch (e) { root._core.completeProcessAction({ pid: killProc.targetPid, success: false, message: "Invalid process result" }); }
+            }
+        }
+        stderr: SplitParser {
+            onRead: line => killProc._errBuf += (killProc._errBuf.length > 0 ? " " : "") + line
+        }
+        onExited: exitCode => {
+            const success = exitCode === 0;
+            if (!root.state.processAction || root.state.processAction.pid !== killProc.targetPid)
+                root._core.completeProcessAction({ pid: killProc.targetPid, success: success, message: success ? "" : (killProc._errBuf || "Failed") });
+            const message = success ? "" : (root.state.processAction.message || killProc._errBuf || "Failed");
+            root.processKillResult(killProc.targetPid, success, message);
+        }
+    }
 
     property Process proc: Process {
         // -u: unbuffered stdout — piped (non-tty) stdout is block-buffered by
         // default, so without this the script's prints sit in its internal
         // buffer for a long time before SplitParser ever sees a line.
-        command: ["python3", "-u", Quickshell.env("HOME") + "/.config/quickshell/helios/modules/bar/system-info.py"]
+        command: root._processCommand()
         stdout: SplitParser {
             onRead: line => {
-                for (let i = 0; i < line.length; i++) {
-                    const ch = line[i];
-                    if (ch === "{") root._depth++;
-                    else if (ch === "}") root._depth--;
-                }
-                root._buf += line + "\n";
-                if (root._depth === 0 && root._buf.trim().length > 0) {
-                    try {
-                        const data = JSON.parse(root._buf);
-                        root.cpu = data.cpu;
-                        root.memory = data.memory;
-                        root.disk = data.disk;
-                        root.network = data.network;
-                        root.gpu = data.gpu;
-                        root.processes = data.processes || [];
-                        root.ready = true;
-
-                        const now = Date.now();
-                        if (root._lastNetworkSampleTime > 0) {
-                            const dtSec = (now - root._lastNetworkSampleTime) / 1000;
-                            root.networkRate = {
-                                sentKBs: root.computeRateKBs(root._lastNetworkSentMb, data.network.sent_mb, dtSec),
-                                receivedKBs: root.computeRateKBs(root._lastNetworkReceivedMb, data.network.received_mb, dtSec)
-                            };
-                            root.networkSentHistory = root.pushHistory(root.networkSentHistory, root.networkRate.sentKBs, root.networkHistoryLength);
-                            root.networkReceivedHistory = root.pushHistory(root.networkReceivedHistory, root.networkRate.receivedKBs, root.networkHistoryLength);
-                        }
-                        root._lastNetworkSentMb = data.network.sent_mb;
-                        root._lastNetworkReceivedMb = data.network.received_mb;
-                        root._lastNetworkSampleTime = now;
-                    } catch (e) {
-                        // Partial/malformed block — drop it and wait for the next.
-                    }
-                    root._buf = "";
-                }
+                    if (!root._core.ingest(line)) console.warn("[SystemMonitor] ignoring malformed sample");
             }
         }
     }

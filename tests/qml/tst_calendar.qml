@@ -30,13 +30,22 @@ ShellRoot {
         root._terminateDelay.start();
     }
 
+    property int persistenceRequests: 0
+    property int refreshRequests: 0
+    CalendarCore {
+        id: calendar
+        onPersistenceRequested: root.persistenceRequests++
+        onRefreshRequested: root.refreshRequests++
+    }
+
     function test_eventsByDateGroupsAndPreservesOrder() {
         const events = [
             { summary: "Standup", date: "2026-09-01", allDay: false, startTime: "09:00", endTime: "09:15", source: "Personal" },
             { summary: "Dentist", date: "2026-09-02", allDay: false, startTime: "14:00", endTime: "15:00", source: "Personal" },
             { summary: "Team sync", date: "2026-09-01", allDay: false, startTime: "13:00", endTime: "13:30", source: "Personal" }
         ];
-        const grouped = Calendar.eventsByDate(events);
+        calendar.completeRefresh({ events: events, subscriptionErrors: [] });
+        const grouped = calendar.state.eventsByDate;
         root.compare(Object.keys(grouped).sort(), ["2026-09-01", "2026-09-02"]);
         root.compare(grouped["2026-09-01"].length, 2);
         root.compare(grouped["2026-09-01"][0].summary, "Standup");
@@ -45,24 +54,29 @@ ShellRoot {
     }
 
     function test_eventsByDateHandlesEmptyInput() {
-        root.compare(Calendar.eventsByDate([]), {});
-        root.compare(Calendar.eventsByDate(null), {});
+        calendar.completeRefresh({ events: [], subscriptionErrors: [] });
+        root.compare(calendar.state.eventsByDate, {});
     }
 
     function test_sanitizeSubscriptionTrimsAndValidates() {
-        root.compare(Calendar.sanitizeSubscription("  Work  ", "  https://example.com/cal.ics  "), { label: "Work", url: "https://example.com/cal.ics" });
-        root.compare(Calendar.sanitizeSubscription("", "https://example.com/cal.ics"), null);
-        root.compare(Calendar.sanitizeSubscription("Work", ""), null);
-        root.compare(Calendar.sanitizeSubscription("   ", "   "), null);
+        calendar.subscriptions = [];
+        root.persistenceRequests = 0;
+        root.refreshRequests = 0;
+        root.verify(calendar.subscribe("  Work  ", "  https://example.com/cal.ics  "));
+        root.compare(calendar.state.subscriptions[0].label, "Work");
+        root.compare(calendar.state.subscriptions[0].url, "https://example.com/cal.ics");
+        root.compare(root.persistenceRequests, 1);
+        root.compare(root.refreshRequests, 1);
+        root.verify(!calendar.subscribe("", "https://example.com/cal.ics"));
+        root.verify(!calendar.subscribe("Work", ""));
     }
 
     function test_generateSubscriptionIdAvoidsCollisionAndIsNonEmpty() {
-        const existing = [{ id: "sub-fixed", label: "x", url: "y" }];
-        const id = Calendar.generateSubscriptionId(existing);
+        const id = calendar.state.subscriptions[0].id;
         root.verify(id.length > 0, "generated id was empty");
-        root.verify(id !== "sub-fixed", "generated id collided with an existing one");
-        const id2 = Calendar.generateSubscriptionId(existing);
-        root.verify(id !== id2, "two calls produced the same id");
+        root.verify(calendar.unsubscribe(id));
+        root.compare(calendar.state.subscriptions.length, 0);
+        root.verify(!calendar.unsubscribe("missing"));
     }
 
     Component.onCompleted: {

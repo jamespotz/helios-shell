@@ -37,7 +37,7 @@ Item {
 
             Rectangle {
                 id: clearBtn
-                visible: Notifications.history.length > 0
+                visible: Notifications.state.history.length > 0
                 width: clearText.implicitWidth + 16
                 height: 26
                 radius: 13
@@ -76,7 +76,7 @@ Item {
 
         // Empty state
         Column {
-            visible: Notifications.history.length === 0
+            visible: Notifications.state.history.length === 0
             width: parent.width
             spacing: 8
             topPadding: 20
@@ -92,15 +92,15 @@ Item {
         Item {
             id: historyListWrap
             width: parent.width
-            visible: Notifications.history.length > 0
-            height: Math.min(320, Notifications.history.length * 68)
+            visible: Notifications.state.history.length > 0
+            height: Math.min(320, Notifications.state.history.length * 68)
 
             ListView {
                 id: historyList
                 anchors.fill: parent
                 clip: true
                 spacing: 4
-                model: Notifications.history
+                model: Notifications.state.history
                 boundsBehavior: Flickable.StopAtBounds
 
                 delegate: Rectangle {
@@ -121,7 +121,7 @@ Item {
                     MouseArea {
                         anchors.fill: parent
                         cursorShape: Qt.PointingHandCursor
-                        onClicked: Notifications.openApp(histRow.modelData)
+                        onClicked: Notifications.open(histRow.modelData.id)
                     }
 
                     Row {
@@ -201,8 +201,8 @@ Item {
 
         // Count footer
         StyledText {
-            visible: Notifications.history.length > 0
-            text: Notifications.history.length + " notification" + (Notifications.history.length !== 1 ? "s" : "") + " in history"
+            visible: Notifications.state.history.length > 0
+            text: Notifications.state.history.length + " notification" + (Notifications.state.history.length !== 1 ? "s" : "") + " in history"
             font.pixelSize: Config.fontSize - 2
             color: Colors.subtext
         }

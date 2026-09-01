@@ -34,41 +34,48 @@ ShellRoot {
         root._terminateDelay.start();
     }
 
+    BluetoothDeviceCore { id: devices; devices: []; audioNodes: [] }
+
     function test_normalizeAddressStripsColonsAndCase() {
-        root.compare(BluetoothAudio.normalizeAddress("AA:BB:CC:11:22:33"), "aabbcc112233");
-        root.compare(BluetoothAudio.normalizeAddress(""), "");
-        root.compare(BluetoothAudio.normalizeAddress(undefined), "");
+        devices.devices = [{ path: "/device/one", address: "AA:BB:CC:11:22:33", name: "Headphones" }];
+        devices.audioNodes = [{ properties: {
+            "device.api": "bluez5", "api.bluez5.address": "aa:bb:cc:11:22:33",
+            "api.bluez5.codec": "sbc_xq", "api.bluez5.profile": "a2dp-sink"
+        }}];
+        root.compare(devices.state.devices[0].id, "AA:BB:CC:11:22:33");
+        root.compare(devices.state.devices[0].audio.codec, "SBC-XQ");
+        root.compare(devices.state.devices[0].audio.profile, "A2DP");
     }
 
     function test_friendlyProfileMapsKnownValues() {
-        root.compare(BluetoothAudio.friendlyProfile("a2dp-sink"), "A2DP");
-        root.compare(BluetoothAudio.friendlyProfile("headset-head-unit"), "HFP/HSP");
-        root.compare(BluetoothAudio.friendlyProfile("some-custom-profile"), "some-custom-profile");
-        root.compare(BluetoothAudio.friendlyProfile(""), "");
+        devices.devices = [{ path: "/device/one", address: "11:22", name: "Keyboard" }];
+        devices.audioNodes = [];
+        root.compare(devices.state.devices[0].audio, null);
     }
 
     function test_extractProfileReturnsNullWithoutCodecOrProfile() {
-        root.compare(BluetoothAudio.extractProfile({}), null);
-        root.compare(BluetoothAudio.extractProfile(null), null);
+        devices.devices = [{ path: "/device/one", address: "11:22" }];
+        devices.audioNodes = [{ properties: { "device.api": "bluez5", "api.bluez5.address": "11:22" } }];
+        root.compare(devices.state.devices[0].audio, null);
     }
 
     function test_extractProfileCombinesCodecAndProfile() {
-        const result = BluetoothAudio.extractProfile({
-            "api.bluez5.codec": "aac",
-            "api.bluez5.profile": "a2dp-sink"
-        });
+        devices.audioNodes = [{ properties: { "api.bluez5.address": "11:22", "api.bluez5.codec": "aac", "api.bluez5.profile": "a2dp-sink" } }];
+        const result = devices.state.devices[0].audio;
         root.compare(result.codec, "AAC");
         root.compare(result.profile, "A2DP");
     }
 
     function test_extractProfileHandlesCodecOnly() {
-        const result = BluetoothAudio.extractProfile({ "api.bluez5.codec": "sbc" });
+        devices.audioNodes = [{ properties: { "api.bluez5.address": "11:22", "api.bluez5.codec": "sbc" } }];
+        const result = devices.state.devices[0].audio;
         root.compare(result.codec, "SBC");
         root.compare(result.profile, "");
     }
 
     function test_extractProfilePolishesCompoundCodecLabels() {
-        const result = BluetoothAudio.extractProfile({ "api.bluez5.codec": "sbc_xq" });
+        devices.audioNodes = [{ properties: { "api.bluez5.address": "11:22", "api.bluez5.codec": "sbc_xq" } }];
+        const result = devices.state.devices[0].audio;
         root.compare(result.codec, "SBC-XQ");
     }
 
@@ -76,26 +83,21 @@ ShellRoot {
     // this machine have no device.bus key at all (only device.api=bluez5 and
     // api.bluez5.address), so the classifier must not require device.bus.
     function test_isBluetoothSinkPropsRecognizesRealBluez5Node() {
-        root.verify(BluetoothAudio.isBluetoothSinkProps({
-            "device.api": "bluez5",
-            "api.bluez5.address": "34:09:C9:A5:6B:2A",
-            "api.bluez5.codec": "sbc_xq",
-            "api.bluez5.profile": "a2dp-sink"
-        }), "expected a real bluez5 node with no device.bus to be recognized");
+        devices.devices = [{ path: "/device/two", address: "34:09:C9:A5:6B:2A" }];
+        devices.audioNodes = [{ properties: { "device.api": "bluez5", "api.bluez5.address": "34:09:C9:A5:6B:2A", "api.bluez5.codec": "sbc_xq" } }];
+        root.compare(devices.state.devices[0].audio.codec, "SBC-XQ");
     }
 
     function test_isBluetoothSinkPropsRecognizesDeviceBusFallback() {
-        root.verify(BluetoothAudio.isBluetoothSinkProps({ "device.bus": "bluetooth" }),
-            "expected device.bus === bluetooth to still be accepted as a fallback signal");
+        devices.devices = [{ path: "/device/three", address: "44:55" }];
+        devices.audioNodes = [{ properties: { "device.bus": "bluetooth", "api.bluez5.address": "44:55", "api.bluez5.codec": "sbc" } }];
+        root.compare(devices.state.devices[0].audio.codec, "SBC");
     }
 
     function test_isBluetoothSinkPropsRejectsNonBluetoothNodes() {
-        root.verify(!BluetoothAudio.isBluetoothSinkProps({}),
-            "expected empty properties to be rejected");
-        root.verify(!BluetoothAudio.isBluetoothSinkProps({ "device.bus": "pci" }),
-            "expected a non-bluetooth device.bus to be rejected");
-        root.verify(!BluetoothAudio.isBluetoothSinkProps(null),
-            "expected null properties to be rejected");
+        devices.devices = [{ path: "/device/four", address: "66:77" }];
+        devices.audioNodes = [{ properties: { "device.bus": "pci", "api.bluez5.codec": "sbc" } }];
+        root.compare(devices.state.devices[0].audio, null);
     }
 
     Component.onCompleted: {

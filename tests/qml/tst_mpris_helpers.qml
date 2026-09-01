@@ -1,7 +1,6 @@
 import QtQuick
 import Quickshell
 import Quickshell.Io
-import Quickshell.Services.Mpris
 import services
 
 ShellRoot {
@@ -29,49 +28,58 @@ ShellRoot {
         root._terminateDelay.start();
     }
 
-    function test_selectPlayerReturnsNullForEmptyList() {
-        root.compare(MprisHelpers.selectPlayer([], ""), null);
+    MediaSessionCore { id: session; players: [] }
+
+    function player(id, playing, controllable) {
+        return {
+            dbusName: id, identity: id.toUpperCase(), isPlaying: playing, canControl: controllable,
+            position: 0, length: 100, trackTitle: id, trackArtist: "artist", trackArtUrl: "",
+            canSeek: true, canGoPrevious: true, canTogglePlaying: true, canGoNext: true,
+            shuffleSupported: true, shuffle: false, loopSupported: false, loopState: 0,
+            previous: function() {}, togglePlaying: function() {}, next: function() {}
+        };
+    }
+
+    function test_emptySessionHasCoherentState() {
+        session.players = [];
+        root.compare(session.state.selectedId, "");
+        root.compare(session.state.track, null);
+        root.verify(!session.state.capabilities.seek);
     }
 
     function test_selectPlayerPrefersPinnedSelection() {
-        const players = [
-            { dbusName: "a", isPlaying: false, canControl: true },
-            { dbusName: "b", isPlaying: true, canControl: true }
-        ];
-        // "b" is playing, but "a" is explicitly pinned — pinned wins.
-        root.compare(MprisHelpers.selectPlayer(players, "a").dbusName, "a");
+        session.players = [root.player("a", false, true), root.player("b", true, true)];
+        root.verify(session.selectPlayer("a"));
+        root.compare(session.state.selectedId, "a");
     }
 
     function test_selectPlayerFallsBackWhenPinnedIsGone() {
-        const players = [
-            { dbusName: "a", isPlaying: false, canControl: true },
-            { dbusName: "b", isPlaying: true, canControl: true }
-        ];
-        // "missing" no longer exists — falls back to the playing one.
-        root.compare(MprisHelpers.selectPlayer(players, "missing").dbusName, "b");
+        session.selectedId = "missing";
+        session.players = [root.player("a", false, true), root.player("b", true, true)];
+        root.compare(session.state.selectedId, "b");
     }
 
     function test_selectPlayerPrefersPlayingOverFirstControllable() {
-        const players = [
-            { dbusName: "a", isPlaying: false, canControl: true },
-            { dbusName: "b", isPlaying: true, canControl: true }
-        ];
-        root.compare(MprisHelpers.selectPlayer(players, "").dbusName, "b");
+        session.selectedId = "";
+        session.players = [root.player("a", false, true), root.player("b", true, true)];
+        root.compare(session.state.selectedId, "b");
     }
 
-    function test_nextLoopStateCyclesNoneToPlaylistToTrackToNone() {
-        root.compare(MprisHelpers.nextLoopState(MprisLoopState.None), MprisLoopState.Playlist);
-        root.compare(MprisHelpers.nextLoopState(MprisLoopState.Playlist), MprisLoopState.Track);
-        root.compare(MprisHelpers.nextLoopState(MprisLoopState.Track), MprisLoopState.None);
+    function test_seekIsOwnedBySession() {
+        const p = root.player("a", true, true);
+        session.players = [p];
+        root.verify(session.seek(0.25));
+        root.compare(p.position, 25);
+        root.compare(session.state.track.position, 25);
     }
 
     Component.onCompleted: {
         try {
-            root.test_selectPlayerReturnsNullForEmptyList();
+            root.test_emptySessionHasCoherentState();
             root.test_selectPlayerPrefersPinnedSelection();
             root.test_selectPlayerFallsBackWhenPinnedIsGone();
             root.test_selectPlayerPrefersPlayingOverFirstControllable();
-            root.test_nextLoopStateCyclesNoneToPlaylistToTrackToNone();
+            root.test_seekIsOwnedBySession();
             root.pass();
         } catch (error) {
             root.reportFailure(error);

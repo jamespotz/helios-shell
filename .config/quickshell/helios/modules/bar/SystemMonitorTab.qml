@@ -9,25 +9,39 @@ import "../../components"
 Item {
     id: root
 
-    readonly property var stats: SystemStats
+    readonly property var stats: SystemStats.state
 
     property bool live: true
-    onLiveChanged: root.live ? SystemStats.start() : SystemStats.stop()
+    onLiveChanged: SystemStats.setActive(root.live)
 
-    Component.onCompleted: SystemStats.start()
-    Component.onDestruction: SystemStats.stop()
+    // "dashboard" is the stats overview below; "processes" swaps in the
+    // full sortable/filterable Process List in place, rather than adding a
+    // 20th entry to PanelWrapper's already-crowded tab bar.
+    property string view: "dashboard"
+    onViewChanged: SystemStats.setProcessDetail(root.view === "processes")
+
+    Component.onCompleted: SystemStats.setActive(true)
+    Component.onDestruction: SystemStats.setActive(false)
 
     function levelColor(pct, warnAt, hotAt) {
         return pct >= hotAt ? Colors.danger : pct >= warnAt ? Colors.warning : Colors.accent;
     }
 
     implicitWidth: 620
-    implicitHeight: col.implicitHeight
+    implicitHeight: root.view === "dashboard" ? col.implicitHeight : processView.implicitHeight
+
+    ProcessListView {
+        id: processView
+        width: parent.width
+        visible: root.view === "processes"
+        onBackRequested: root.view = "dashboard"
+    }
 
     Column {
         id: col
         width: parent.width
         spacing: 16
+        visible: root.view === "dashboard"
 
         // --- Header: live indicator + pause toggle --------------------------
         Item {
@@ -573,7 +587,37 @@ Item {
             spacing: 8
             visible: root.stats.processes.length > 0
 
-            StyledText { text: "Top Processes"; font.bold: true; font.pixelSize: Config.fontSize - 1 }
+            Item {
+                width: parent.width
+                height: 18
+
+                StyledText { anchors.left: parent.left; text: "Top Processes"; font.bold: true; font.pixelSize: Config.fontSize - 1 }
+
+                Item {
+                    id: viewAllLink
+                    anchors.right: parent.right
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: viewAllRow.implicitWidth
+                    height: viewAllRow.implicitHeight
+                    opacity: viewAllHover.hovered ? 0.7 : 1
+                    Behavior on opacity { NumberAnimation { duration: Config.animFast; easing.type: Easing.OutCubic } }
+
+                    Row {
+                        id: viewAllRow
+                        spacing: 2
+                        StyledText { text: "View All"; color: Colors.accent; font.weight: Font.Medium; font.pixelSize: Config.fontSize - 2; anchors.verticalCenter: parent.verticalCenter }
+                        MaterialIcon { icon: "chevron_right"; font.pixelSize: 14; color: Colors.accent; anchors.verticalCenter: parent.verticalCenter }
+                    }
+
+                    HoverHandler { id: viewAllHover }
+                    MouseArea {
+                        anchors.fill: parent
+                        anchors.margins: -6
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: root.view = "processes"
+                    }
+                }
+            }
 
             Column {
                 width: parent.width

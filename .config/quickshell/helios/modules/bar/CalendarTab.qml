@@ -44,11 +44,12 @@ Item {
     readonly property bool viewingCurrentMonth: root.viewDate.getFullYear() === root.today.getFullYear()
         && root.viewDate.getMonth() === root.today.getMonth()
 
-    readonly property var eventsByDate: Calendar.eventsByDate(Calendar.events)
+    readonly property var calendar: Calendar.state
+    readonly property var eventsByDate: root.calendar.eventsByDate
     readonly property var selectedDayEvents: root.eventsByDate[root.dateKey(root.selectedDate)] || []
 
-    Component.onCompleted: Calendar.open()
-    Component.onDestruction: Calendar.close()
+    Component.onCompleted: Calendar.setActive(true)
+    Component.onDestruction: Calendar.setActive(false)
 
     implicitWidth: 340
     implicitHeight: col.implicitHeight
@@ -102,7 +103,7 @@ Item {
             StyledText { text: "Calendars"; font.bold: true; font.pixelSize: Config.fontSize - 1 }
 
             StyledText {
-                visible: Calendar.subscriptions.length === 0
+                visible: root.calendar.subscriptions.length === 0
                 text: "No subscribed calendars yet"
                 opacity: 0.5
                 font.pixelSize: Config.fontSize - 2
@@ -111,15 +112,15 @@ Item {
             Column {
                 width: parent.width
                 spacing: 4
-                visible: Calendar.subscriptions.length > 0
+                visible: root.calendar.subscriptions.length > 0
 
                 Repeater {
-                    model: Calendar.subscriptions
+                    model: root.calendar.subscriptions
 
                     Item {
                         id: subRow
                         required property var modelData
-                        readonly property var error: Calendar.subscriptionErrors.find(e => e.id === subRow.modelData.id) || null
+                        readonly property var error: subRow.modelData.error
 
                         width: parent.width
                         height: 32
@@ -156,7 +157,7 @@ Item {
                                 anchors.verticalCenter: parent.verticalCenter
                                 icon: "close"
                                 iconSize: 14
-                                onClicked: Calendar.removeSubscription(subRow.modelData.id)
+                                onClicked: Calendar.unsubscribe(subRow.modelData.id)
                             }
                         }
                     }
@@ -189,7 +190,7 @@ Item {
                     icon: "add"
                     enabled: labelField.text.trim().length > 0 && urlField.text.trim().length > 0
                     onClicked: {
-                        Calendar.addSubscription(labelField.text, urlField.text);
+                        Calendar.subscribe(labelField.text, urlField.text);
                         labelField.text = "";
                         urlField.text = "";
                     }
@@ -333,7 +334,7 @@ Item {
                 // result during a slow refresh reads as "no events exist"
                 // rather than "still loading," even though local events sit
                 // in that same empty window.
-                text: Calendar.ready ? "No events" : "Loading…"
+                text: root.calendar.ready ? "No events" : "Loading…"
                 opacity: 0.5
                 font.pixelSize: Config.fontSize - 2
             }

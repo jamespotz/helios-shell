@@ -10,7 +10,7 @@ import "../../components"
 Item {
     id: root
 
-    readonly property var list: Notifications.list
+    readonly property var list: Notifications.state.popups
     readonly property int count: list.length
 
     readonly property bool hovering: hoverTracker.hovered
@@ -34,7 +34,7 @@ Item {
         interval: 5000
         onTriggered: {
             if (root.hovering) { autoDismissTimer.restart(); return; }
-            if (root.count === 1) Notifications.dismiss(root.list[0]);
+            if (root.count === 1) Notifications.dismiss(root.list[0].id);
         }
     }
 
@@ -109,14 +109,14 @@ Item {
                 IconButton {
                     icon: "open_in_new"
                     iconSize: 14
-                    visible: root.count === 1 && Notifications.hasDefaultAction(root.list[0])
-                    onClicked: if (root.count === 1) Notifications.focusApp(root.list[0])
+                    visible: root.count === 1 && root.list[0].canOpen
+                    onClicked: if (root.count === 1) Notifications.open(root.list[0].id)
                 }
 
                 IconButton {
                     icon: "close"
                     iconSize: 14
-                    onClicked: if (root.count === 1) Notifications.dismiss(root.list[0])
+                    onClicked: if (root.count === 1) Notifications.dismiss(root.list[0].id)
                 }
             }
         }
@@ -244,15 +244,15 @@ Item {
                             anchors.verticalCenter: parent.verticalCenter
                             icon: "open_in_new"
                             iconSize: 13
-                            visible: Notifications.hasDefaultAction(row.modelData)
-                            onClicked: Notifications.focusApp(row.modelData)
+                            visible: row.modelData.canOpen
+                            onClicked: Notifications.open(row.modelData.id)
                         }
 
                         IconButton {
                             anchors.verticalCenter: parent.verticalCenter
                             icon: "close"
                             iconSize: 13
-                            onClicked: Notifications.dismiss(row.modelData)
+                            onClicked: Notifications.dismiss(row.modelData.id)
                         }
                     }
                 }

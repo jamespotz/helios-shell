@@ -1,6 +1,7 @@
 pragma Singleton
 import QtQuick
 import Quickshell.Io
+import Quickshell.Services.Pipewire
 
 // Bluetooth state + actions, talking to BlueZ directly over the system
 // D-Bus (org.bluez.Adapter1 / org.bluez.Device1 / ObjectManager) via
@@ -33,11 +34,39 @@ QtObject {
     property string pairingPath: ""
 
     property string lastError: ""
+    readonly property var _audioSinks: Pipewire.nodes
+        ? Pipewire.nodes.values.filter(n => n.isSink && !n.isStream && (n.type & PwNodeType.AudioSink) === PwNodeType.AudioSink)
+        : []
+    readonly property PwObjectTracker _audioTracker: PwObjectTracker { objects: root._audioSinks }
+    readonly property BluetoothDeviceCore _core: BluetoothDeviceCore { devices: root.devices; audioNodes: root._audioSinks }
+    readonly property var state: ({
+        available: root.available,
+        powered: root.powered,
+        discoverable: root.discoverable,
+        scanning: root.scanning,
+        lastError: root.lastError,
+        devices: root._core.state.devices
+    })
     signal errorOccurred(string action, string message)
     signal deviceAutoConnected(string name)
 
-    function open() { root.active = true; root.refreshAll(); }
-    function close() { root.active = false; }
+    function setActive(active) {
+        if (root.active === active) return;
+        root.active = active;
+        if (active) root.refreshAll();
+    }
+
+    function _pathForId(id) {
+        const device = root.devices.find(d => (d.address || d.path) === id);
+        return device ? device.path : "";
+    }
+
+    function setScanning(scanning) { return scanning ? root.startDiscovery() : root.stopDiscovery(); }
+    function pair(id) { const path = root._pathForId(id); return path ? root._pairPath(path) : false; }
+    function connect(id) { const path = root._pathForId(id); return path ? root._connectPath(path) : false; }
+    function disconnect(id) { const path = root._pathForId(id); return path ? root._disconnectPath(path) : false; }
+    function forget(id) { const path = root._pathForId(id); return path ? root._forgetPath(path) : false; }
+    function setAutoConnect(id, enabled) { const path = root._pathForId(id); return path ? root._setTrustedPath(path, enabled) : false; }
 
     // busctl only prints the D-Bus error's human message ("Call failed:
     // <message>"), not its dotted name (org.bluez.Error.*) — sd-bus derives
@@ -132,8 +161,8 @@ QtObject {
             // Paired devices just need a Connect(); devices that lost their
             // bond (like the R60i) need a fresh Pair() — pairDevice() already
             // chains into connectDevice() on success.
-            if (dev.paired) root.connectDevice(dev.path);
-            else root.pairDevice(dev.path);
+            if (dev.paired) root._connectPath(dev.path);
+            else root._pairPath(dev.path);
         }
 
         // Keep discovery alive while any trusted device is still missing —
@@ -219,12 +248,13 @@ QtObject {
     // not a pairing failure, and is exactly what the Soundcore R60i NC does
     // (pairs fine, then drops during the audio-profile handshake).
 
-    function pairDevice(path) {
+    function _pairPath(path) {
         root.pairingPath = path;
         pairProc.targetPath = path;
         pairProc.command = ["busctl", "--system", "call", "org.bluez", path, "org.bluez.Device1", "Pair"];
         pairProc.running = false;
         pairProc.running = true;
+        return true;
     }
 
     property Process pairProc: Process {
@@ -241,16 +271,17 @@ QtObject {
                 // often doesn't auto-connect audio profiles. Try to connect
                 // explicitly, then read the real Connected property back
                 // from BlueZ in connectProc's handler rather than assuming.
-                root.connectDevice(pairProc.targetPath);
+                root._connectPath(pairProc.targetPath);
             }
         }
     }
 
-    function connectDevice(path) {
+    function _connectPath(path) {
         connectProc.targetPath = path;
         connectProc.command = ["busctl", "--system", "call", "org.bluez", path, "org.bluez.Device1", "Connect"];
         connectProc.running = false;
         connectProc.running = true;
+        return true;
     }
 
     property Process connectProc: Process {
@@ -269,10 +300,11 @@ QtObject {
         }
     }
 
-    function disconnectDevice(path) {
+    function _disconnectPath(path) {
         disconnectProc.command = ["busctl", "--system", "call", "org.bluez", path, "org.bluez.Device1", "Disconnect"];
         disconnectProc.running = false;
         disconnectProc.running = true;
+        return true;
     }
 
     property Process disconnectProc: Process {
@@ -284,10 +316,11 @@ QtObject {
         }
     }
 
-    function removeDevice(path) {
+    function _forgetPath(path) {
         removeProc.command = ["busctl", "--system", "call", "org.bluez", root.adapterPath, "org.bluez.Adapter1", "RemoveDevice", "o", path];
         removeProc.running = false;
         removeProc.running = true;
+        return true;
     }
 
     property Process removeProc: Process {
@@ -299,10 +332,11 @@ QtObject {
         }
     }
 
-    function setTrusted(path, trusted) {
+    function _setTrustedPath(path, trusted) {
         trustProc.command = ["busctl", "--system", "set-property", "org.bluez", path, "org.bluez.Device1", "Trusted", "b", trusted ? "true" : "false"];
         trustProc.running = false;
         trustProc.running = true;
+        return true;
     }
 
     property Process trustProc: Process {

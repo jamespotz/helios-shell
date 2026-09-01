@@ -33,7 +33,7 @@ Row {
     readonly property var battery: UPower.displayDevice
     readonly property bool hasBattery: battery && battery.isLaptopBattery && battery.isPresent
 
-    readonly property bool bluetoothConnected: Bluetooth.devices.some(d => d.connected)
+    readonly property bool bluetoothConnected: Bluetooth.state.devices.some(d => d.connected)
 
     readonly property bool hasActiveMedia: {
         const players = Mpris.players ? Mpris.players.values : [];
@@ -64,7 +64,7 @@ Row {
 
     IconButton {
         icon: root.bluetoothConnected ? "bluetooth_connected"
-            : Bluetooth.powered ? "bluetooth" : "bluetooth_disabled"
+            : Bluetooth.state.powered ? "bluetooth" : "bluetooth_disabled"
         active: root.isIslandTab("bluetooth")
         onClicked: root.openIslandTab("bluetooth")
     }

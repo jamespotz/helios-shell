@@ -16,7 +16,7 @@ PanelWindow {
     screen: modelData
 
     readonly property bool panelOpen: Bridge.islandOpen && Bridge.islandScreen === modelData.name
-    readonly property bool notifyMode: !panelOpen && Notifications.list.length > 0
+    readonly property bool notifyMode: !panelOpen && Notifications.state.popups.length > 0
     property bool hovering: false
     readonly property bool expanded: panelOpen || notifyMode || hovering
 

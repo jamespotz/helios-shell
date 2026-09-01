@@ -1,5 +1,4 @@
 import QtQuick
-import Quickshell.Services.Mpris
 import Quickshell.Widgets
 import "../../services"
 import "../../components"
@@ -7,43 +6,14 @@ import "../../components"
 Item {
     id: root
 
-    readonly property var activePlayers: Mpris.players ? Mpris.players.values : []
-    property string selectedPlayerId: ""
-    readonly property var player: MprisHelpers.selectPlayer(root.activePlayers, root.selectedPlayerId)
+    readonly property var media: MediaSession.state
+    readonly property var track: root.media.track
 
-    // Drop a pinned selection once that player disappears (app closed, dbus
-    // name released) instead of silently freezing on a dead player.
-    onActivePlayersChanged: {
-        if (root.selectedPlayerId && !root.activePlayers.some(p => p.dbusName === root.selectedPlayerId)) {
-            root.selectedPlayerId = "";
-        }
-    }
-
-    readonly property var connectedDevice: Bluetooth.devices.find(d => d.connected) || null
-
-    // Most players only emit positionChanged on seek/track-change, not every
-    // second during normal playback — binding the seek bar straight to
-    // player.position left it visibly frozen while a track played. Poll it
-    // instead; a direct property read here (not inside a binding) always
-    // gets the live value regardless of whether the signal fired.
-    property real displayPosition: player ? player.position : 0
+    readonly property var connectedDevice: Bluetooth.state.devices.find(d => d.connected) || null
 
     function formatTime(seconds) {
         const s = Math.max(0, Math.floor(seconds || 0));
         return String(Math.floor(s / 60)).padStart(2, "0") + ":" + String(s % 60).padStart(2, "0");
-    }
-
-    Timer {
-        interval: 1000
-        running: !!(root.player && root.player.isPlaying)
-        repeat: true
-        onTriggered: root.displayPosition = root.player.position
-    }
-
-    Connections {
-        target: root.player
-        function onPositionChanged() { root.displayPosition = root.player.position; }
-        function onTrackTitleChanged() { root.displayPosition = root.player ? root.player.position : 0; }
     }
 
     // --- Equalizer, wired to a real EasyEffects output preset. EasyEffects
@@ -85,7 +55,7 @@ Item {
 
                 MaterialIcon {
                     anchors.centerIn: parent
-                    visible: !(root.player && root.player.trackArtUrl)
+                    visible: !(root.track && root.track.artUrl)
                     icon: "music_note"
                     font.pixelSize: 34
                     opacity: 0.7
@@ -95,8 +65,8 @@ Item {
                     id: artImage
                     anchors.fill: parent
                     anchors.margins: 1
-                    visible: !!(root.player && root.player.trackArtUrl)
-                    source: root.player && root.player.trackArtUrl ? root.player.trackArtUrl : ""
+                    visible: !!(root.track && root.track.artUrl)
+                    source: root.track && root.track.artUrl ? root.track.artUrl : ""
                     fillMode: Image.PreserveAspectCrop
                     asynchronous: true
                 }
@@ -111,7 +81,7 @@ Item {
                 id: visualizer
                 anchors.bottom: parent.bottom
                 anchors.right: parent.right
-                visible: !!(root.player && root.player.isPlaying)
+                visible: root.media.playback.playing
                 active: Cava.anyPlaying
                 levels: visible && active ? Cava.bars.map(v => v / Cava.maxRange) : []
                 barColor: Colors.accent
@@ -134,19 +104,19 @@ Item {
                     elide: Text.ElideRight
                     font.bold: true
                     font.pixelSize: Config.fontSize + 6
-                    text: root.player && root.player.trackTitle ? root.player.trackTitle : "Nothing playing"
+                    text: root.track && root.track.title ? root.track.title : "Nothing playing"
                 }
                 StyledText {
                     width: parent.width
                     elide: Text.ElideRight
                     opacity: 0.6
-                    text: root.player && root.player.trackArtist ? root.player.trackArtist : ""
+                    text: root.track ? root.track.artist : ""
                 }
 
                 Row {
                     spacing: 6
                     topPadding: 2
-                    visible: !!root.connectedDevice || !!(root.player && root.player.identity)
+                    visible: !!root.connectedDevice || root.media.identity.length > 0
 
                     Rectangle {
                         visible: !!root.connectedDevice
@@ -169,7 +139,7 @@ Item {
                     }
 
                     Rectangle {
-                        visible: !!(root.player && root.player.identity)
+                        visible: root.media.identity.length > 0
                         width: viaChip.implicitWidth + 18
                         height: 22
                         radius: 11
@@ -181,7 +151,7 @@ Item {
                             spacing: 4
                             MaterialIcon { icon: "graphic_eq"; font.pixelSize: 12; opacity: 0.6; anchors.verticalCenter: parent.verticalCenter }
                             StyledText {
-                                text: root.player ? root.player.identity : ""
+                                text: root.media.identity
                                 opacity: 0.6
                                 font.pixelSize: Config.fontSize - 3
                                 anchors.verticalCenter: parent.verticalCenter
@@ -196,16 +166,16 @@ Item {
         Row {
             width: parent.width
             spacing: 6
-            visible: root.activePlayers.length > 1
+            visible: root.media.players.length > 1
 
             Repeater {
-                model: root.activePlayers
+                model: root.media.players
 
                 Chip {
                     required property var modelData
-                    text: modelData.identity || "Player"
-                    active: !!(root.player && root.player.dbusName === modelData.dbusName)
-                    onClicked: root.selectedPlayerId = modelData.dbusName
+                    text: modelData.name
+                    active: root.media.selectedId === modelData.id
+                    onClicked: MediaSession.selectPlayer(modelData.id)
                 }
             }
         }
@@ -218,28 +188,21 @@ Item {
                 width: parent.width
                 trackHeight: 4
                 thumbHoverOnly: true
-                value: root.player && root.player.lengthSupported && root.player.length > 0
-                    ? root.displayPosition / root.player.length : 0
-                onMoved: v => {
-                    if (root.player && root.player.canSeek && root.player.length > 0) {
-                        const newPos = v * root.player.length;
-                        root.player.position = newPos;
-                        root.displayPosition = newPos;
-                    }
-                }
+                value: root.track && root.track.duration > 0 ? root.track.position / root.track.duration : 0
+                onMoved: v => MediaSession.seek(v)
             }
 
             Row {
                 width: parent.width
                 StyledText {
-                    text: root.formatTime(root.displayPosition)
+                    text: root.formatTime(root.track ? root.track.position : 0)
                     font.family: Config.monoFontFamily
                     opacity: 0.7
                     font.pixelSize: Config.fontSize - 2
                 }
                 Item { width: parent.width - 2 * 60; height: 1 }
                 StyledText {
-                    text: root.player ? root.formatTime(root.player.length) : "00:00"
+                    text: root.formatTime(root.track ? root.track.duration : 0)
                     font.family: Config.monoFontFamily
                     opacity: 0.7
                     font.pixelSize: Config.fontSize - 2
@@ -254,39 +217,39 @@ Item {
             IconButton {
                 icon: "shuffle"
                 iconSize: 17
-                visible: !!(root.player && root.player.shuffleSupported)
-                active: !!(root.player && root.player.shuffle)
+                visible: root.media.capabilities.shuffle
+                active: root.media.playback.shuffle
                 anchors.verticalCenter: parent.verticalCenter
-                onClicked: if (root.player) root.player.shuffle = !root.player.shuffle
+                onClicked: MediaSession.toggleShuffle()
             }
             IconButton {
                 icon: "skip_previous"
                 iconSize: 19
                 anchors.verticalCenter: parent.verticalCenter
-                onClicked: if (root.player && root.player.canGoPrevious) root.player.previous()
+                onClicked: MediaSession.previous()
             }
             IconButton {
                 width: 44
                 height: 44
-                icon: root.player && root.player.isPlaying ? "pause" : "play_arrow"
+                icon: root.media.playback.playing ? "pause" : "play_arrow"
                 iconSize: 26
-                active: !!(root.player && root.player.isPlaying)
+                active: root.media.playback.playing
                 anchors.verticalCenter: parent.verticalCenter
-                onClicked: if (root.player && root.player.canTogglePlaying) root.player.togglePlaying()
+                onClicked: MediaSession.togglePlaying()
             }
             IconButton {
                 icon: "skip_next"
                 iconSize: 19
                 anchors.verticalCenter: parent.verticalCenter
-                onClicked: if (root.player && root.player.canGoNext) root.player.next()
+                onClicked: MediaSession.next()
             }
             IconButton {
-                icon: root.player && root.player.loopState === MprisLoopState.Track ? "repeat_one" : "repeat"
+                icon: root.media.playback.loop === "track" ? "repeat_one" : "repeat"
                 iconSize: 17
-                visible: !!(root.player && root.player.loopSupported)
-                active: !!(root.player && root.player.loopState !== MprisLoopState.None)
+                visible: root.media.capabilities.loop
+                active: root.media.playback.loop !== "none"
                 anchors.verticalCenter: parent.verticalCenter
-                onClicked: if (root.player) root.player.loopState = MprisHelpers.nextLoopState(root.player.loopState)
+                onClicked: MediaSession.cycleLoop()
             }
         }
 

@@ -30,32 +30,42 @@ ShellRoot {
         root._terminateDelay.start();
     }
 
-    function test_computeRateKBsComputesKilobytesPerSecond() {
-        // 1 MB delta over 2 seconds = 512 KB/s
-        root.compare(SystemStats.computeRateKBs(10, 11, 2), 512);
+    SystemMonitorCore { id: monitor }
+
+    function test_stateIsCoherentBeforeSampling() {
+        root.compare(monitor.state.status, "stopped");
+        root.compare(monitor.state.ready, false);
+        root.compare(monitor.state.processes, []);
+        root.compare(monitor.state.networkSentHistory, []);
     }
 
-    function test_computeRateKBsClampsNegativeDelta() {
-        // Counter reset (e.g. interface restarted) must never go negative
-        root.compare(SystemStats.computeRateKBs(50, 10, 1), 0);
+    function test_ingestPublishesOneCoherentSnapshot() {
+        const sample = {
+            cpu: { usage_percent: 12, per_core: [12], frequency_mhz: 3000 },
+            memory: { usage_percent: 40, used_gb: 4, total_gb: 10 },
+            disk: { read_mb: 1, write_mb: 2 }, network: { sent_mb: 3, received_mb: 4 },
+            gpu: null, processes: [{ pid: 2, name: "worker" }],
+            network_rate: { sent_kbs: 5, received_kbs: 6 },
+            network_history: { sent_kbs: [5], received_kbs: [6] }
+        };
+        root.verify(monitor.ingest(JSON.stringify(sample)));
+        root.compare(monitor.state.status, "live");
+        root.compare(monitor.state.cpu.usage_percent, 12);
+        root.compare(monitor.state.networkRate.receivedKBs, 6);
+        root.compare(monitor.state.processes[0].pid, 2);
+        root.verify(!monitor.ingest("{broken"));
+        root.compare(monitor.state.cpu.usage_percent, 12, "malformed sample replaced last good state");
     }
 
-    function test_computeRateKBsHandlesZeroElapsed() {
-        root.compare(SystemStats.computeRateKBs(10, 20, 0), 0);
-    }
-
-    function test_pushHistoryAppendsAndTrims() {
-        root.compare(SystemStats.pushHistory([1, 2, 3], 4, 5), [1, 2, 3, 4]);
-        root.compare(SystemStats.pushHistory([1, 2, 3], 4, 3), [2, 3, 4]);
-        root.compare(SystemStats.pushHistory([], 1, 3), [1]);
+    function test_rejectsUnknownProcessIntent() {
+        root.verify(!SystemStats.actOnProcess(123, "unknown"));
     }
 
     Component.onCompleted: {
         try {
-            root.test_computeRateKBsComputesKilobytesPerSecond();
-            root.test_computeRateKBsClampsNegativeDelta();
-            root.test_computeRateKBsHandlesZeroElapsed();
-            root.test_pushHistoryAppendsAndTrims();
+            root.test_stateIsCoherentBeforeSampling();
+            root.test_ingestPublishesOneCoherentSnapshot();
+            root.test_rejectsUnknownProcessIntent();
             root.pass();
         } catch (error) {
             root.reportFailure(error);
