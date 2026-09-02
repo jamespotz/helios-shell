@@ -122,6 +122,24 @@ Item {
             ]
         }
 
+        Item {
+            width: parent.width
+            height: profileSwitch.implicitHeight
+            visible: root.viewMode === "orbit" && root.bluetooth.powered && !!root.audioProfile
+
+            SegmentedControl {
+                id: profileSwitch
+                width: 220
+                anchors.horizontalCenter: parent.horizontalCenter
+                model: [
+                    { value: "music", label: "Music", icon: "music_note" },
+                    { value: "call", label: "Call", icon: "call" }
+                ]
+                currentValue: root.audioProfile ? root.audioProfile.category : null
+                onActivated: value => Bluetooth.setAudioProfile(root.connectedDevice.id, value)
+            }
+        }
+
         StyledText {
             visible: root.viewMode === "orbit" && root.bluetooth.powered && root.devices.length === 0
             text: "No devices found"

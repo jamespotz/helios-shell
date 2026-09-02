@@ -68,6 +68,49 @@ QtObject {
     function forget(id) { const path = root._pathForId(id); return path ? root._forgetPath(path) : false; }
     function setAutoConnect(id, enabled) { const path = root._pathForId(id); return path ? root._setTrustedPath(path, enabled) : false; }
 
+    // Audio profile (A2DP "music" vs HFP/HSP "call") lives on the PipeWire
+    // card, not the BlueZ device — Quickshell's Pipewire module exposes
+    // nodes/properties but no card/profile API, so this shells out to pactl
+    // (already present as part of pipewire-pulse) the same way the rest of
+    // this service shells out to busctl for BlueZ.
+    function setAudioProfile(id, category) {
+        const device = root.devices.find(d => (d.address || d.path) === id);
+        if (!device || !device.address) return false;
+        const cardName = "bluez_card." + device.address.toUpperCase().replace(/:/g, "_");
+        const card = root.cards.find(c => c.name === cardName);
+        if (!card || !card.profiles) return false;
+        const prefix = category === "call" ? "headset-head-unit" : "a2dp-sink";
+        const candidates = Object.keys(card.profiles)
+            .filter(name => (name === prefix || name.startsWith(prefix + "-")) && card.profiles[name].available)
+            .sort((a, b) => card.profiles[b].priority - card.profiles[a].priority);
+        if (candidates.length === 0) return false;
+        profileProc.command = ["pactl", "set-card-profile", cardName, candidates[0]];
+        profileProc.running = false;
+        profileProc.running = true;
+        return true;
+    }
+
+    property var cards: []
+
+    property Process profileProc: Process {
+        property string errText: ""
+        stderr: StdioCollector { onStreamFinished: profileProc.errText = text }
+        onExited: (exitCode) => {
+            if (exitCode !== 0) root.reportError("audio profile", profileProc.errText);
+            root.refreshAll();
+        }
+    }
+
+    property Process cardsProc: Process {
+        command: ["pactl", "-f", "json", "list", "cards"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try { root.cards = JSON.parse(text) || []; }
+                catch (e) { console.warn("[Bluetooth] failed to parse pactl cards:", e); }
+            }
+        }
+    }
+
     // busctl only prints the D-Bus error's human message ("Call failed:
     // <message>"), not its dotted name (org.bluez.Error.*) — sd-bus derives
     // that message from the error name's last component, so this reverses
@@ -353,6 +396,8 @@ QtObject {
     function refreshAll() {
         getObjectsProc.running = false;
         getObjectsProc.running = true;
+        cardsProc.running = false;
+        cardsProc.running = true;
     }
 
     property Process getObjectsProc: Process {
