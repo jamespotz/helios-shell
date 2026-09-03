@@ -16,6 +16,40 @@ Item {
 
     property string draftFolder: Wallpaper.folderPath
     property bool folderEditorOpen: false
+    property var thumbnailQueue: []
+    property var readyThumbnails: ({})
+
+    function requestThumbnail(sourcePath, outputPath) {
+        if (root.readyThumbnails[outputPath] || thumbnailGenerator.outputPath === outputPath
+                || root.thumbnailQueue.some(job => job.outputPath === outputPath)) return;
+        root.thumbnailQueue = root.thumbnailQueue.concat([{
+            sourcePath: sourcePath,
+            outputPath: outputPath
+        }]);
+        root.startNextThumbnail();
+    }
+
+    function startNextThumbnail() {
+        if (thumbnailGenerator.running || root.thumbnailQueue.length === 0) return;
+        const job = root.thumbnailQueue[0];
+        root.thumbnailQueue = root.thumbnailQueue.slice(1);
+        thumbnailGenerator.outputPath = job.outputPath;
+        thumbnailGenerator.command = ["sh", "-c",
+            "mkdir -p \"$(dirname \"$2\")\" && { [ -f \"$2\" ] || "
+                + "ffmpeg -y -loglevel error -ss 00:00:00.5 -i \"$1\" -frames:v 1 -vf scale=320:-1 \"$2\"; }",
+            "_", job.sourcePath, job.outputPath];
+        thumbnailGenerator.running = true;
+    }
+
+    Process {
+        id: thumbnailGenerator
+        property string outputPath: ""
+        onExited: exitCode => {
+            if (exitCode === 0)
+                root.readyThumbnails = Object.assign({}, root.readyThumbnails, { [outputPath]: true });
+            root.startNextThumbnail();
+        }
+    }
 
     implicitWidth: 340
     implicitHeight: col.implicitHeight
@@ -272,19 +306,10 @@ Item {
                             readonly property bool selected: Wallpaper.path === modelData
                             readonly property bool isVideoThumb: ["mp4", "webm", "mkv", "mov"].includes(modelData.split(".").pop().toLowerCase())
                             readonly property string videoThumbPath: Quickshell.env("HOME") + "/.cache/helios/wallpaper-thumbs/" + modelData.replace(/[^A-Za-z0-9]/g, "_") + ".jpg"
-                            property bool videoThumbReady: false
+                            readonly property bool videoThumbReady: !!root.readyThumbnails[thumb.videoThumbPath]
 
-                            // One-shot frame grab, cached by sanitized path — cheap
-                            // and only ever runs once per video (subsequent opens
-                            // of this panel just hit the cached jpg).
-                            Process {
-                                running: thumb.isVideoThumb
-                                command: ["sh", "-c",
-                                    "mkdir -p \"$(dirname '" + thumb.videoThumbPath + "')\" && " +
-                                    "{ [ -f '" + thumb.videoThumbPath + "' ] || " +
-                                    "ffmpeg -y -loglevel error -ss 00:00:00.5 -i '" + thumb.modelData + "' " +
-                                    "-frames:v 1 -vf scale=320:-1 '" + thumb.videoThumbPath + "'; }"]
-                                onExited: thumb.videoThumbReady = true
+                            Component.onCompleted: {
+                                if (thumb.isVideoThumb) root.requestThumbnail(thumb.modelData, thumb.videoThumbPath);
                             }
 
                             // Soft accent glow behind the selected tile — same

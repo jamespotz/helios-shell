@@ -64,9 +64,35 @@ PanelWindow {
                 : stage.revealStyle;
         }
 
-        function transitionFinished() { stage.transitioning = false }
+        function transitionFinished() {
+            stage.transitioning = false;
+            if (!fadeOld.running) bgOld.source = "";
+        }
+
+        function boundDecodeSize(image) {
+            if (image.decodeBoundApplied || image.status !== Image.Ready) return false;
+
+            const naturalWidth = image.implicitWidth;
+            const naturalHeight = image.implicitHeight;
+            const screenWidth = wallpaper.screen.width * wallpaper.screen.devicePixelRatio;
+            const screenHeight = wallpaper.screen.height * wallpaper.screen.devicePixelRatio;
+            if (naturalWidth <= 0 || naturalHeight <= 0 || screenWidth <= 0 || screenHeight <= 0) return false;
+
+            const imageAspect = naturalWidth / naturalHeight;
+            const screenAspect = screenWidth / screenHeight;
+            const targetWidth = imageAspect >= screenAspect
+                ? Math.ceil(screenHeight * imageAspect) : Math.ceil(screenWidth);
+            const targetHeight = imageAspect >= screenAspect
+                ? Math.ceil(screenHeight) : Math.ceil(screenWidth / imageAspect);
+            if (naturalWidth <= targetWidth && naturalHeight <= targetHeight) return false;
+
+            image.decodeBoundApplied = true;
+            image.sourceSize = Qt.size(targetWidth, targetHeight);
+            return true;
+        }
 
         function beginTransition() {
+            revealModule.reset();
             // Captured before prevSource is overwritten below — this is the
             // one point where prevSource still reliably names the outgoing
             // (currently showing) wallpaper, not the incoming one.
@@ -79,7 +105,6 @@ PanelWindow {
             }
             bgOld.opacity = 1;
             stage.prevSource = Wallpaper.source;
-            driftAnim.stop();
             bgNew.scale = 1;
             bgNew.x = 0;
             bgNew.y = 0;
@@ -121,16 +146,23 @@ PanelWindow {
 
         Image {
             id: bgOld
+            property bool decodeBoundApplied: false
             anchors.fill: parent
             visible: source !== "" && status === Image.Ready
             fillMode: Image.PreserveAspectCrop
             asynchronous: true
             cache: false
             z: 0
+            onSourceChanged: {
+                decodeBoundApplied = false;
+                sourceSize = Qt.size(0, 0);
+            }
+            onStatusChanged: stage.boundDecodeSize(bgOld)
         }
 
         Image {
             id: bgNew
+            property bool decodeBoundApplied: false
             anchors.fill: parent
             visible: !Wallpaper.isVideo && source !== "" && status === Image.Ready
             fillMode: Image.PreserveAspectCrop
@@ -139,7 +171,14 @@ PanelWindow {
             z: 1
             source: Wallpaper.source
 
-            onStatusChanged: if (stage.awaitingReady && status === Image.Ready) stage.playTransition()
+            onSourceChanged: {
+                decodeBoundApplied = false;
+                sourceSize = Qt.size(0, 0);
+            }
+            onStatusChanged: {
+                const reloadRequested = stage.boundDecodeSize(bgNew);
+                if (!reloadRequested && stage.awaitingReady && status === Image.Ready) stage.playTransition();
+            }
         }
 
         // playbackState is read-only on MediaPlayer — drive it with
@@ -167,18 +206,6 @@ PanelWindow {
             fillMode: VideoOutput.PreserveAspectCrop
         }
 
-        // A slow, near-imperceptible drift on the resting wallpaper — the
-        // same "living wallpaper" touch noctalia-shell uses — instead of a
-        // perfectly static image once a transition settles.
-        SequentialAnimation {
-            id: driftAnim
-            loops: Animation.Infinite
-            running: !Wallpaper.isVideo && !stage.awaitingReady && !stage.transitioning && bgNew.status === Image.Ready
-
-            NumberAnimation { target: bgNew; property: "scale"; to: 1.035; duration: 14000; easing.type: Easing.InOutSine }
-            NumberAnimation { target: bgNew; property: "scale"; to: 1.0; duration: 14000; easing.type: Easing.InOutSine }
-        }
-
         NumberAnimation {
             id: fadeOld
             target: bgOld
@@ -186,6 +213,7 @@ PanelWindow {
             to: 0
             duration: 900
             easing.type: Easing.InOutCubic
+            onFinished: if (!stage.transitioning) bgOld.source = ""
         }
 
         // === 1. "blur" — Cinematic Zoom & Lens Blur ==========================
@@ -470,7 +498,19 @@ PanelWindow {
 
             function cellDone() {
                 revealModule.pendingCells -= 1;
-                if (revealModule.pendingCells <= 0) stage.transitionFinished();
+                if (revealModule.pendingCells <= 0) {
+                    stage.transitionFinished();
+                    Qt.callLater(revealModule.reset);
+                }
+            }
+
+            function reset() {
+                gridRepeater.model = 0;
+                hexRepeater.model = 0;
+                blindsRepeater.model = 0;
+                revealModule.hexCells = [];
+                revealModule.pendingCells = 0;
+                revealModule.activeKind = "";
             }
 
             Repeater {

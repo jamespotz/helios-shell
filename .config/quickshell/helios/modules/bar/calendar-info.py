@@ -18,9 +18,11 @@ gi.require_version("ICalGLib", "3.0")
 from gi.repository import EDataServer, ECal, ICalGLib  # noqa: E402
 import json
 import datetime
+import hashlib
 import os
 import urllib.parse
 import urllib.request
+import urllib.error
 
 
 WINDOW_DAYS = 180
@@ -29,6 +31,7 @@ WINDOW_DAYS = 180
 # slow or huge feed can't stall a refresh or bloat memory. The 10s socket
 # timeout below only bounds individual reads, not total transfer time.
 MAX_ICS_BYTES = 5 * 1024 * 1024
+CACHE_DIR = os.path.expanduser("~/.cache/helios/calendar-feeds")
 
 
 def fmt(dt):
@@ -101,6 +104,76 @@ def load_subscriptions():
     return []
 
 
+def _cache_paths(url):
+    key = hashlib.sha256(url.encode("utf-8")).hexdigest()
+    return (
+        os.path.join(CACHE_DIR, key + ".ics"),
+        os.path.join(CACHE_DIR, key + ".json"),
+    )
+
+
+def _load_feed_cache(url):
+    body_path, meta_path = _cache_paths(url)
+    try:
+        with open(body_path, "rb") as body_file:
+            body = body_file.read(MAX_ICS_BYTES + 1)
+        if len(body) > MAX_ICS_BYTES:
+            return None, {}
+        with open(meta_path) as meta_file:
+            meta = json.load(meta_file)
+        return body, meta if isinstance(meta, dict) else {}
+    except (OSError, ValueError):
+        return None, {}
+
+
+def _write_feed_cache(url, body, headers):
+    os.makedirs(CACHE_DIR, exist_ok=True)
+    body_path, meta_path = _cache_paths(url)
+    body_tmp = body_path + ".tmp"
+    meta_tmp = meta_path + ".tmp"
+    metadata = {
+        "etag": headers.get("ETag", ""),
+        "lastModified": headers.get("Last-Modified", ""),
+    }
+    with open(body_tmp, "wb") as body_file:
+        body_file.write(body)
+    with open(meta_tmp, "w") as meta_file:
+        json.dump(metadata, meta_file)
+    os.replace(body_tmp, body_path)
+    os.replace(meta_tmp, meta_path)
+
+
+def fetch_subscription(url):
+    cached_body, metadata = _load_feed_cache(url)
+    headers = {"User-Agent": "helios-shell-calendar/1.0"}
+    if metadata.get("etag"):
+        headers["If-None-Match"] = metadata["etag"]
+    if metadata.get("lastModified"):
+        headers["If-Modified-Since"] = metadata["lastModified"]
+
+    try:
+        request = urllib.request.Request(url, headers=headers)
+        with urllib.request.urlopen(request, timeout=10) as response:
+            body = response.read(MAX_ICS_BYTES + 1)
+            if len(body) > MAX_ICS_BYTES:
+                return None, "feed too large (over 5 MB)"
+            try:
+                _write_feed_cache(url, body, response.headers)
+            except OSError:
+                pass
+            return body.decode("utf-8", errors="replace"), None
+    except urllib.error.HTTPError as error:
+        if error.code == 304 and cached_body is not None:
+            return cached_body.decode("utf-8", errors="replace"), None
+        if cached_body is not None:
+            return cached_body.decode("utf-8", errors="replace"), "refresh failed; showing cached data"
+        return None, "HTTP request failed (%d)" % error.code
+    except (OSError, ValueError):
+        if cached_body is not None:
+            return cached_body.decode("utf-8", errors="replace"), "refresh failed; showing cached data"
+        return None, "calendar feed request failed"
+
+
 def event_from_span(component, span, label):
     # The callback's `component` is the recurrence TEMPLATE — its
     # get_dtstart() is the template's original date, the SAME on every
@@ -163,20 +236,10 @@ def collect_subscription_events(subscriptions):
             )
             continue
 
-        try:
-            req = urllib.request.Request(
-                url, headers={"User-Agent": "helios-shell-calendar/1.0"}
-            )
-            with urllib.request.urlopen(req, timeout=10) as resp:
-                raw_bytes = resp.read(MAX_ICS_BYTES + 1)
-                if len(raw_bytes) > MAX_ICS_BYTES:
-                    errors.append(
-                        {"id": sub_id, "label": label, "message": "feed too large (over 5 MB)"}
-                    )
-                    continue
-                raw = raw_bytes.decode("utf-8", errors="replace")
-        except Exception as e:
-            errors.append({"id": sub_id, "label": label, "message": str(e)})
+        raw, fetch_error = fetch_subscription(url)
+        if fetch_error:
+            errors.append({"id": sub_id, "label": label, "message": fetch_error})
+        if raw is None:
             continue
 
         try:

@@ -63,7 +63,6 @@ QtObject {
         printErrors: false
         atomicWrites: true
         preload: true
-        blockLoading: true
         onLoaded: {
             try {
                 const parsed = JSON.parse(subscriptionsFile.text());

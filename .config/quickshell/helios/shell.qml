@@ -14,16 +14,11 @@ import "./modules/lock"
 import "./modules/wallpaper"
 
 ShellRoot {
-    // Themes is otherwise only referenced from IpcHandler function bodies and
-    // from the (Loader-deferred) theme settings panel, so without this touch
-    // Force-instantiate lazy singletons at startup so their data is cached
-    // and ready before the user first opens the corresponding panel.
-    // Cost: negligible — each is one async subprocess (~50ms) that returns a
-    // small list. None block the UI thread.
+    // Restore services whose state affects always-on shell behavior. Panel-only
+    // services initialize when their panel first opens.
     QtObject {
         Component.onCompleted: {
             Themes.currentLabel();
-            WifiNetworks.loaded;   // triggers Component.onCompleted → refreshNetworks()
             NightLight.enabled;    // restores persisted state + spawns wlsunset if needed
             IdleInhibit.enabled;   // restores persisted state + spawns hypridle if needed
         }
@@ -39,7 +34,10 @@ ShellRoot {
         Bar {}
     }
 
-    Launcher {}
+    LazyLoader {
+        activeAsync: Bridge.launcherOpen
+        Launcher {}
+    }
     Osd {}
     PowerMenu {}
     Keybinds {}
@@ -60,12 +58,11 @@ ShellRoot {
         ]
     }
 
-    // Creates MediaCard's 8 named EasyEffects presets (Flat/Bass/Pop/...) the
-    // first time helios runs anywhere — never overwrites ones that already
-    // exist, so a user's own edits to them stick.
-    Process {
-        running: true
-        command: ["python3", Quickshell.env("HOME") + "/.config/quickshell/helios/modules/bar/easyeffects-eq.py", "--ensure-presets"]
+    IpcHandler {
+        target: "launcher"
+        function toggle() { Bridge.toggleLauncher() }
+        function open() { Bridge.launcherOpen = true }
+        function close() { Bridge.launcherOpen = false }
     }
 
     IpcHandler {

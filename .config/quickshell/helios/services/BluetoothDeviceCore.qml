@@ -12,15 +12,15 @@ QtObject {
     readonly property var codecLabels: ({ "sbc": "SBC", "sbc_xq": "SBC-XQ", "aac": "AAC", "aptx": "aptX", "aptx_hd": "aptX HD", "aptx_ll": "aptX LL", "aptx_ll_duplex": "aptX LL", "ldac": "LDAC" })
     readonly property var state: ({
         devices: root.devices.map(device => ({
-            id: device.address || device.path,
-            name: device.name,
-            alias: device.alias,
+            id: device.address || device.dbusPath || device.path,
+            name: device.name || device.deviceName,
+            alias: device.name || device.alias,
             address: device.address,
             icon: device.icon,
             paired: device.paired,
             connected: device.connected,
             trusted: device.trusted,
-            nearby: device.rssi !== 0,
+            nearby: device.rssi !== undefined ? device.rssi !== 0 : !device.paired,
             batteryAvailable: device.batteryAvailable,
             battery: device.battery,
             pairing: device.pairing,

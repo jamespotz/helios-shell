@@ -25,6 +25,9 @@ QtObject {
     property var days: ({}) // { "2026-08-24": { "firefox": 1234.5, ... }, ... }
     property string currentApp: ""
     property real currentSince: 0 // Date.now() ms
+    property bool persistenceDirty: false
+    property string persistedDayKey: ""
+    property bool usageReady: false
 
     // App class (lowercased) -> nicer icon/label/category than the raw wm
     // class. Unlisted apps fall back to _prettify()'d class name, a generic
@@ -89,6 +92,10 @@ QtObject {
     // No-ops while idle (see idleMonitor below) — a focused-but-unattended
     // window shouldn't keep racking up "usage".
     function _tick() {
+        if (!root.usageReady) {
+            root.currentSince = Date.now();
+            return false;
+        }
         if (idleMonitor.isIdle) return false;
         const now = Date.now();
         let changed = false;
@@ -99,6 +106,7 @@ QtObject {
                 const day = Object.assign({}, root.days[key]);
                 day[root.currentApp] = (day[root.currentApp] || 0) + elapsed;
                 root.days = Object.assign({}, root.days, { [key]: day });
+                root.persistenceDirty = true;
                 changed = true;
             }
         }
@@ -128,6 +136,7 @@ QtObject {
     function _save() {
         root._prune();
         logFile.setText(JSON.stringify(root.days));
+        root.persistenceDirty = false;
     }
 
     // --- Derived data consumed by ActivityTab.qml -----------------------
@@ -182,7 +191,6 @@ QtObject {
         printErrors: false
         atomicWrites: true
         preload: true
-        blockLoading: true
         onLoaded: {
             try {
                 const parsed = JSON.parse(limitsFile.text());
@@ -218,7 +226,13 @@ QtObject {
         interval: 60000
         running: true
         repeat: true
-        onTriggered: root._clockTick++
+        onTriggered: {
+            root._clockTick++;
+            const dayKey = root._dayKey(Date.now());
+            if (root.persistedDayKey !== "" && root.persistedDayKey !== dayKey && root.persistenceDirty)
+                root._save();
+            root.persistedDayKey = dayKey;
+        }
     }
 
     readonly property var weekDates: {
@@ -293,7 +307,6 @@ QtObject {
         printErrors: false
         atomicWrites: true
         preload: true
-        blockLoading: true
         onLoaded: {
             try {
                 const parsed = JSON.parse(logFile.text());
@@ -301,6 +314,12 @@ QtObject {
             } catch (e) {
                 // First run / empty file — start with an empty log.
             }
+            root.usageReady = true;
+            root.currentSince = Date.now();
+        }
+        onLoadFailed: {
+            root.usageReady = true;
+            root.currentSince = Date.now();
         }
     }
 
@@ -313,7 +332,14 @@ QtObject {
         interval: 15000
         running: true
         repeat: true
-        onTriggered: { if (root._tick()) root._save(); }
+        onTriggered: root._tick()
+    }
+
+    property Timer persistenceTimer: Timer {
+        interval: 3 * 60 * 1000
+        running: true
+        repeat: true
+        onTriggered: { if (root.persistenceDirty) root._save(); }
     }
 
     // Native AFK detection via the real ext-idle-notify-v1 Wayland protocol
@@ -337,6 +363,7 @@ QtObject {
                     const day = Object.assign({}, root.days[key]);
                     day[root.currentApp] = (day[root.currentApp] || 0) + (cutoff - root.currentSince) / 1000;
                     root.days = Object.assign({}, root.days, { [key]: day });
+                    root.persistenceDirty = true;
                     root._save();
                 }
             } else {
@@ -347,5 +374,12 @@ QtObject {
         }
     }
 
-    Component.onCompleted: root._onFocusChanged()
+    Component.onCompleted: {
+        root.persistedDayKey = root._dayKey(Date.now());
+        root._onFocusChanged();
+    }
+    Component.onDestruction: {
+        root._tick();
+        if (root.persistenceDirty) root._save();
+    }
 }

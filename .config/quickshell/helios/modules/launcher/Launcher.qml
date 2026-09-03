@@ -25,13 +25,6 @@ PanelWindow {
     color: "transparent"
     exclusiveZone: -1
 
-    IpcHandler {
-        target: "launcher"
-        function toggle() { Bridge.toggleLauncher() }
-        function open() { Bridge.launcherOpen = true }
-        function close() { Bridge.launcherOpen = false }
-    }
-
     property var results: []
     // Set by refresh() whenever the query is a "/em[oji] <term>" search —
     // switches the results delegate from app rows to emoji rows and the
@@ -196,6 +189,7 @@ PanelWindow {
             resultList.currentIndex = 0;
         } else {
             contextMenuEntry = null;
+            results = [];
         }
     }
 
@@ -207,6 +201,11 @@ PanelWindow {
     Connections {
         target: ExtraApps
         function onListChanged() { if (launcher.visible) launcher.refresh() }
+    }
+
+    Connections {
+        target: Emoji
+        function onListChanged() { if (launcher.visible && launcher.emojiMode) launcher.refresh() }
     }
 
     Scrim {

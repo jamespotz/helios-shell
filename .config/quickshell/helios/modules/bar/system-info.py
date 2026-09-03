@@ -65,6 +65,19 @@ def get_gpu():
 # always report 0.0%, so keep them cached by PID across iterations — this is
 # psutil's documented pattern for exactly this case.
 _process_cache = {}
+_process_metadata = {}
+_gpu_cache = None
+_last_gpu_sample = 0.0
+GPU_SAMPLE_INTERVAL = 15.0
+
+
+def get_gpu_cached():
+    global _gpu_cache, _last_gpu_sample
+    now = time.monotonic()
+    if _last_gpu_sample == 0.0 or now - _last_gpu_sample >= GPU_SAMPLE_INTERVAL:
+        _gpu_cache = get_gpu()
+        _last_gpu_sample = now
+    return _gpu_cache
 
 
 def get_processes(limit=6):
@@ -82,58 +95,76 @@ def get_processes(limit=6):
     for pid in list(_process_cache.keys()):
         if pid not in current_pids:
             del _process_cache[pid]
+            _process_metadata.pop(pid, None)
 
-    results = []
+    samples = []
     for pid, p in _process_cache.items():
         try:
-            with p.oneshot():
-                name = p.name()
-                try:
-                    cmdline = " ".join(p.cmdline()) or "[" + name + "]"
-                except (psutil.AccessDenied, psutil.ZombieProcess):
-                    cmdline = "[" + name + "]"
-                try:
-                    user = p.username()
-                except (psutil.AccessDenied, KeyError):
-                    user = ""
-                results.append(
-                    {
-                        "pid": pid,
-                        "name": name,
-                        "cmdline": cmdline,
-                        "user": user,
-                        "cpu_percent": p.cpu_percent(interval=None),
-                        "memory_percent": round(p.memory_percent(), 1),
-                    }
-                )
+            samples.append((p.cpu_percent(interval=None), pid, p))
         except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
             continue
 
-    results.sort(key=lambda r: r["cpu_percent"], reverse=True)
-    return results[:limit]
+    samples.sort(key=lambda sample: sample[0], reverse=True)
+    results = []
+    for cpu_percent, pid, p in samples[:limit]:
+        try:
+            metadata = _process_metadata.get(pid)
+            if metadata is None:
+                with p.oneshot():
+                    name = p.name()
+                    try:
+                        cmdline = " ".join(p.cmdline()) or "[" + name + "]"
+                    except (psutil.AccessDenied, psutil.ZombieProcess):
+                        cmdline = "[" + name + "]"
+                    try:
+                        user = p.username()
+                    except (psutil.AccessDenied, KeyError):
+                        user = ""
+                metadata = {"name": name, "cmdline": cmdline, "user": user}
+                _process_metadata[pid] = metadata
+
+            results.append(
+                {
+                    "pid": pid,
+                    "name": metadata["name"],
+                    "cmdline": metadata["cmdline"],
+                    "user": metadata["user"],
+                    "cpu_percent": cpu_percent,
+                    "memory_percent": round(p.memory_percent(), 1),
+                }
+            )
+        except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+            continue
+
+    return results
 
 
-def get_system_stats(rate, sent_history, received_history):
+def get_system_stats(rate, sent_history, received_history, network_counters):
+    cpu_usage = psutil.cpu_percent(interval=0.5)
+    per_core = psutil.cpu_percent(percpu=True)
+    frequency = psutil.cpu_freq()
+    memory = psutil.virtual_memory()
+    disk = psutil.disk_io_counters()
     snapshot = {
         "cpu": {
-            "usage_percent": psutil.cpu_percent(interval=0.5),
-            "per_core": psutil.cpu_percent(percpu=True),
-            "frequency_mhz": psutil.cpu_freq().current if psutil.cpu_freq() else None,
+            "usage_percent": cpu_usage,
+            "per_core": per_core,
+            "frequency_mhz": frequency.current if frequency else None,
         },
         "memory": {
-            "usage_percent": psutil.virtual_memory().percent,
-            "used_gb": round(psutil.virtual_memory().used / 1024**3, 2),
-            "total_gb": round(psutil.virtual_memory().total / 1024**3, 2),
+            "usage_percent": memory.percent,
+            "used_gb": round(memory.used / 1024**3, 2),
+            "total_gb": round(memory.total / 1024**3, 2),
         },
         "disk": {
-            "read_mb": round(psutil.disk_io_counters().read_bytes / 1024**2, 2),
-            "write_mb": round(psutil.disk_io_counters().write_bytes / 1024**2, 2),
+            "read_mb": round(disk.read_bytes / 1024**2, 2),
+            "write_mb": round(disk.write_bytes / 1024**2, 2),
         },
         "network": {
-            "sent_mb": round(psutil.net_io_counters().bytes_sent / 1024**2, 2),
-            "received_mb": round(psutil.net_io_counters().bytes_recv / 1024**2, 2),
+            "sent_mb": round(network_counters.bytes_sent / 1024**2, 2),
+            "received_mb": round(network_counters.bytes_recv / 1024**2, 2),
         },
-        "gpu": get_gpu(),
+        "gpu": get_gpu_cached(),
         "processes": get_processes(FULL_PROCESS_LIMIT if FULL_PROCESS_LIST else TOP_PROCESS_LIMIT),
     }
     snapshot["network_rate"] = rate
@@ -169,5 +200,5 @@ while True:
         received_history.append(rate["received_kbs"])
     last_network = counters
     last_sample_time = now
-    print(json.dumps(get_system_stats(rate, sent_history, received_history), separators=(",", ":")), flush=True)
+    print(json.dumps(get_system_stats(rate, sent_history, received_history, counters), separators=(",", ":")), flush=True)
     time.sleep(5)

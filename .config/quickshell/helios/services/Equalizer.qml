@@ -27,6 +27,9 @@ QtObject {
     })
     property string currentPreset: "treble"
     property var eqValues: eqPresets["treble"].slice()
+    property bool presetsReady: false
+    property string pendingAction: ""
+    property string pendingPreset: ""
 
     readonly property bool eqIsSaved: {
         const p = eqValues, preset = eqPresets[currentPreset];
@@ -40,6 +43,16 @@ QtObject {
     function applyPreset(name) {
         root.currentPreset = name;
         root.eqValues = root.eqPresets[name].slice();
+        if (!root.presetsReady) {
+            root.pendingAction = "preset";
+            root.pendingPreset = name;
+            root.ensurePresets();
+            return;
+        }
+        root._loadPreset(name);
+    }
+
+    function _loadPreset(name) {
         const presetName = name.charAt(0).toUpperCase() + name.slice(1);
         eqLoadPresetProc.command = ["flatpak", "run", "com.github.wwmm.easyeffects", "--load-preset", presetName];
         eqLoadPresetProc.running = true;
@@ -48,11 +61,38 @@ QtObject {
     // One of these per band-drag release, not per drag frame — each call
     // shells out to `flatpak run`, too slow to fire continuously.
     function applyLiveBands() {
+        if (!root.presetsReady) {
+            root.pendingAction = "live";
+            root.ensurePresets();
+            return;
+        }
+        root._applyLiveBands();
+    }
+
+    function _applyLiveBands() {
         const args = root.eqValues.map(v => String((v - 0.5) * 24));
         eqLiveApplyProc.command = ["python3", root.eqScriptPath].concat(args);
         eqLiveApplyProc.running = true;
     }
 
+    function ensurePresets() {
+        if (!root.presetsReady && !ensurePresetsProc.running)
+            ensurePresetsProc.running = true;
+    }
+
     property Process eqLoadPresetProc: Process {}
     property Process eqLiveApplyProc: Process {}
+    property Process ensurePresetsProc: Process {
+        command: ["python3", root.eqScriptPath, "--ensure-presets"]
+        onExited: exitCode => {
+            if (exitCode !== 0) return;
+            root.presetsReady = true;
+            const action = root.pendingAction;
+            root.pendingAction = "";
+            if (action === "preset") root._loadPreset(root.pendingPreset);
+            else if (action === "live") root._applyLiveBands();
+        }
+    }
+
+    Component.onCompleted: root.ensurePresets()
 }

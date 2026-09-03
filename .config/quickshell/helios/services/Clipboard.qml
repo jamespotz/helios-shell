@@ -64,6 +64,4 @@ QtObject {
     property Process copier: Process {}
     property Process deleter: Process { onExited: root.refresh() }
     property Process wiper: Process { command: ["cliphist", "wipe"]; onExited: root.refresh() }
-
-    Component.onCompleted: root.refresh()
 }

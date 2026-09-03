@@ -19,6 +19,7 @@ QtObject {
     readonly property bool available: !!(root.device && root.device.isLaptopBattery && root.device.isPresent)
 
     property var samples: [] // [{ t: epochMs, percent: 0..100 }]
+    property bool historyReady: false
     readonly property int maxSamples: 288 // 24h at 5-minute sampling
 
     // Pure — exported for direct testing (tests/qml/tst_battery_history.qml).
@@ -38,7 +39,7 @@ QtObject {
 
     property Timer sampleTimer: Timer {
         interval: 5 * 60 * 1000
-        running: root.available
+        running: root.available && root.historyReady
         repeat: true
         triggeredOnStart: true
         onTriggered: root.sample()
@@ -53,7 +54,6 @@ QtObject {
         printErrors: false
         atomicWrites: true
         preload: true
-        blockLoading: true
         onLoaded: {
             try {
                 const parsed = JSON.parse(historyFile.text());
@@ -61,6 +61,8 @@ QtObject {
             } catch (e) {
                 // First run / empty file.
             }
+            root.historyReady = true;
         }
+        onLoadFailed: root.historyReady = true
     }
 }

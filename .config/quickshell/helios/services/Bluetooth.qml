@@ -2,82 +2,136 @@ pragma Singleton
 import QtQuick
 import Quickshell.Io
 import Quickshell.Services.Pipewire
+import Quickshell.Services.UPower
+import Quickshell.Bluetooth as QsBluetooth
 
-// Bluetooth state + actions, talking to BlueZ directly over the system
-// D-Bus (org.bluez.Adapter1 / org.bluez.Device1 / ObjectManager) via
-// `busctl`, instead of Quickshell's built-in Quickshell.Bluetooth module.
-// Mirrors the WifiNetworks.qml pattern: one reusable Process per action,
-// `command` reassigned and `running` retoggled to fire it again.
-//
-// --- Why busctl instead of a real D-Bus signal subscription -----------
-// BlueZ's own reactive updates (InterfacesAdded/Removed, PropertiesChanged)
-// would normally come from `busctl monitor org.bluez`, but that requires
-// becoming a D-Bus *monitor*, which stock system-bus policy on this machine
-// denies to non-root (`BecomeMonitor failed: Access denied`). There is also
-// no generic Quickshell QML API for exporting a D-Bus object, so this layer
-// can't register a real org.bluez.Agent1 either — pairing here only works
-// for devices BlueZ auto-accepts without agent interaction (headsets/
-// earbuds in "Just Works" mode; the common case). Given that, this service
-// polls `GetManagedObjects` instead of subscribing to signals, plus does an
-// immediate refresh after every action it initiates for instant feedback.
+// Reactive Bluetooth state backed by Quickshell's native BlueZ integration.
+// Keep this adapter's public API stable so BluetoothTab, MediaCard, and Osd do
+// not need to know which backend owns device discovery and actions.
 QtObject {
     id: root
 
-    property var devices: []
-    property bool available: false
-    property bool powered: false
-    property bool discoverable: false
-    property bool scanning: false
-    property string adapterPath: "/org/bluez/hci0"
+    readonly property var adapter: QsBluetooth.Bluetooth.defaultAdapter
+    readonly property var nativeDevices: root.adapter && root.adapter.devices
+        ? root.adapter.devices.values : []
 
-    property bool active: false // panel visibility — gates background polling
-    property string pairingPath: ""
-
+    property bool active: false
     property string lastError: ""
+    property var cards: []
+
     readonly property var _audioSinks: Pipewire.nodes
         ? Pipewire.nodes.values.filter(n => n.isSink && !n.isStream && (n.type & PwNodeType.AudioSink) === PwNodeType.AudioSink)
         : []
     readonly property PwObjectTracker _audioTracker: PwObjectTracker { objects: root._audioSinks }
-    readonly property BluetoothDeviceCore _core: BluetoothDeviceCore { devices: root.devices; audioNodes: root._audioSinks }
+    readonly property BluetoothDeviceCore _core: BluetoothDeviceCore {
+        devices: root.nativeDevices
+        audioNodes: root._audioSinks
+    }
     readonly property var state: ({
-        available: root.available,
-        powered: root.powered,
-        discoverable: root.discoverable,
-        scanning: root.scanning,
+        available: !!root.adapter,
+        powered: !!root.adapter && root.adapter.enabled,
+        discoverable: !!root.adapter && root.adapter.discoverable,
+        scanning: !!root.adapter && root.adapter.discovering,
         lastError: root.lastError,
         devices: root._core.state.devices
     })
+
     signal errorOccurred(string action, string message)
     signal deviceAutoConnected(string name)
+
+    function _deviceForId(id) {
+        return root.nativeDevices.find(device => device.address === id || device.dbusPath === id) || null;
+    }
+
+    function _reportError(action, message) {
+        root.lastError = action + ": " + message;
+        root.errorOccurred(action, message);
+        errorClearTimer.restart();
+    }
 
     function setActive(active) {
         if (root.active === active) return;
         root.active = active;
-        if (active) root.refreshAll();
+        if (active) cardsProc.running = true;
+        root._scheduleReconnect(false);
     }
 
-    function _pathForId(id) {
-        const device = root.devices.find(d => (d.address || d.path) === id);
-        return device ? device.path : "";
+    function refreshAll() {
+        // Native BlueZ objects update from D-Bus signals. Only PipeWire card
+        // profiles still need an external snapshot, and only while visible.
+        if (root.active) {
+            cardsProc.running = false;
+            cardsProc.running = true;
+        }
     }
 
-    function setScanning(scanning) { return scanning ? root.startDiscovery() : root.stopDiscovery(); }
-    function pair(id) { const path = root._pathForId(id); return path ? root._pairPath(path) : false; }
-    function connect(id) { const path = root._pathForId(id); return path ? root._connectPath(path) : false; }
-    function disconnect(id) { const path = root._pathForId(id); return path ? root._disconnectPath(path) : false; }
-    function forget(id) { const path = root._pathForId(id); return path ? root._forgetPath(path) : false; }
-    function setAutoConnect(id, enabled) { const path = root._pathForId(id); return path ? root._setTrustedPath(path, enabled) : false; }
+    function setPowered(enabled) {
+        if (!root.adapter) { root._reportError("power", "No Bluetooth adapter"); return; }
+        root.adapter.enabled = enabled;
+        if (!enabled) root._cancelReconnect();
+    }
 
-    // Audio profile (A2DP "music" vs HFP/HSP "call") lives on the PipeWire
-    // card, not the BlueZ device — Quickshell's Pipewire module exposes
-    // nodes/properties but no card/profile API, so this shells out to pactl
-    // (already present as part of pipewire-pulse) the same way the rest of
-    // this service shells out to busctl for BlueZ.
+    function setScanning(scanning) {
+        if (!root.adapter) { root._reportError("discovery", "No Bluetooth adapter"); return; }
+        root._autoDiscovery = false;
+        root.adapter.discovering = scanning;
+    }
+
+    function setDiscoverable(discoverable) {
+        if (!root.adapter) { root._reportError("discoverable", "No Bluetooth adapter"); return; }
+        if (discoverable) root.adapter.pairable = true;
+        root.adapter.discoverable = discoverable;
+    }
+
+    property string pendingPairId: ""
+    property string autoConnectId: ""
+
+    function pair(id) {
+        const device = root._deviceForId(id);
+        if (!device) { root._reportError("pair", "Device is no longer available"); return false; }
+        root.pendingPairId = id;
+        device.pair();
+        return true;
+    }
+
+    function connect(id) {
+        const device = root._deviceForId(id);
+        if (!device) { root._reportError("connect", "Device is no longer available"); return false; }
+        device.connect();
+        return true;
+    }
+
+    function disconnect(id) {
+        const device = root._deviceForId(id);
+        if (!device) { root._reportError("disconnect", "Device is no longer available"); return false; }
+        device.disconnect();
+        return true;
+    }
+
+    function forget(id) {
+        const device = root._deviceForId(id);
+        if (!device) { root._reportError("forget", "Device is no longer available"); return false; }
+        if (root.autoConnectId === id) root._cancelReconnect();
+        device.forget();
+        return true;
+    }
+
+    function setAutoConnect(id, enabled) {
+        const device = root._deviceForId(id);
+        if (!device) { root._reportError("set trusted", "Device is no longer available"); return false; }
+        device.trusted = enabled;
+        if (enabled) root._scheduleReconnect(true);
+        return true;
+    }
+
+    // PipeWire's QML API does not expose card-profile changes, so this one
+    // action keeps pactl. Card enumeration happens only while this panel is
+    // active, never on an idle timer.
     function setAudioProfile(id, category) {
-        const device = root.devices.find(d => (d.address || d.path) === id);
+        const device = root._deviceForId(id);
         if (!device || !device.address) return false;
         const cardName = "bluez_card." + device.address.toUpperCase().replace(/:/g, "_");
-        const card = root.cards.find(c => c.name === cardName);
+        const card = root.cards.find(candidate => candidate.name === cardName);
         if (!card || !card.profiles) return false;
         const prefix = category === "call" ? "headset-head-unit" : "a2dp-sink";
         const candidates = Object.keys(card.profiles)
@@ -85,18 +139,15 @@ QtObject {
             .sort((a, b) => card.profiles[b].priority - card.profiles[a].priority);
         if (candidates.length === 0) return false;
         profileProc.command = ["pactl", "set-card-profile", cardName, candidates[0]];
-        profileProc.running = false;
         profileProc.running = true;
         return true;
     }
 
-    property var cards: []
-
     property Process profileProc: Process {
         property string errText: ""
         stderr: StdioCollector { onStreamFinished: profileProc.errText = text }
-        onExited: (exitCode) => {
-            if (exitCode !== 0) root.reportError("audio profile", profileProc.errText);
+        onExited: exitCode => {
+            if (exitCode !== 0) root._reportError("audio profile", profileProc.errText.trim() || "Failed");
             root.refreshAll();
         }
     }
@@ -106,354 +157,125 @@ QtObject {
         stdout: StdioCollector {
             onStreamFinished: {
                 try { root.cards = JSON.parse(text) || []; }
-                catch (e) { console.warn("[Bluetooth] failed to parse pactl cards:", e); }
+                catch (error) { root._reportError("audio profiles", "Invalid pactl response"); }
             }
         }
     }
 
-    // busctl only prints the D-Bus error's human message ("Call failed:
-    // <message>"), not its dotted name (org.bluez.Error.*) — sd-bus derives
-    // that message from the error name's last component, so this reverses
-    // it back to a friendly explanation on a best-effort basis.
-    readonly property var errorMessages: ({
-        "failed": "Bluetooth operation failed",
-        "not ready": "Adapter isn't ready yet",
-        "not available": "Not available on this device",
-        "already connected": "Device is already connected",
-        "already exists": "Device is already paired",
-        "does not exist": "Device is no longer known to BlueZ (try scanning again)",
-        "authentication failed": "Pairing was rejected or the PIN was wrong",
-        "authentication canceled": "Pairing was canceled",
-        "authentication cancelled": "Pairing was canceled",
-        "authentication rejected": "Pairing was rejected by the device",
-        "authentication timeout": "Pairing timed out",
-        "connection attempt failed": "The device dropped the connection while setting up (common right after pairing on some headsets)",
-        "in progress": "Already in progress"
-    })
-
-    function reportError(action, stderrText) {
-        const raw = (stderrText || "").replace(/^Call failed:\s*/i, "").trim();
-        const friendly = root.errorMessages[raw.toLowerCase()] || raw || "Unknown D-Bus error";
-        root.lastError = action + ": " + friendly;
-        console.warn("[Bluetooth]", action, "failed —", raw || "(no message)");
-        root.errorOccurred(action, friendly);
-        errorClearTimer.restart();
+    property Timer errorClearTimer: Timer {
+        interval: 6000
+        onTriggered: root.lastError = ""
     }
 
-    property Timer errorClearTimer: Timer { interval: 6000; onTriggered: root.lastError = "" }
+    // Exceptional reconnect path for trusted devices that do not retain a
+    // BlueZ bond. Attempts are finite and increasingly spaced. On battery it
+    // runs only while the Bluetooth panel is open.
+    property int reconnectAttempt: 0
+    readonly property int maxReconnectAttempts: 4
+    readonly property var reconnectDelays: [5000, 15000, 30000, 60000]
+    property bool _autoDiscovery: false
 
-    property Timer pollTimer: Timer {
-        interval: root.scanning ? 1500 : 4000
-        running: root.active
-        repeat: true
-        onTriggered: root.refreshAll()
+    function _missingTrustedDevice() {
+        return root.nativeDevices.find(device => device.trusted && !device.connected) || null;
     }
 
-    // --- Background auto-reconnect (runs whether or not the panel is open) --
-    // BlueZ normally reconnects a Trusted device on its own once the
-    // peripheral pages back in — no action needed here. But some devices
-    // (confirmed for the Soundcore R60i NC via direct D-Bus inspection: it
-    // reports Bonded: false, and Paired flips back to false the moment it
-    // disconnects) never persist a real bond, so BlueZ has no pairing record
-    // left to reconnect to. Compensate by periodically re-discovering and
-    // re-pairing/connecting any Trusted device that isn't currently
-    // connected, and keeping discovery running in the background while one
-    // is outstanding so BlueZ has a chance to see it page back in at all.
-    property var lastReconnectAttempt: ({})
-    readonly property int reconnectCooldownMs: 20000
-
-    // Set right before firing the Pair()/Connect() call below, so
-    // connectProc's onExited can tell an auto-triggered connect apart from
-    // a user-initiated one (same shared Process either way) and only emit
-    // deviceAutoConnected for the former.
-    property string autoConnectPath: ""
-    property string autoConnectName: ""
-
-    property Timer backgroundPollTimer: Timer {
-        interval: 15000
-        running: root.available
-        repeat: true
-        triggeredOnStart: true
-        onTriggered: root.refreshAll()
+    function _stopAutoDiscovery() {
+        if (root._autoDiscovery && root.adapter && root.adapter.discovering)
+            root.adapter.discovering = false;
+        root._autoDiscovery = false;
     }
 
-    function maybeAutoReconnect(list) {
-        if (!root.powered) return;
-        // Never stomp on an in-flight pair/connect — including one this same
-        // function started a moment ago, since reassigning pairProc/
-        // connectProc's `command` while they're still running would kill and
-        // restart them mid-call (including a legitimate user-initiated one).
-        if (root.pairProc.running || root.connectProc.running) return;
-
-        const pending = list.filter(d => d.trusted && !d.connected && !d.pairing);
-        if (pending.length === 0) return;
-
-        // Only actually fire Pair()/Connect() at a device BlueZ has recently
-        // seen advertise (nonzero RSSI) — that's the only "is this thing
-        // physically nearby" signal exposed over D-Bus. Without this check
-        // an out-of-range trusted device gets a failing Connect() call every
-        // cooldown window forever instead of just waiting quietly.
-        const nearby = pending.filter(d => d.rssi !== 0);
-
-        const now = Date.now();
-        const dev = nearby.find(d => (now - (root.lastReconnectAttempt[d.path] || 0)) >= root.reconnectCooldownMs);
-        if (dev) {
-            root.lastReconnectAttempt[dev.path] = now;
-            root.autoConnectPath = dev.path;
-            root.autoConnectName = dev.name || dev.alias;
-            // Paired devices just need a Connect(); devices that lost their
-            // bond (like the R60i) need a fresh Pair() — pairDevice() already
-            // chains into connectDevice() on success.
-            if (dev.paired) root._connectPath(dev.path);
-            else root._pairPath(dev.path);
-        }
-
-        // Keep discovery alive while any trusted device is still missing —
-        // classic BT devices only show up in GetManagedObjects once BlueZ
-        // has actually seen them via an active inquiry, and RSSI (used above
-        // to gate connect attempts on proximity) only gets populated/
-        // refreshed that same way.
-        if (!root.scanning) root.startDiscovery();
+    function _cancelReconnect() {
+        reconnectTimer.stop();
+        root.reconnectAttempt = 0;
+        root.autoConnectId = "";
+        root._stopAutoDiscovery();
     }
 
-    // --- Discovery -----------------------------------------------------
-
-    // BlueZ ties an active discovery session to the D-Bus connection that
-    // called StartDiscovery, and ends the session the instant that
-    // connection closes. A one-shot `busctl call ... StartDiscovery` opens
-    // its own connection just for that call and exits (closing it)
-    // immediately after — so discovery was being silently stopped within
-    // milliseconds every time, before it could ever be observed as active.
-    // Keeping a single long-lived `bluetoothctl` process open for the scan
-    // (and killing it to stop) keeps the connection — and discovery —
-    // alive instead. `--timeout` runs bluetoothctl non-interactively, which
-    // does NOT register its own pairing agent (only the full interactive
-    // REPL does) — that matters because a registered agent would fight the
-    // "just works" auto-accept pairing this service relies on (see
-    // pairDevice below) if a scan happens to be running during a pair. The
-    // timeout is just a safety cap in case stopDiscovery() never gets
-    // called; normal start/stop is driven directly by these two functions.
-    function startDiscovery() {
-        if (discoveryProc.running) return;
-        discoveryProc.command = ["bluetoothctl", "--timeout", "120", "scan", "on"];
-        discoveryProc.running = true;
-    }
-
-    function stopDiscovery() {
-        discoveryProc.running = false;
-    }
-
-    property Process discoveryProc: Process {
-        property string errText: ""
-        stderr: StdioCollector { onStreamFinished: discoveryProc.errText = text }
-        onExited: (exitCode) => {
-            if (exitCode !== 0) root.reportError("discovery", discoveryProc.errText);
-            root.refreshAll();
-        }
-    }
-
-    // --- Adapter power / discoverable -----------------------------------
-
-    function setPowered(v) {
-        powerProc.command = ["busctl", "--system", "set-property", "org.bluez", root.adapterPath, "org.bluez.Adapter1", "Powered", "b", v ? "true" : "false"];
-        powerProc.running = false;
-        powerProc.running = true;
-    }
-
-    property Process powerProc: Process {
-        property string errText: ""
-        stderr: StdioCollector { onStreamFinished: powerProc.errText = text }
-        onExited: (exitCode) => {
-            if (exitCode !== 0) root.reportError("power", powerProc.errText);
-            root.refreshAll();
-        }
-    }
-
-    function setDiscoverable(v) {
-        discoverableProc.command = ["busctl", "--system", "set-property", "org.bluez", root.adapterPath, "org.bluez.Adapter1", "Discoverable", "b", v ? "true" : "false"];
-        discoverableProc.running = false;
-        discoverableProc.running = true;
-    }
-
-    property Process discoverableProc: Process {
-        property string errText: ""
-        stderr: StdioCollector { onStreamFinished: discoverableProc.errText = text }
-        onExited: (exitCode) => {
-            if (exitCode !== 0) root.reportError("discoverable", discoverableProc.errText);
-            root.refreshAll();
-        }
-    }
-
-    // --- Device actions --------------------------------------------------
-    // Pairing and connecting are always kept as separate D-Bus calls/states
-    // (never inferred from one another): a device can be Paired:true and
-    // Connected:false at the same time — that's a connect/profile failure,
-    // not a pairing failure, and is exactly what the Soundcore R60i NC does
-    // (pairs fine, then drops during the audio-profile handshake).
-
-    function _pairPath(path) {
-        root.pairingPath = path;
-        pairProc.targetPath = path;
-        pairProc.command = ["busctl", "--system", "call", "org.bluez", path, "org.bluez.Device1", "Pair"];
-        pairProc.running = false;
-        pairProc.running = true;
-        return true;
-    }
-
-    property Process pairProc: Process {
-        property string targetPath: ""
-        property string errText: ""
-        stderr: StdioCollector { onStreamFinished: pairProc.errText = text }
-        onExited: (exitCode) => {
-            if (exitCode !== 0) {
-                root.pairingPath = "";
-                root.reportError("pair", pairProc.errText);
-                root.refreshAll();
-            } else {
-                // Pair() succeeding does NOT mean Connected is true — BlueZ
-                // often doesn't auto-connect audio profiles. Try to connect
-                // explicitly, then read the real Connected property back
-                // from BlueZ in connectProc's handler rather than assuming.
-                root._connectPath(pairProc.targetPath);
-            }
-        }
-    }
-
-    function _connectPath(path) {
-        connectProc.targetPath = path;
-        connectProc.command = ["busctl", "--system", "call", "org.bluez", path, "org.bluez.Device1", "Connect"];
-        connectProc.running = false;
-        connectProc.running = true;
-        return true;
-    }
-
-    property Process connectProc: Process {
-        property string targetPath: ""
-        property string errText: ""
-        stderr: StdioCollector { onStreamFinished: connectProc.errText = text }
-        onExited: (exitCode) => {
-            root.pairingPath = "";
-            if (exitCode !== 0) {
-                root.reportError("connect", connectProc.errText);
-            } else if (connectProc.targetPath !== "" && connectProc.targetPath === root.autoConnectPath) {
-                root.deviceAutoConnected(root.autoConnectName);
-            }
-            if (connectProc.targetPath === root.autoConnectPath) root.autoConnectPath = "";
-            root.refreshAll(); // always re-read Paired/Connected from BlueZ, win or lose
-        }
-    }
-
-    function _disconnectPath(path) {
-        disconnectProc.command = ["busctl", "--system", "call", "org.bluez", path, "org.bluez.Device1", "Disconnect"];
-        disconnectProc.running = false;
-        disconnectProc.running = true;
-        return true;
-    }
-
-    property Process disconnectProc: Process {
-        property string errText: ""
-        stderr: StdioCollector { onStreamFinished: disconnectProc.errText = text }
-        onExited: (exitCode) => {
-            if (exitCode !== 0) root.reportError("disconnect", disconnectProc.errText);
-            root.refreshAll();
-        }
-    }
-
-    function _forgetPath(path) {
-        removeProc.command = ["busctl", "--system", "call", "org.bluez", root.adapterPath, "org.bluez.Adapter1", "RemoveDevice", "o", path];
-        removeProc.running = false;
-        removeProc.running = true;
-        return true;
-    }
-
-    property Process removeProc: Process {
-        property string errText: ""
-        stderr: StdioCollector { onStreamFinished: removeProc.errText = text }
-        onExited: (exitCode) => {
-            if (exitCode !== 0) root.reportError("forget", removeProc.errText);
-            root.refreshAll();
-        }
-    }
-
-    function _setTrustedPath(path, trusted) {
-        trustProc.command = ["busctl", "--system", "set-property", "org.bluez", path, "org.bluez.Device1", "Trusted", "b", trusted ? "true" : "false"];
-        trustProc.running = false;
-        trustProc.running = true;
-        return true;
-    }
-
-    property Process trustProc: Process {
-        property string errText: ""
-        stderr: StdioCollector { onStreamFinished: trustProc.errText = text }
-        onExited: (exitCode) => {
-            if (exitCode !== 0) root.reportError("set trusted", trustProc.errText);
-            root.refreshAll();
-        }
-    }
-
-    // --- State: ObjectManager snapshot ------------------------------------
-
-    function refreshAll() {
-        getObjectsProc.running = false;
-        getObjectsProc.running = true;
-        cardsProc.running = false;
-        cardsProc.running = true;
-    }
-
-    property Process getObjectsProc: Process {
-        command: ["busctl", "--system", "--json=short", "call", "org.bluez", "/", "org.freedesktop.DBus.ObjectManager", "GetManagedObjects"]
-        stdout: StdioCollector { onStreamFinished: root.applyManagedObjects(text) }
-    }
-
-    function applyManagedObjects(text) {
-        let parsed;
-        try {
-            parsed = JSON.parse(text);
-        } catch (e) {
-            console.warn("[Bluetooth] failed to parse GetManagedObjects:", e);
+    function _scheduleReconnect(resetBudget) {
+        const device = root._missingTrustedDevice();
+        if (!root.adapter || !root.adapter.enabled || !device || (UPower.onBattery && !root.active)) {
+            root._cancelReconnect();
             return;
         }
-        const managed = (parsed.data && parsed.data[0]) || {};
-
-        let adapterPath = "";
-        let adapterProps = null;
-        for (const path in managed) {
-            const a = managed[path]["org.bluez.Adapter1"];
-            if (a) { adapterPath = path; adapterProps = a; break; }
-        }
-        root.available = !!adapterPath;
-        root.adapterPath = adapterPath || root.adapterPath || "/org/bluez/hci0";
-        root.powered = !!(adapterProps && adapterProps.Powered && adapterProps.Powered.data);
-        root.discoverable = !!(adapterProps && adapterProps.Discoverable && adapterProps.Discoverable.data);
-        root.scanning = !!(adapterProps && adapterProps.Discovering && adapterProps.Discovering.data);
-
-        const list = [];
-        for (const path in managed) {
-            const dev1 = managed[path]["org.bluez.Device1"];
-            if (!dev1) continue;
-            const battery = managed[path]["org.bluez.Battery1"];
-            const get = (k, d) => (dev1[k] ? dev1[k].data : d);
-            const name = get("Name", "") || get("Alias", "") || get("Address", "");
-            list.push({
-                path: path,
-                name: name,
-                alias: get("Alias", name),
-                address: get("Address", ""),
-                icon: get("Icon", ""),
-                paired: !!get("Paired", false),
-                connected: !!get("Connected", false),
-                trusted: !!get("Trusted", false),
-                rssi: get("RSSI", 0),
-                uuids: get("UUIDs", []),
-                batteryAvailable: !!battery,
-                battery: (battery && battery.Percentage) ? battery.Percentage.data / 100 : 0,
-                pairing: path === root.pairingPath
-            });
-        }
-        list.sort((a, b) => a.name.localeCompare(b.name));
-        root.devices = list;
-        root.maybeAutoReconnect(list);
+        if (resetBudget) root.reconnectAttempt = 0;
+        if (root.reconnectAttempt >= root.maxReconnectAttempts || reconnectTimer.running) return;
+        reconnectTimer.interval = root.reconnectDelays[root.reconnectAttempt];
+        reconnectTimer.start();
     }
 
-    Component.onCompleted: root.refreshAll()
+    function _attemptReconnect() {
+        const device = root._missingTrustedDevice();
+        if (!device || !root.adapter || !root.adapter.enabled || (UPower.onBattery && !root.active)) {
+            root._cancelReconnect();
+            return;
+        }
+
+        if (!root.adapter.discovering) {
+            root._autoDiscovery = true;
+            root.adapter.discovering = true;
+        }
+
+        root.autoConnectId = device.address || device.dbusPath;
+        root.reconnectAttempt++;
+        if (!device.pairing && device.state !== QsBluetooth.BluetoothDeviceState.Connecting) {
+            if (device.paired) device.connect();
+            else {
+                root.pendingPairId = root.autoConnectId;
+                device.pair();
+            }
+        }
+        root._scheduleReconnect(false);
+        if (root.reconnectAttempt >= root.maxReconnectAttempts) root._stopAutoDiscovery();
+    }
+
+    property Timer reconnectTimer: Timer {
+        onTriggered: root._attemptReconnect()
+    }
+
+    property Instantiator deviceWatchers: Instantiator {
+        model: root.nativeDevices
+        delegate: QtObject {
+            required property var modelData
+            property Connections watcher: Connections {
+                target: modelData
+
+                function onPairedChanged() {
+                    const id = modelData.address || modelData.dbusPath;
+                    if (id === root.pendingPairId && modelData.paired) {
+                        root.pendingPairId = "";
+                        if (!modelData.connected) modelData.connect();
+                    }
+                }
+
+                function onConnectedChanged() {
+                    const id = modelData.address || modelData.dbusPath;
+                    if (modelData.connected) {
+                        if (id === root.autoConnectId) root.deviceAutoConnected(modelData.name || modelData.deviceName);
+                        root._cancelReconnect();
+                    } else if (modelData.trusted) {
+                        root._scheduleReconnect(true);
+                    }
+                }
+
+                function onTrustedChanged() {
+                    if (modelData.trusted) root._scheduleReconnect(true);
+                }
+            }
+        }
+    }
+
+    onNativeDevicesChanged: root._scheduleReconnect(false)
+
+    property Connections adapterWatcher: Connections {
+        target: root.adapter
+        function onEnabledChanged() { root._scheduleReconnect(true); }
+    }
+
+    property Connections batteryWatcher: Connections {
+        target: UPower
+        function onOnBatteryChanged() { root._scheduleReconnect(false); }
+    }
+
+    Component.onCompleted: root._scheduleReconnect(true)
 }

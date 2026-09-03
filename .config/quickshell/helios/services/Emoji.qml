@@ -29,7 +29,6 @@ QtObject {
         path: Quickshell.env("HOME") + "/.config/quickshell/helios/data/emoji.json"
         printErrors: false
         preload: true
-        blockLoading: true
         onLoaded: {
             try {
                 const parsed = JSON.parse(dataFile.text());
