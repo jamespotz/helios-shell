@@ -9,7 +9,7 @@ import "../../components"
 
 // macOS Wallpaper-picker-inspired layout: a big preview of the current
 // wallpaper up top, the folder path tucked behind a collapsed disclosure row
-// (power-user config, not the default focus), then reveal-style pills and a
+// (power-user config, not the default focus), then transition pills and a
 // bigger, fewer-columns thumbnail grid than before.
 Item {
     id: root
@@ -76,8 +76,8 @@ Item {
             }
 
             // videoOutput is set on MediaPlayer, not source on VideoOutput —
-            // this build's VideoOutput has no `source` property (see
-            // modules/wallpaper/Wallpaper.qml).
+            // this Qt6Multimedia build's VideoOutput has no `source`
+            // property (only `videoSink`).
             MediaPlayer {
                 id: previewPlayer
                 source: Wallpaper.isVideo ? Wallpaper.source : ""
@@ -235,11 +235,11 @@ Item {
             font.pixelSize: Config.fontSize - 2
         }
 
-        // --- Reveal animation --------------------------------------------------
+        // --- Transition ----------------------------------------------------
         StyledText {
             width: parent.width
             font.bold: true
-            text: "Reveal animation"
+            text: "Transition"
         }
 
         Flow {
@@ -247,13 +247,13 @@ Item {
             spacing: 6
 
             Repeater {
-                model: Config.wallpaperRevealStyles
+                model: Config.wallpaperTransitionStyles
 
                 Chip {
                     required property string modelData
-                    active: Config.wallpaperRevealStyle === modelData
+                    active: Config.wallpaperTransitionStyle === modelData
                     text: modelData.charAt(0).toUpperCase() + modelData.slice(1)
-                    onClicked: Config.setWallpaperRevealStyle(modelData)
+                    onClicked: Config.setWallpaperTransitionStyle(modelData)
                 }
             }
         }
@@ -354,8 +354,8 @@ Item {
                                 visible: !thumb.showPlaceholder
                             }
 
-                            // Fallback while the frame grab runs (or if ffmpeg is
-                            // unavailable/fails) — same placeholder as before.
+                            // Fallback while the frame grab runs (or if ffmpeg
+                            // is unavailable/fails).
                             Rectangle {
                                 anchors.fill: parent
                                 radius: Colors.radiusSmall
@@ -373,7 +373,7 @@ Item {
                             // Video indicator — the thumbnail alone (a still
                             // frame) can't tell photo and video apart.
                             Rectangle {
-                                visible: thumb.isVideoThumb
+                                visible: thumb.isVideoThumb && !thumb.showPlaceholder
                                 anchors.left: parent.left
                                 anchors.bottom: parent.bottom
                                 anchors.margins: 4

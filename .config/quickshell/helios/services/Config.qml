@@ -122,13 +122,13 @@ QtObject {
     readonly property string timeFormat: root.use24HourClock ? "HH:mm"
         : root.clockAmPmUppercase ? "h:mm AP" : "h:mm ap"
 
-    // Which reveal animation modules/wallpaper/Wallpaper.qml plays when the
-    // wallpaper changes — "random" cycles through all of them, or pin one.
-    readonly property string wallpaperRevealStyle: settingsAdapter.wallpaperRevealStyle
-    readonly property var wallpaperRevealStyles: ["random", "blur", "glitch", "liquid", "grid", "neon", "honeycomb", "blinds"]
+    // Transition awww plays when the wallpaper changes (its own
+    // --transition-type values — see services/Wallpaper.qml).
+    readonly property string wallpaperTransitionStyle: settingsAdapter.wallpaperTransitionStyle
+    readonly property var wallpaperTransitionStyles: ["simple", "center", "outer", "left", "right", "top", "bottom", "any", "random"]
 
-    function setWallpaperRevealStyle(style) {
-        settingsAdapter.wallpaperRevealStyle = style;
+    function setWallpaperTransitionStyle(style) {
+        settingsAdapter.wallpaperTransitionStyle = style;
         root.settingsFile.writeAdapter();
     }
 
@@ -160,7 +160,7 @@ QtObject {
             property bool showIdleStatusIndicators: false
             property bool showIdleClipboard: false
 
-            property string wallpaperRevealStyle: "random"
+            property string wallpaperTransitionStyle: "any"
 
             property bool use24HourClock: false
             property bool clockAmPmUppercase: true

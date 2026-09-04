@@ -22,7 +22,7 @@ A [Quickshell](https://quickshell.org)-based desktop shell for [Hyprland](https:
 - **Screen recording** — gpu-screen-recorder with fullscreen/window/region modes
 - **Weather** — wttr.in with hourly forecast and 3-day daily
 - **Activity tracking** — per-app focus time, weekly stats, heatmap
-- **Wallpaper** — per-screen with 7 animated reveal transitions
+- **Wallpaper** — images/GIFs via awww, video via mpvpaper, with transitions
 - **Themes** — 10+ presets + dynamic from wallpaper (matugen); syncs GTK, Qt, Ghostty, btop, Neovim, Zed, Bat
 - **Power profiles** — saver/balanced/performance via power-profiles-daemon
 - **Launcher** — app search (XDG + Flatpak + Snap)
@@ -61,6 +61,11 @@ sudo dnf install hypridle
 
 # Screen recording
 sudo dnf install gpu-screen-recorder
+
+# Wallpaper (images/GIFs + video) — from the Terra repo (https://terra.fyralabs.com)
+sudo dnf install --repofrompath 'terra,https://repos.fyralabs.com/terra$releasever' \
+  --setopt='terra.gpgkey=https://repos.fyralabs.com/terra$releasever/key.asc' terra-release
+sudo dnf install awww mpvpaper
 
 # Syntax highlighting theme sync (optional)
 sudo dnf install bat
@@ -169,9 +174,10 @@ Targets: `launcher`, `lock`, `island`, `osd`, `weather`, `wallpaper`, `theme`, `
     ├── osd/               Volume + brightness
     ├── powermenu/         Power actions
     ├── keybinds/          Live cheatsheet
-    ├── lock/              Session lock (PAM)
-    └── wallpaper/         Per-screen wallpaper + transitions
+    └── lock/              Session lock (PAM)
 ```
+
+Wallpaper display itself is owned by external daemons, not a Quickshell module — `services/Wallpaper.qml` drives `awww` (images/GIFs) and `mpvpaper` (video).
 
 ## License
 

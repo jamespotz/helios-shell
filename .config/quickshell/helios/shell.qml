@@ -11,7 +11,6 @@ import "./modules/osd"
 import "./modules/powermenu"
 import "./modules/keybinds"
 import "./modules/lock"
-import "./modules/wallpaper"
 
 ShellRoot {
     // Restore services whose state affects always-on shell behavior. Panel-only
@@ -22,11 +21,6 @@ ShellRoot {
             NightLight.enabled;    // restores persisted state + spawns wlsunset if needed
             IdleInhibit.enabled;   // restores persisted state + spawns hypridle if needed
         }
-    }
-
-    Variants {
-        model: Quickshell.screens
-        Wallpaper {}
     }
 
     Variants {
