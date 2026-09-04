@@ -59,7 +59,7 @@ QtObject {
                 videoProc.running = true;
             } else {
                 applyProc.command = ["awww", "img", root.pendingApplyPath,
-                    "--transition-type", Config.wallpaperTransitionStyle];
+                    "--transition-type", Config.wallpaperTransitionStyle, "--transition-step", 255, "--transition-fps", 144];
                 applyProc.running = false;
                 applyProc.running = true;
             }
