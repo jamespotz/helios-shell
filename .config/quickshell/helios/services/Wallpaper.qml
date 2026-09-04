@@ -34,6 +34,7 @@ QtObject {
 
     property string pendingApplyPath: ""
     property bool pendingApplyIsVideo: false
+    property bool daemonKilled: false
 
     function applyToDaemon(text) {
         let p = text;
@@ -57,12 +58,39 @@ QtObject {
                 videoProc.command = ["mpvpaper", "-o", "no-audio loop panscan=1.0 hwdec=auto", "*", root.pendingApplyPath];
                 videoProc.running = false;
                 videoProc.running = true;
+                // awww-daemon keeps its decoded image buffer resident even
+                // while mpvpaper owns the output — that's the ~1GB idle RAM
+                // hit. Kill it during video playback; the video->image
+                // branch below respawns it before the next image apply.
+                daemonKillProc.running = false;
+                daemonKillProc.running = true;
+                root.daemonKilled = true;
+            } else if (root.daemonKilled) {
+                // Video -> image: daemon was killed above, respawn it and
+                // give it the same startup grace as restoreTimer before
+                // pushing the image.
+                root.daemonKilled = false;
+                daemonProc.running = false;
+                daemonProc.running = true;
+                daemonRespawnTimer.start();
             } else {
                 applyProc.command = ["awww", "img", root.pendingApplyPath,
                     "--transition-type", Config.wallpaperTransitionStyle, "--transition-step", 255, "--transition-fps", 144];
                 applyProc.running = false;
                 applyProc.running = true;
             }
+        }
+    }
+
+    property Process daemonKillProc: Process { command: ["awww", "kill"] }
+
+    property Timer daemonRespawnTimer: Timer {
+        interval: 400
+        onTriggered: {
+            applyProc.command = ["awww", "img", root.pendingApplyPath,
+                "--transition-type", Config.wallpaperTransitionStyle, "--transition-step", 255, "--transition-fps", 144];
+            applyProc.running = false;
+            applyProc.running = true;
         }
     }
 

@@ -19,6 +19,11 @@ Item {
     property var thumbnailQueue: []
     property var readyThumbnails: ({})
 
+    // Loader recreates this tab each time it's opened, so pick up any
+    // files added/removed on disk since last time — but only if a folder
+    // is actually configured, no point scanning nothing.
+    Component.onCompleted: if (Wallpaper.folderPath) Wallpaper.scanFolder()
+
     function requestThumbnail(sourcePath, outputPath) {
         if (root.readyThumbnails[outputPath] || thumbnailGenerator.outputPath === outputPath
                 || root.thumbnailQueue.some(job => job.outputPath === outputPath)) return;
