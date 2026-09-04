@@ -54,7 +54,7 @@ QtObject {
                 // panscan=1.0 crops to fill the output instead of
                 // letterboxing when the video's aspect ratio doesn't match
                 // the screen's.
-                videoProc.command = ["mpvpaper", "-o", "no-audio loop panscan=1.0", "*", root.pendingApplyPath];
+                videoProc.command = ["mpvpaper", "-o", "no-audio loop panscan=1.0 hwdec=auto", "*", root.pendingApplyPath];
                 videoProc.running = false;
                 videoProc.running = true;
             } else {

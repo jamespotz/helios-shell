@@ -1,4 +1,11 @@
 //@ pragma UseQApplication
+// Default state dir is keyed by an MD5 hash of the resolved config path —
+// launching via `-c helios` vs `-p <repo path>` (or any other path
+// inconsistency, e.g. symlink resolution) hashes differently and orphans
+// previously persisted state (wallpaper, island settings, etc.) under a
+// different by-shell/<id>/ dir. Pin it so state always lands in the same
+// place regardless of how the shell was launched.
+//@ pragma StateDir $BASE/helios
 import QtQuick
 import Quickshell
 import Quickshell.Io
