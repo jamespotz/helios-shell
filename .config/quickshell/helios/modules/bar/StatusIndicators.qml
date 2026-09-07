@@ -50,8 +50,17 @@ Row {
     IconButton {
         visible: MicActivity.isSystemMicActive
         icon: "mic"
-        active: root.isIslandTab("volume")
-        onClicked: root.openIslandTab("volume")
+        iconColor: Colors.danger
+        active: root.isIslandTab("privacy")
+        onClicked: root.openIslandTab("privacy")
+    }
+
+    IconButton {
+        visible: CameraActivity.isSystemCameraActive
+        icon: "videocam"
+        iconColor: Colors.danger
+        active: root.isIslandTab("privacy")
+        onClicked: root.openIslandTab("privacy")
     }
 
     IconButton {

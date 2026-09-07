@@ -9,6 +9,7 @@ QtObject {
     property bool launcherOpen: false
     property bool powerMenuOpen: false
     property bool keybindsOpen: false
+    property bool overviewOpen: false
 
     // Dynamic island: each screen's bar is itself the island. islandScreen +
     // islandTab pick which screen's bar is pinned open and to which panel
@@ -53,6 +54,8 @@ QtObject {
     function closePowerMenu() { powerMenuOpen = false }
     function toggleKeybinds() { keybindsOpen = !keybindsOpen }
     function closeKeybinds() { keybindsOpen = false }
+    function toggleOverview() { overviewOpen = !overviewOpen }
+    function closeOverview() { overviewOpen = false }
     function lock() { lockRequested() }
 
     function toggleIsland(screenName, tab) {

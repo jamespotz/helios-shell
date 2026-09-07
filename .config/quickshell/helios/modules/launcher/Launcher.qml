@@ -99,7 +99,17 @@ PanelWindow {
         { label: "Open Notification History", icon: "notifications", keywords: "history settings", run: () => Bridge.toggleIsland(launcher.screen ? launcher.screen.name : "", "notifications") },
         { label: "Open Calendar", icon: "calendar_month", keywords: "events settings", run: () => Bridge.toggleIsland(launcher.screen ? launcher.screen.name : "", "calendar") },
         { label: "Open Island Settings", icon: "settings", keywords: "appearance size settings", run: () => Bridge.toggleIsland(launcher.screen ? launcher.screen.name : "", "island") },
-    ]
+        { label: "Open Focus Modes", icon: "center_focus_strong", keywords: "dnd caffeine power profile night light settings", run: () => Bridge.toggleIsland(launcher.screen ? launcher.screen.name : "", "focus") },
+        { label: "Open Privacy Dashboard", icon: "shield", keywords: "microphone camera mic webcam screen recording clipboard settings", run: () => Bridge.toggleIsland(launcher.screen ? launcher.screen.name : "", "privacy") },
+        { label: "Open Audio Mixer", icon: "graphic_eq", keywords: "per-app volume output routing settings", run: () => Bridge.toggleIsland(launcher.screen ? launcher.screen.name : "", "mixer") },
+        { label: "Open Automation Rules", icon: "bolt", keywords: "headphones monitor battery trigger action settings", run: () => Bridge.toggleIsland(launcher.screen ? launcher.screen.name : "", "automation") },
+        { label: "Workspace Overview", icon: "grid_view", keywords: "workspaces windows mission control overview", run: () => Bridge.toggleOverview() },
+    ].concat(FocusModes.presets.map(p => ({
+        label: (FocusModes.activeId === p.id ? "Turn Off " : "Turn On ") + p.name,
+        icon: p.icon || "center_focus_strong",
+        keywords: "focus mode dnd caffeine",
+        run: () => FocusModes.toggle(p)
+    })))
 
     // Right-click context menu — freedesktop "Desktop Actions" for the app
     // under contextMenuEntry (e.g. Ghostty's "New Window"), positioned at

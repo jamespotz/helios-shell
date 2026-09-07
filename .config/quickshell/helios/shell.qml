@@ -18,6 +18,7 @@ import "./modules/osd"
 import "./modules/powermenu"
 import "./modules/keybinds"
 import "./modules/lock"
+import "./modules/overview"
 
 ShellRoot {
     // Restore services whose state affects always-on shell behavior. Panel-only
@@ -38,6 +39,10 @@ ShellRoot {
     LazyLoader {
         activeAsync: Bridge.launcherOpen
         Launcher {}
+    }
+    LazyLoader {
+        activeAsync: Bridge.overviewOpen
+        Overview {}
     }
     Osd {}
     PowerMenu {}
@@ -102,6 +107,13 @@ ShellRoot {
         target: "keybinds"
         function toggle() { Bridge.toggleKeybinds() }
         function close() { Bridge.closeKeybinds() }
+    }
+
+    IpcHandler {
+        target: "overview"
+        function toggle() { Bridge.toggleOverview() }
+        function open() { Bridge.overviewOpen = true }
+        function close() { Bridge.closeOverview() }
     }
 
     IpcHandler {
@@ -175,6 +187,15 @@ ShellRoot {
             const screen = Utils.screenForMonitor(Quickshell.screens, Hyprland.focusedMonitor) || Quickshell.screens[0];
             Bridge.toggleIsland(screen.name, "system");
         }
+    }
+
+    IpcHandler {
+        target: "focus"
+        function apply(id: string) {
+            const preset = FocusModes.presets.find(p => p.id === id);
+            if (preset) FocusModes.apply(preset);
+        }
+        function off() { FocusModes.deactivate() }
     }
 
     // Lets any shell script or keybind report progress on a long-running

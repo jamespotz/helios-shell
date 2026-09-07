@@ -167,6 +167,23 @@ Item {
 
             Rectangle { width: parent.width; height: 1; color: Colors.overlay; opacity: 0.15 }
 
+            // --- Auto-focus for meetings -----------------------------------
+            Column {
+                width: parent.width
+                spacing: 6
+
+                StyledText { text: "When a meeting starts"; font.pixelSize: Config.fontSize - 2; opacity: 0.7 }
+
+                SegmentedControl {
+                    width: parent.width
+                    model: [{ value: "", label: "Off", icon: "" }].concat(FocusModes.presets.map(p => ({ value: p.id, label: p.name, icon: p.icon })))
+                    currentValue: Calendar.meetingFocusId
+                    onActivated: value => Calendar.setMeetingFocusId(value)
+                }
+            }
+
+            Rectangle { width: parent.width; height: 1; color: Colors.overlay; opacity: 0.15 }
+
             Column {
                 width: parent.width
                 spacing: 8

@@ -30,14 +30,28 @@ QtObject {
     property PwObjectTracker tracker: PwObjectTracker { objects: root.candidateStreams }
     property PwObjectTracker linkTracker: PwObjectTracker { objects: Pipewire.links.values }
 
-    readonly property bool isSystemMicActive: {
+    // Node ids whose upstream link comes from a real capture device (not a
+    // sink's monitor) — i.e. streams actually holding the mic open, keyed
+    // for _activeApps below to look up without re-scanning linkGroups per
+    // stream.
+    readonly property var _activeIds: {
         const candidateIds = root.candidateStreams.map(n => n.id);
         const groups = Pipewire.linkGroups.values;
+        const ids = new Set();
         for (let i = 0; i < groups.length; i++) {
             const g = groups[i];
             if (g.target && candidateIds.includes(g.target.id) && g.source && !g.source.isSink)
-                return true;
+                ids.add(g.target.id);
         }
-        return false;
+        return ids;
     }
+
+    readonly property bool isSystemMicActive: root._activeIds.size > 0
+
+    // App names (Privacy dashboard) currently holding the mic open —
+    // `application.name` is the PipeWire property every mic-capturing app
+    // sets (verified live via `pactl list source-outputs`).
+    readonly property var activeApps: root.candidateStreams
+        .filter(n => root._activeIds.has(n.id))
+        .map(n => (n.properties && n.properties["application.name"]) || n.description || n.name)
 }

@@ -30,3 +30,6 @@ MediaSessionCore 1.0 MediaSessionCore.qml
 singleton Calendar 1.0 Calendar.qml
 CalendarCore 1.0 CalendarCore.qml
 singleton Tasks 1.0 Tasks.qml
+singleton FocusModes 1.0 FocusModes.qml
+singleton CameraActivity 1.0 CameraActivity.qml
+singleton Automations 1.0 Automations.qml

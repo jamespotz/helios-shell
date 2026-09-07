@@ -75,8 +75,12 @@ Item {
                     Repeater {
                         model: [
                             { tab: "volume", icon: "volume_up" },
+                            { tab: "mixer", icon: "graphic_eq" },
                             { tab: "bluetooth", icon: "bluetooth" },
                             { tab: "wifi", icon: "wifi" },
+                            { tab: "focus", icon: "center_focus_strong" },
+                            { tab: "privacy", icon: "shield" },
+                            { tab: "automation", icon: "bolt" },
                             { tab: "media", icon: "music_note" },
                             { tab: "clipboard", icon: "content_paste" },
                             { tab: "recorder", icon: "videocam" },
@@ -138,8 +142,12 @@ Item {
                 Loader {
                     id: panelLoader
                     width: flick.width
-                    sourceComponent: Bridge.islandTab === "bluetooth" ? bluetoothTab
+                    sourceComponent: Bridge.islandTab === "mixer" ? mixerTab
+                        : Bridge.islandTab === "bluetooth" ? bluetoothTab
                         : Bridge.islandTab === "wifi" ? wifiTab
+                        : Bridge.islandTab === "focus" ? focusTab
+                        : Bridge.islandTab === "privacy" ? privacyTab
+                        : Bridge.islandTab === "automation" ? automationTab
                         : Bridge.islandTab === "media" ? mediaTab
                         : Bridge.islandTab === "clipboard" ? clipboardTab
                         : Bridge.islandTab === "recorder" ? recorderTab
@@ -168,8 +176,12 @@ Item {
         : PowerProfiles.profile === PowerProfile.Performance ? "bolt" : "balance"
 
     Component { id: volumeTab; VolumeTab {} }
+    Component { id: mixerTab; AudioMixerTab {} }
     Component { id: bluetoothTab; BluetoothTab {} }
     Component { id: wifiTab; WifiTab {} }
+    Component { id: focusTab; FocusTab {} }
+    Component { id: privacyTab; PrivacyTab {} }
+    Component { id: automationTab; AutomationTab {} }
     Component { id: mediaTab; MediaCard {} }
     Component { id: clipboardTab; ClipboardTab {} }
     Component { id: recorderTab; ScreenRecorderTab {} }

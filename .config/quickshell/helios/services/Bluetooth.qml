@@ -127,6 +127,45 @@ QtObject {
         return true;
     }
 
+    // ─── Low-battery alert ───────────────────────────────────────────────
+    // "Warn only when action matters" — one alert per device per drop below
+    // the threshold, not a running list. Same dedup + hysteresis shape as
+    // Calendar.qml's meeting alert: fire once, and only re-fire after the
+    // device has recovered well above the threshold (recharged) and dropped
+    // again, so it doesn't spam every scan while just idling at 19%.
+    readonly property int lowBatteryThreshold: 20
+    property var lowBatteryAlert: null
+    property var _lowBatteryAlerted: ({})
+
+    function dismissLowBattery() { root.lowBatteryAlert = null; }
+
+    function _scanLowBattery() {
+        if (root.lowBatteryAlert) return;
+        for (const device of root.state.devices) {
+            if (!device.connected || !device.batteryAvailable) continue;
+            const pct = Math.round(device.battery * 100);
+            if (pct <= root.lowBatteryThreshold) {
+                if (root._lowBatteryAlerted[device.id]) continue;
+                root._lowBatteryAlerted = Object.assign({}, root._lowBatteryAlerted, { [device.id]: true });
+                root.lowBatteryAlert = device;
+                return;
+            }
+            if (pct > root.lowBatteryThreshold + 10 && root._lowBatteryAlerted[device.id]) {
+                const next = Object.assign({}, root._lowBatteryAlerted);
+                delete next[device.id];
+                root._lowBatteryAlerted = next;
+            }
+        }
+    }
+
+    property Timer lowBatteryTimer: Timer {
+        interval: 60000
+        running: true
+        repeat: true
+        triggeredOnStart: true
+        onTriggered: root._scanLowBattery()
+    }
+
     // PipeWire's QML API does not expose card-profile changes, so this one
     // action keeps pactl. Card enumeration happens only while this panel is
     // active, never on an idle timer.

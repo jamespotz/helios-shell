@@ -260,10 +260,35 @@ Item {
                                 spacing: 1
                                 anchors.verticalCenter: parent.verticalCenter
                                 StyledText { text: myRow.modelData.name; font.weight: Font.DemiBold }
-                                StyledText {
-                                    text: myRow.modelData.connected ? "Connected" : "Not Connected"
-                                    opacity: 0.6
-                                    font.pixelSize: Config.fontSize - 3
+                                Row {
+                                    spacing: 4
+                                    StyledText {
+                                        text: myRow.modelData.connected ? "Connected" : "Not Connected"
+                                        opacity: 0.6
+                                        font.pixelSize: Config.fontSize - 3
+                                    }
+                                    // Device continuity: battery for whatever this
+                                    // device is (mouse, keyboard, headset, controller,
+                                    // phone) — BlueZ's Battery1 interface generalizes
+                                    // across device types, so one badge covers all of
+                                    // them with no per-category logic.
+                                    Row {
+                                        visible: myRow.modelData.connected && myRow.modelData.batteryAvailable
+                                        spacing: 2
+                                        StyledText { text: "·"; opacity: 0.6; font.pixelSize: Config.fontSize - 3 }
+                                        MaterialIcon {
+                                            icon: "battery_full"
+                                            font.pixelSize: 11
+                                            color: Math.round(myRow.modelData.battery * 100) <= Bluetooth.lowBatteryThreshold ? Colors.danger : Colors.subtext
+                                            anchors.verticalCenter: parent.verticalCenter
+                                        }
+                                        StyledText {
+                                            text: Math.round(myRow.modelData.battery * 100) + "%"
+                                            color: Math.round(myRow.modelData.battery * 100) <= Bluetooth.lowBatteryThreshold ? Colors.danger : Colors.subtext
+                                            opacity: 0.9
+                                            font.pixelSize: Config.fontSize - 3
+                                        }
+                                    }
                                 }
                             }
                         }

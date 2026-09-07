@@ -18,12 +18,16 @@ PanelWindow {
     readonly property bool panelOpen: Bridge.islandOpen && Bridge.islandScreen === modelData.name
     readonly property bool notifyMode: !panelOpen && Notifications.state.popups.length > 0
     readonly property bool taskMode: !panelOpen && !notifyMode && Tasks.items.length > 0
+    readonly property bool meetingMode: !panelOpen && !notifyMode && !taskMode && Calendar.upcomingAlert !== null
+    readonly property bool batteryMode: !panelOpen && !notifyMode && !taskMode && !meetingMode && Bluetooth.lowBatteryAlert !== null
     property bool hovering: false
-    readonly property bool expanded: panelOpen || notifyMode || taskMode || hovering
+    readonly property bool expanded: panelOpen || notifyMode || taskMode || meetingMode || batteryMode || hovering
 
     readonly property string mode: panelOpen ? Bridge.islandTab
         : notifyMode ? "notify"
         : taskMode ? "task"
+        : meetingMode ? "meeting"
+        : batteryMode ? "battery"
         : hovering ? "peek"
         : "idle"
 
@@ -192,6 +196,8 @@ PanelWindow {
             Keys.onEscapePressed: {
                 if (bar.panelOpen) Bridge.closeIsland();
                 else if (bar.notifyMode) Notifications.dismissAll();
+                else if (bar.meetingMode) Calendar.dismissAlert();
+                else if (bar.batteryMode) Bluetooth.dismissLowBattery();
                 else bar.hovering = false;
             }
         }
@@ -240,6 +246,8 @@ PanelWindow {
                     sourceComponent: bar.panelOpen ? panelComp
                         : bar.notifyMode ? notifyComp
                         : bar.taskMode ? taskComp
+                        : bar.meetingMode ? meetingComp
+                        : bar.batteryMode ? batteryComp
                         : bar.hovering ? peekComp
                         : idleComp
                     onLoaded: contentFadeIn.restart()
@@ -262,5 +270,7 @@ PanelWindow {
     Component { id: peekComp; PeekContent { targetScreen: bar.screen } }
     Component { id: notifyComp; NotifyCard {} }
     Component { id: taskComp; TaskCard {} }
+    Component { id: meetingComp; MeetingCard {} }
+    Component { id: batteryComp; BatteryAlertCard {} }
     Component { id: panelComp; PanelWrapper {} }
 }

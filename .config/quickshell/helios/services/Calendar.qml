@@ -27,6 +27,78 @@ QtObject {
     function subscribe(label, url) { return root._core.subscribe(label, url); }
     function unsubscribe(id) { return root._core.unsubscribe(id); }
 
+    // ─── Upcoming-meeting alert ─────────────────────────────────────────
+    // Surfaces one timed event at a time, starting 5 minutes before it
+    // begins, for the Island to auto-peek (see Bar.qml's meetingMode,
+    // modeled on notifyMode/taskMode) independent of whether the Calendar
+    // tab is open — this timer always runs, unlike refreshTimer above.
+    property var upcomingAlert: null
+    property var _alertedKeys: ({})
+
+    // event.date is "YYYY-MM-DD", event.startTime is "HH:MM" (both from
+    // calendar-info.py) — parsed as local time, matching how the agenda
+    // already displays them.
+    function _eventStart(event) {
+        if (!event.startTime) return null;
+        const [y, m, d] = event.date.split("-").map(Number);
+        const [hh, mm] = event.startTime.split(":").map(Number);
+        return new Date(y, m - 1, d, hh, mm);
+    }
+
+    function _eventKey(event) { return event.date + "|" + event.startTime + "|" + event.summary; }
+
+    function dismissAlert() { root.upcomingAlert = null; }
+
+    function _scanForAlerts() {
+        if (root.upcomingAlert) return;
+        const now = Date.now();
+        for (const event of root.state.events) {
+            const start = root._eventStart(event);
+            if (!start) continue;
+            const key = root._eventKey(event);
+            if (root._alertedKeys[key]) continue;
+            const minutesUntil = (start.getTime() - now) / 60000;
+            // [-1, 5]: fires once, 5 minutes ahead of start, and stays valid
+            // for a minute after in case the 20s scan interval just missed it.
+            if (minutesUntil <= 5 && minutesUntil >= -1) {
+                root._alertedKeys = Object.assign({}, root._alertedKeys, { [key]: true });
+                root.upcomingAlert = event;
+                if (root.meetingFocusId) {
+                    const preset = FocusModes.presets.find(p => p.id === root.meetingFocusId);
+                    if (preset) FocusModes.apply(preset);
+                }
+                break;
+            }
+        }
+    }
+
+    property Timer alertTimer: Timer {
+        interval: 20000
+        running: true
+        repeat: true
+        triggeredOnStart: true
+        onTriggered: root._scanForAlerts()
+    }
+
+    // Which Focus preset (if any) to auto-apply when a meeting alert
+    // fires — "" means off. Persisted separately from subscriptions since
+    // it's an unrelated setting that happens to live on the same service.
+    property string meetingFocusId: ""
+
+    function setMeetingFocusId(id) {
+        root.meetingFocusId = id;
+        meetingFocusFile.setText(id);
+    }
+
+    property FileView meetingFocusFile: FileView {
+        path: root.cacheDir + "/calendar-meeting-focus.txt"
+        printErrors: false
+        atomicWrites: true
+        preload: true
+        blockLoading: true
+        onLoaded: root.meetingFocusId = meetingFocusFile.text().trim()
+    }
+
     function setActive(active) {
         if (root._active === active) return;
         root._active = active;
