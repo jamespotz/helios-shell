@@ -27,8 +27,8 @@ Shape {
     preferredRendererType: Shape.CurveRenderer
 
     ShapePath {
-        strokeWidth: 2
-        strokeColor: Qt.rgba(Colors.overlay.r, Colors.overlay.g, Colors.overlay.b, 0.3)
+        strokeWidth: 1.5
+        strokeColor: Qt.rgba(1, 1, 1, 0.55)
         fillColor: "transparent"
         capStyle: ShapePath.RoundCap
         strokeStyle: ShapePath.SolidLine

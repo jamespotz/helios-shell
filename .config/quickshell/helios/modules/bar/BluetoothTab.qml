@@ -238,12 +238,12 @@ Item {
                     HoverRow {
                         width: parent.width
                         highlighted: myRow.modelData.connected
-                        // Trusted-but-unpaired devices (see myDevices above)
-                        // need Pair(), not Connect() — the info button
-                        // (below) handles expand/collapse instead.
+                        // Trusted survives the R60i's Paired:false-on-disconnect
+                        // quirk (see myDevices above); Pair() only makes sense
+                        // for devices with neither flag set.
                         onClicked: {
                             if (myRow.modelData.connected) Bluetooth.disconnect(myRow.modelData.id);
-                            else if (myRow.modelData.paired) Bluetooth.connect(myRow.modelData.id);
+                            else if (myRow.modelData.paired || myRow.modelData.trusted) Bluetooth.connect(myRow.modelData.id);
                             else Bluetooth.pair(myRow.modelData.id);
                         }
 

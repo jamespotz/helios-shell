@@ -97,6 +97,9 @@ QtObject {
     function connect(id) {
         const device = root._deviceForId(id);
         if (!device) { root._reportError("connect", "Device is no longer available"); return false; }
+        // Trust before connect so a flaky first connect (e.g. Soundcore R60i)
+        // is retry-eligible via _scheduleReconnect instead of dying silently.
+        device.trusted = true;
         device.connect();
         return true;
     }
@@ -211,6 +214,15 @@ QtObject {
             return;
         }
 
+        // A connect/pair attempt (ours or the user's) may still be in
+        // flight — some devices (Soundcore R60i) take 15-20s to finish SDP.
+        // Toggling discovery mid-attempt starves that negotiation and drops
+        // the link. Wait for it to resolve before touching the radio.
+        if (device.pairing || device.state === QsBluetooth.BluetoothDeviceState.Connecting) {
+            root._scheduleReconnect(false);
+            return;
+        }
+
         if (!root.adapter.discovering) {
             root._autoDiscovery = true;
             root.adapter.discovering = true;
@@ -218,12 +230,10 @@ QtObject {
 
         root.autoConnectId = device.address || device.dbusPath;
         root.reconnectAttempt++;
-        if (!device.pairing && device.state !== QsBluetooth.BluetoothDeviceState.Connecting) {
-            if (device.paired) device.connect();
-            else {
-                root.pendingPairId = root.autoConnectId;
-                device.pair();
-            }
+        if (device.paired) device.connect();
+        else {
+            root.pendingPairId = root.autoConnectId;
+            device.pair();
         }
         root._scheduleReconnect(false);
         if (root.reconnectAttempt >= root.maxReconnectAttempts) root._stopAutoDiscovery();
