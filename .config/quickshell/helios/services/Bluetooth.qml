@@ -182,6 +182,11 @@ QtObject {
         return root.nativeDevices.find(device => device.trusted && !device.connected) || null;
     }
 
+    function _idleMissingTrustedDevice() {
+        return root.nativeDevices.find(device => device.trusted && !device.connected
+            && !device.pairing && device.state !== QsBluetooth.BluetoothDeviceState.Connecting) || null;
+    }
+
     function _stopAutoDiscovery() {
         if (root._autoDiscovery && root.adapter && root.adapter.discovering)
             root.adapter.discovering = false;
@@ -190,6 +195,7 @@ QtObject {
 
     function _cancelReconnect() {
         reconnectTimer.stop();
+        reconnectFinalCheckTimer.stop();
         root.reconnectAttempt = 0;
         root.autoConnectId = "";
         root._stopAutoDiscovery();
@@ -217,8 +223,9 @@ QtObject {
         // A connect/pair attempt (ours or the user's) may still be in
         // flight — some devices (Soundcore R60i) take 15-20s to finish SDP.
         // Toggling discovery mid-attempt starves that negotiation and drops
-        // the link. Wait for it to resolve before touching the radio.
-        if (device.pairing || device.state === QsBluetooth.BluetoothDeviceState.Connecting) {
+        // the link. Skip to the next missing device instead of stalling on it.
+        const idleDevice = root._idleMissingTrustedDevice();
+        if (!idleDevice) {
             root._scheduleReconnect(false);
             return;
         }
@@ -228,15 +235,29 @@ QtObject {
             root.adapter.discovering = true;
         }
 
-        root.autoConnectId = device.address || device.dbusPath;
+        root.autoConnectId = idleDevice.address || idleDevice.dbusPath;
         root.reconnectAttempt++;
-        if (device.paired) device.connect();
+        if (idleDevice.paired) idleDevice.connect();
         else {
             root.pendingPairId = root.autoConnectId;
-            device.pair();
+            idleDevice.pair();
         }
-        root._scheduleReconnect(false);
-        if (root.reconnectAttempt >= root.maxReconnectAttempts) root._stopAutoDiscovery();
+        if (root.reconnectAttempt >= root.maxReconnectAttempts) {
+            // Give this last attempt its full window before declaring
+            // failure — it's still negotiating, not done yet.
+            reconnectFinalCheckTimer.restart();
+        } else {
+            root._scheduleReconnect(false);
+        }
+    }
+
+    property Timer reconnectFinalCheckTimer: Timer {
+        interval: root.reconnectDelays[root.reconnectDelays.length - 1]
+        onTriggered: {
+            root._stopAutoDiscovery();
+            const device = root._missingTrustedDevice();
+            if (device) root._reportError("reconnect", "Could not reconnect to " + (device.name || device.deviceName || "device"));
+        }
     }
 
     property Timer reconnectTimer: Timer {

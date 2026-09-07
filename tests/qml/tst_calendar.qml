@@ -58,6 +58,25 @@ ShellRoot {
         root.compare(calendar.state.eventsByDate, {});
     }
 
+    function test_cachedEventsPreserveLinks() {
+        const events = [{
+            summary: "Planning",
+            date: "2026-09-03",
+            allDay: false,
+            startTime: "10:00",
+            endTime: "11:00",
+            source: "Work",
+            links: ["https://meet.example.com/team"]
+        }];
+        calendar.completeRefresh({ events: events, subscriptionErrors: [] });
+        root.compare(calendar.state.eventsByDate["2026-09-03"][0].links, events[0].links);
+        calendar.beginRefresh();
+        calendar.cancelRefresh();
+        root.verify(calendar.state.ready);
+        root.verify(!calendar.state.refreshing);
+        root.compare(calendar.state.events, events);
+    }
+
     function test_sanitizeSubscriptionTrimsAndValidates() {
         calendar.subscriptions = [];
         root.persistenceRequests = 0;
@@ -83,6 +102,7 @@ ShellRoot {
         try {
             root.test_eventsByDateGroupsAndPreservesOrder();
             root.test_eventsByDateHandlesEmptyInput();
+            root.test_cachedEventsPreserveLinks();
             root.test_sanitizeSubscriptionTrimsAndValidates();
             root.test_generateSubscriptionIdAvoidsCollisionAndIsNonEmpty();
             root.pass();

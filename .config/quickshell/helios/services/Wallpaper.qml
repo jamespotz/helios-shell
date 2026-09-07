@@ -49,7 +49,9 @@ QtObject {
     }
 
     property Process videoKillProc: Process {
-        command: ["pkill", "-x", "mpvpaper"]
+        // mpvpaper can remain alive after SIGTERM once its Wayland surface
+        // fails. Force cleanup so the replacement can claim every output.
+        command: ["pkill", "-KILL", "-x", "mpvpaper"]
         onExited: {
             if (root.pendingApplyIsVideo) {
                 // panscan=1.0 crops to fill the output instead of

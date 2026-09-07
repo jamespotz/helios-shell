@@ -1,4 +1,5 @@
 import QtQuick
+import Quickshell
 import "../../services"
 import "../../components"
 
@@ -348,6 +349,7 @@ Item {
                     model: root.selectedDayEvents
 
                     Row {
+                        id: eventRow
                         required property var modelData
                         width: parent.width
                         spacing: 10
@@ -359,10 +361,55 @@ Item {
                             font.pixelSize: Config.fontSize - 3
                             font.family: Config.monoFontFamily
                         }
-                        StyledText {
+                        Column {
                             width: parent.width - 70
-                            elide: Text.ElideRight
-                            text: modelData.summary
+                            spacing: 3
+
+                            StyledText {
+                                width: parent.width
+                                elide: Text.ElideRight
+                                text: eventRow.modelData.summary
+                            }
+
+                            Repeater {
+                                model: eventRow.modelData.links || []
+
+                                Item {
+                                    id: linkItem
+                                    required property string modelData
+                                    width: parent.width
+                                    height: 20
+                                    activeFocusOnTab: true
+
+                                    Row {
+                                        anchors.fill: parent
+                                        spacing: 5
+
+                                        MaterialIcon {
+                                            anchors.verticalCenter: parent.verticalCenter
+                                            icon: "link"
+                                            font.pixelSize: 13
+                                            color: Colors.accent
+                                        }
+                                        StyledText {
+                                            anchors.verticalCenter: parent.verticalCenter
+                                            width: parent.width - 18
+                                            text: linkItem.modelData
+                                            color: Colors.accent
+                                            elide: Text.ElideMiddle
+                                            font.pixelSize: Config.fontSize - 3
+                                            font.underline: linkHover.hovered || linkItem.activeFocus
+                                        }
+                                    }
+
+                                    HoverHandler { id: linkHover }
+                                    TapHandler {
+                                        onTapped: Quickshell.execDetached(["xdg-open", linkItem.modelData])
+                                    }
+                                    Keys.onReturnPressed: Quickshell.execDetached(["xdg-open", linkItem.modelData])
+                                    Keys.onSpacePressed: Quickshell.execDetached(["xdg-open", linkItem.modelData])
+                                }
+                            }
                         }
                     }
                 }

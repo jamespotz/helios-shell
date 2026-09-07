@@ -20,6 +20,7 @@ import json
 import datetime
 import hashlib
 import os
+import re
 import urllib.parse
 import urllib.request
 import urllib.error
@@ -32,6 +33,24 @@ WINDOW_DAYS = 180
 # timeout below only bounds individual reads, not total transfer time.
 MAX_ICS_BYTES = 5 * 1024 * 1024
 CACHE_DIR = os.path.expanduser("~/.cache/helios/calendar-feeds")
+URL_PATTERN = re.compile(r"https?://[^\s<>\"']+")
+
+
+def event_links(component):
+    """Return unique web links from URL, description, and location fields."""
+    candidates = []
+    url_property = component.get_first_property(ICalGLib.PropertyKind.URL_PROPERTY)
+    if url_property is not None:
+        candidates.append(url_property.get_url() or "")
+    candidates.extend((component.get_description() or "", component.get_location() or ""))
+
+    links = []
+    for candidate in candidates:
+        for match in URL_PATTERN.findall(candidate):
+            link = match.rstrip(".,;:!?)]}")
+            if link and link not in links:
+                links.append(link)
+    return links
 
 
 def fmt(dt):
@@ -83,6 +102,7 @@ def collect_local_events():
                 else "%02d:%02d" % (t.get_hour(), t.get_minute()),
                 "endTime": None,
                 "source": source.get_display_name(),
+                "links": event_links(comp),
             }
             te = comp.get_dtend()
             if te is not None and not is_all_day:
@@ -196,6 +216,7 @@ def event_from_span(component, span, label):
             "startTime": None,
             "endTime": None,
             "source": label,
+            "links": event_links(component),
         }
 
     d = datetime.datetime.fromtimestamp(start_epoch)
@@ -207,6 +228,7 @@ def event_from_span(component, span, label):
         "startTime": "%02d:%02d" % (d.hour, d.minute),
         "endTime": "%02d:%02d" % (de.hour, de.minute),
         "source": label,
+        "links": event_links(component),
     }
 
 

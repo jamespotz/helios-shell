@@ -48,6 +48,8 @@ QtObject {
 
     function beginRefresh() { root.refreshing = true; }
 
+    function cancelRefresh() { root.refreshing = false; }
+
     function completeRefresh(result) {
         const next = result || {};
         root.events = next.events || [];

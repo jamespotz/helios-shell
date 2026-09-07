@@ -20,6 +20,9 @@ QtObject {
 
     readonly property string cacheDir: Quickshell.env("HOME") + "/.cache/helios"
     readonly property string subscriptionsPath: root.cacheDir + "/calendar-subscriptions.json"
+    readonly property string eventsPath: root.cacheDir + "/calendar-events.json"
+    readonly property int refreshInterval: 5 * 60 * 1000
+    property double lastRefreshAt: 0
 
     function subscribe(label, url) { return root._core.subscribe(label, url); }
     function unsubscribe(id) { return root._core.unsubscribe(id); }
@@ -27,7 +30,8 @@ QtObject {
     function setActive(active) {
         if (root._active === active) return;
         root._active = active;
-        if (active) root.refresh();
+        if (active && (!root.state.ready || Date.now() - root.lastRefreshAt >= root.refreshInterval))
+            root.refresh();
     }
 
     function refresh() {
@@ -43,9 +47,11 @@ QtObject {
                 try {
                     const parsed = JSON.parse(text);
                     root._core.completeRefresh(parsed);
+                    root.lastRefreshAt = Date.now();
+                    eventsFile.setText(JSON.stringify({ savedAt: root.lastRefreshAt, result: parsed }));
                 } catch (e) {
                     console.warn("[Calendar] failed to parse calendar-info.py output:", e);
-                    root._core.completeRefresh({ events: [], subscriptionErrors: [] });
+                    root._core.cancelRefresh();
                 }
             }
         }
@@ -73,13 +79,32 @@ QtObject {
         }
     }
 
+    property FileView eventsFile: FileView {
+        path: root.eventsPath
+        printErrors: false
+        atomicWrites: true
+        preload: true
+        blockLoading: true
+        onLoaded: {
+            try {
+                const cached = JSON.parse(eventsFile.text());
+                if (cached && cached.result && Array.isArray(cached.result.events)) {
+                    root.lastRefreshAt = Number(cached.savedAt) || 0;
+                    root._core.completeRefresh(cached.result);
+                }
+            } catch (e) {
+                // First run / empty cache.
+            }
+        }
+    }
+
     Component.onCompleted: root.ensureCacheDirProc.running = true
 
     // Refresh every 5 minutes while the tab is open — cheap (one local
     // D-Bus query, no network) and picks up events added elsewhere
     // (GNOME Calendar, a synced account) during the session.
     property Timer refreshTimer: Timer {
-        interval: 5 * 60 * 1000
+        interval: root.refreshInterval
         running: root._active
         repeat: true
         onTriggered: root.refresh()
