@@ -8,7 +8,6 @@ singleton AppLaunch 1.0 AppLaunch.qml
 singleton Notifications 1.0 Notifications.qml
 NotificationCore 1.0 NotificationCore.qml
 singleton Weather 1.0 Weather.qml
-singleton Activity 1.0 Activity.qml
 singleton ExtraApps 1.0 ExtraApps.qml
 singleton Wallpaper 1.0 Wallpaper.qml
 singleton Themes 1.0 Themes.qml

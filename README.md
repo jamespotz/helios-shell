@@ -21,7 +21,6 @@ A [Quickshell](https://quickshell.org)-based desktop shell for [Hyprland](https:
 - **Clipboard history** — cliphist integration
 - **Screen recording** — gpu-screen-recorder with fullscreen/window/region modes
 - **Weather** — wttr.in with hourly forecast and 3-day daily
-- **Activity tracking** — per-app focus time, weekly stats, heatmap
 - **Wallpaper** — images/GIFs via awww, video via mpvpaper, with transitions
 - **Themes** — 10+ presets + dynamic from wallpaper (matugen); syncs GTK, Qt, Ghostty, btop, Neovim, Zed, Bat
 - **Power profiles** — saver/balanced/performance via power-profiles-daemon
@@ -140,7 +139,6 @@ utils.safe_load("helios-binds")
 | `Super+Alt+M` | Media player |
 | `Super+Alt+N` | WiFi |
 | `Super+Alt+W` | Weather |
-| `Super+Alt+A` | Activity |
 | `Super+Alt+P` | Wallpaper |
 | `Super+Alt+T` | Theme |
 | `Super+Alt+I` | Island settings |
@@ -164,7 +162,7 @@ Targets: `launcher`, `lock`, `island`, `osd`, `weather`, `wallpaper`, `theme`, `
 .config/quickshell/helios/
 ├── shell.qml              entry point
 ├── services/              singletons (Colors, Config, Bridge, Notifications,
-│                          Weather, Activity, Themes, Cava, Clipboard,
+│                          Weather, Themes, Cava, Clipboard,
 │                          WifiNetworks, ScreenRecorder, MicActivity,
 │                          Screenshot, NightLight, DisplaySettings, IdleInhibit)
 ├── components/            shared UI (IconButton, Slider, Toggle, StyledText, etc.)

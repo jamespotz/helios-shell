@@ -40,8 +40,8 @@ PanelWindow {
 
     // --- Launch frequency tracking ------------------------------------------
     // Drives the "most used" ranking in refresh() below — persisted so it
-    // survives restarts, same FileView pattern as Activity.qml's app-usage
-    // log. Keyed by entry.name since that's already the dedup key refresh()
+    // survives restarts through FileView. Keyed by entry.name since that's
+    // already the dedup key refresh()
     // uses to merge DesktopEntries + ExtraApps.
     property var launchCounts: ({})
 

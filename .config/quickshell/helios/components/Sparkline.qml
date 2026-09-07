@@ -2,13 +2,12 @@ import QtQuick
 import "../services"
 
 // Reusable bar-style sparkline — generalizes the Repeater-of-Rectangle
-// idiom this shell already uses for ActivityTab.qml's weekly app-usage bars
-// and MiniVisualizer.qml's audio levels, instead of introducing a new
-// Canvas-based charting pattern with no precedent here.
+// idiom this shell already uses for MiniVisualizer.qml's audio levels,
+// instead of introducing a new Canvas-based charting pattern.
 //
 // Requires an explicit `width` from the caller (e.g. `width: parent.width`)
 // — bar width is derived from `root.width`, so an unset/implicit width
-// would be circular. Same constraint ActivityTab's inline version has.
+// would be circular.
 Row {
     id: root
 

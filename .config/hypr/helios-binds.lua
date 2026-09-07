@@ -50,8 +50,6 @@ hl.bind(mainMod .. " + ALT + M", hl.dsp.exec_cmd(helios .. " island toggle media
   { description = "Toggle media player island" })
 hl.bind(mainMod .. " + ALT + W", hl.dsp.exec_cmd(helios .. " island toggle weather"),
   { description = "Toggle weather island" })
-hl.bind(mainMod .. " + ALT + A", hl.dsp.exec_cmd(helios .. " island toggle activity"),
-  { description = "Toggle activity island" })
 hl.bind(mainMod .. " + ALT + P", hl.dsp.exec_cmd(helios .. " island toggle wallpaper"),
   { description = "Toggle wallpaper picker island" })
 hl.bind(mainMod .. " + ALT + T", hl.dsp.exec_cmd(helios .. " island toggle theme"),
