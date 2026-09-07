@@ -17,11 +17,13 @@ PanelWindow {
 
     readonly property bool panelOpen: Bridge.islandOpen && Bridge.islandScreen === modelData.name
     readonly property bool notifyMode: !panelOpen && Notifications.state.popups.length > 0
+    readonly property bool taskMode: !panelOpen && !notifyMode && Tasks.items.length > 0
     property bool hovering: false
-    readonly property bool expanded: panelOpen || notifyMode || hovering
+    readonly property bool expanded: panelOpen || notifyMode || taskMode || hovering
 
     readonly property string mode: panelOpen ? Bridge.islandTab
         : notifyMode ? "notify"
+        : taskMode ? "task"
         : hovering ? "peek"
         : "idle"
 
@@ -237,6 +239,7 @@ PanelWindow {
                     opacity: 0
                     sourceComponent: bar.panelOpen ? panelComp
                         : bar.notifyMode ? notifyComp
+                        : bar.taskMode ? taskComp
                         : bar.hovering ? peekComp
                         : idleComp
                     onLoaded: contentFadeIn.restart()
@@ -258,5 +261,6 @@ PanelWindow {
     Component { id: idleComp; IdleBump { mediaPlaying: bar.hasActiveMedia; targetScreen: bar.screen } }
     Component { id: peekComp; PeekContent { targetScreen: bar.screen } }
     Component { id: notifyComp; NotifyCard {} }
+    Component { id: taskComp; TaskCard {} }
     Component { id: panelComp; PanelWrapper {} }
 }

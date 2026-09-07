@@ -29,3 +29,4 @@ singleton MediaSession 1.0 MediaSession.qml
 MediaSessionCore 1.0 MediaSessionCore.qml
 singleton Calendar 1.0 Calendar.qml
 CalendarCore 1.0 CalendarCore.qml
+singleton Tasks 1.0 Tasks.qml

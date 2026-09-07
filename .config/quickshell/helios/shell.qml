@@ -176,4 +176,17 @@ ShellRoot {
             Bridge.toggleIsland(screen.name, "system");
         }
     }
+
+    // Lets any shell script or keybind report progress on a long-running
+    // command (or a file transfer) so the Island can auto-peek it, the same
+    // way a DBus notification auto-peeks — e.g.:
+    //   quickshell -c helios ipc call task start build "Building project"
+    //   quickshell -c helios ipc call task progress build 0.5
+    //   quickshell -c helios ipc call task done build true
+    IpcHandler {
+        target: "task"
+        function start(id: string, label: string) { Tasks.start(id, label) }
+        function progress(id: string, value: real, label: string) { Tasks.progress(id, value, label) }
+        function done(id: string, ok: bool) { Tasks.finish(id, ok) }
+    }
 }

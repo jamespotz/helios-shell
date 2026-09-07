@@ -31,6 +31,76 @@ PanelWindow {
     // accept/click action from launching to copying.
     property bool emojiMode: false
 
+    // Open windows, refreshed from `hyprctl clients -j` each time the
+    // launcher opens (and again if that fetch is still in flight when the
+    // query starts matching against it). Only included in unrefined (non-
+    // emoji) search once the user has typed something — an empty query
+    // keeps showing "most used apps" like before.
+    property var windows: []
+
+    function refreshWindows() {
+        windowsProc.running = false;
+        windowsProc.running = true;
+    }
+
+    Process {
+        id: windowsProc
+        command: ["hyprctl", "clients", "-j"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try {
+                    launcher.windows = JSON.parse(text)
+                        .filter(w => w.mapped !== false && w.title)
+                        .map(w => ({ address: w.address, title: w.title, appClass: w["class"] || w.initialClass || "" }));
+                } catch (e) {
+                    launcher.windows = [];
+                }
+                if (launcher.visible) launcher.refresh();
+            }
+        }
+    }
+
+    function focusWindow(win) {
+        focusProc.command = ["hyprctl", "dispatch", "focuswindow", "address:" + win.address];
+        focusProc.running = false;
+        focusProc.running = true;
+    }
+
+    Process { id: focusProc }
+
+    // Shell actions ("command palette" entries) — direct calls into the
+    // same service singletons the rest of the shell already uses, so this
+    // list is just a search-friendly index over existing functionality
+    // rather than a second implementation of any of it.
+    readonly property var actionsList: [
+        { label: "Toggle Do Not Disturb", icon: "notifications", keywords: "dnd silence", run: () => Bridge.toggleDnd() },
+        { label: "Toggle Night Light", icon: "eco", keywords: "color temperature blue light", run: () => NightLight.toggle() },
+        { label: "Toggle Caffeine (keep awake)", icon: "bolt", keywords: "idle inhibit sleep", run: () => IdleInhibit.toggleInhibit() },
+        { label: "Lock Screen", icon: "lock", keywords: "session", run: () => Bridge.lock() },
+        { label: "Power Menu", icon: "power_settings_new", keywords: "shutdown restart logout suspend", run: () => Bridge.togglePowerMenu() },
+        { label: "Keybind Cheatsheet", icon: "keyboard", keywords: "shortcuts binds", run: () => Bridge.toggleKeybinds() },
+        { label: "Screenshot — Fullscreen", icon: "crop", keywords: "capture screen", run: () => Screenshot.captureFullscreen() },
+        { label: "Screenshot — Region", icon: "crop", keywords: "capture screen slurp", run: () => Screenshot.captureRegion() },
+        { label: "Screenshot — Active Window", icon: "crop", keywords: "capture screen", run: () => Screenshot.captureWindow() },
+        { label: "Toggle Screen Recording", icon: "movie", keywords: "record video gpu-screen-recorder", run: () => ScreenRecorder.toggle(launcher.screen ? launcher.screen.name : "") },
+        { label: "Open Wi-Fi", icon: "wifi", keywords: "network settings", run: () => Bridge.toggleIsland(launcher.screen ? launcher.screen.name : "", "wifi") },
+        { label: "Open Bluetooth", icon: "bluetooth", keywords: "devices settings", run: () => Bridge.toggleIsland(launcher.screen ? launcher.screen.name : "", "bluetooth") },
+        { label: "Open Volume", icon: "graphic_eq", keywords: "audio sound settings", run: () => Bridge.toggleIsland(launcher.screen ? launcher.screen.name : "", "volume") },
+        { label: "Open Media Player", icon: "music_note", keywords: "mpris playback settings", run: () => Bridge.toggleIsland(launcher.screen ? launcher.screen.name : "", "media") },
+        { label: "Toggle Liquid Glass", icon: "auto_awesome", keywords: "blur translucent settings", run: () => Bridge.toggleLiquidGlass() },
+        { label: "Clipboard History", icon: "content_paste", keywords: "cliphist settings", run: () => Bridge.toggleIsland(launcher.screen ? launcher.screen.name : "", "clipboard") },
+        { label: "Open Weather", icon: "cloud", keywords: "forecast settings", run: () => Bridge.toggleIsland(launcher.screen ? launcher.screen.name : "", "weather") },
+        { label: "Open Wallpaper", icon: "image", keywords: "background settings", run: () => Bridge.toggleIsland(launcher.screen ? launcher.screen.name : "", "wallpaper") },
+        { label: "Open Theme", icon: "palette", keywords: "colors matugen settings", run: () => Bridge.toggleIsland(launcher.screen ? launcher.screen.name : "", "theme") },
+        { label: "Open Display Settings", icon: "desktop_windows", keywords: "resolution scale vrr monitor settings", run: () => Bridge.toggleIsland(launcher.screen ? launcher.screen.name : "", "display") },
+        { label: "Open Idle & Lock Settings", icon: "schedule", keywords: "hypridle timeout dim dpms settings", run: () => Bridge.toggleIsland(launcher.screen ? launcher.screen.name : "", "idlelock") },
+        { label: "Open Power Profile", icon: "balance", keywords: "saver performance battery settings", run: () => Bridge.toggleIsland(launcher.screen ? launcher.screen.name : "", "power") },
+        { label: "Open System Monitor", icon: "dns", keywords: "cpu memory processes settings", run: () => Bridge.toggleIsland(launcher.screen ? launcher.screen.name : "", "system") },
+        { label: "Open Notification History", icon: "notifications", keywords: "history settings", run: () => Bridge.toggleIsland(launcher.screen ? launcher.screen.name : "", "notifications") },
+        { label: "Open Calendar", icon: "calendar_month", keywords: "events settings", run: () => Bridge.toggleIsland(launcher.screen ? launcher.screen.name : "", "calendar") },
+        { label: "Open Island Settings", icon: "settings", keywords: "appearance size settings", run: () => Bridge.toggleIsland(launcher.screen ? launcher.screen.name : "", "island") },
+    ]
+
     // Right-click context menu — freedesktop "Desktop Actions" for the app
     // under contextMenuEntry (e.g. Ghostty's "New Window"), positioned at
     // contextMenuPos in the launcher window's own coordinate space. null
@@ -78,6 +148,8 @@ PanelWindow {
     // Relevance tiers so e.g. "fire" ranks Firefox (name match) above some
     // unrelated app whose keywords merely happen to contain "fire". Ties
     // within a tier fall back to launch frequency — see refresh() below.
+    // Shared across every result kind (app/window/action) so they can be
+    // ranked against each other in one merged list.
     function matchScore(entry, query) {
         const name = entry.name.toLowerCase();
         if (name === query) return 4;
@@ -122,17 +194,31 @@ PanelWindow {
                 // arbitrary filesystem-scan order.
                 newResults = all.slice().sort((a, b) => {
                     return launcher.countFor(b.name) - launcher.countFor(a.name) || a.name.localeCompare(b.name);
-                }).slice(0, 9);
+                }).slice(0, 9).map(e => ({ kind: "app", entry: e }));
             } else {
-                newResults = all.map(e => ({ entry: e, score: launcher.matchScore(e, query) }))
-                    .filter(m => m.score > 0)
+                // Unified command palette: apps, open windows, and shell
+                // actions ranked together in one list, each tagged with
+                // "kind" so the delegate below can render/run it correctly.
+                const appMatches = all
+                    .map(e => ({ kind: "app", data: e, score: launcher.matchScore(e, query) }))
+                    .filter(m => m.score > 0);
+
+                const windowMatches = launcher.windows
+                    .map(w => ({ kind: "window", data: w, score: launcher.matchScore({ name: w.title, genericName: w.appClass }, query) }))
+                    .filter(m => m.score > 0);
+
+                const actionMatches = launcher.actionsList
+                    .map(a => ({ kind: "action", data: a, score: launcher.matchScore({ name: a.label, keywords: a.keywords }, query) }))
+                    .filter(m => m.score > 0);
+
+                newResults = appMatches.concat(windowMatches, actionMatches)
                     .sort((a, b) => {
                         return b.score - a.score
-                            || launcher.countFor(b.entry.name) - launcher.countFor(a.entry.name)
-                            || a.entry.name.localeCompare(b.entry.name);
+                            || (a.kind === "app" ? launcher.countFor(a.data.name) : 0) - (b.kind === "app" ? launcher.countFor(b.data.name) : 0)
+                            || (a.kind === "app" ? 0 : 1) - (b.kind === "app" ? 0 : 1);
                     })
-                    .map(m => m.entry)
-                    .slice(0, 9);
+                    .slice(0, 9)
+                    .map(m => ({ kind: m.kind, entry: m.data }));
             }
         }
         results = newResults;
@@ -149,6 +235,15 @@ PanelWindow {
     function launchApp(entry) {
         launcher.recordLaunch(entry.name);
         AppLaunch.launch(entry);
+    }
+
+    // Runs whichever kind of unified result the user picked — app, open
+    // window, or shell action — then closes the launcher.
+    function activateResult(result) {
+        if (result.kind === "window") launcher.focusWindow(result.entry);
+        else if (result.kind === "action") result.entry.run();
+        else launcher.launchApp(result.entry);
+        Bridge.launcherOpen = false;
     }
 
     // Runs a Desktop Action (the context menu's entries, e.g. Ghostty's
@@ -185,6 +280,7 @@ PanelWindow {
         if (visible) {
             searchField.text = "";
             refresh();
+            refreshWindows();
             searchField.focusInput();
             resultList.currentIndex = 0;
         } else {
@@ -246,7 +342,7 @@ PanelWindow {
                 SearchField {
                     id: searchField
                     width: parent.width - emojiButton.width - parent.spacing
-                    placeholder: "Search apps…"
+                    placeholder: "Search apps, windows, settings…"
                     inputPixelSize: Config.fontSize + 2
 
                     onTextChanged: launcher.refresh()
@@ -258,10 +354,9 @@ PanelWindow {
                     onUpPressed: resultList.currentIndex = Math.max(resultList.currentIndex - 1, 0)
                     onAccepted: {
                         if (results.length === 0) return;
-                        const entry = results[resultList.currentIndex];
-                        if (launcher.emojiMode) launcher.copyEmoji(entry);
-                        else launcher.launchApp(entry);
-                        Bridge.launcherOpen = false;
+                        const result = results[resultList.currentIndex];
+                        if (launcher.emojiMode) { launcher.copyEmoji(result); Bridge.launcherOpen = false; }
+                        else launcher.activateResult(result);
                     }
                 }
 
@@ -292,8 +387,19 @@ PanelWindow {
                 boundsBehavior: Flickable.StopAtBounds
 
                 delegate: Rectangle {
+                    id: resultRow
                     required property var modelData
                     required property int index
+
+                    // Emoji-mode rows carry the raw emoji entry directly;
+                    // every other mode carries { kind, entry } from refresh().
+                    readonly property string kind: launcher.emojiMode ? "emoji" : modelData.kind
+                    readonly property var entry: launcher.emojiMode ? modelData : modelData.entry
+                    readonly property string title: kind === "window" ? entry.title : kind === "action" ? entry.label : entry.name
+                    readonly property string subtitle: kind === "window" ? entry.appClass
+                        : kind === "action" ? "Action"
+                        : kind === "emoji" ? (entry.category || "")
+                        : (entry.genericName || entry.category || "")
 
                     width: resultList.width
                     height: 50
@@ -311,7 +417,8 @@ PanelWindow {
                         anchors.rightMargin: 10
                         spacing: 12
 
-                        // App icon — rounded square
+                        // Icon — app icon image, emoji glyph, or a Material
+                        // icon for windows/actions.
                         Rectangle {
                             width: 36
                             height: 36
@@ -323,37 +430,45 @@ PanelWindow {
                             Image {
                                 anchors.fill: parent
                                 anchors.margins: 3
-                                visible: !launcher.emojiMode
-                                source: launcher.emojiMode ? "" : Quickshell.iconPath(modelData.icon, true)
+                                visible: resultRow.kind === "app"
+                                source: resultRow.kind === "app" ? Quickshell.iconPath(resultRow.entry.icon, true) : ""
                                 fillMode: Image.PreserveAspectFit
                                 asynchronous: true
                             }
 
                             StyledText {
                                 anchors.centerIn: parent
-                                visible: launcher.emojiMode
-                                text: launcher.emojiMode ? modelData.emoji : ""
+                                visible: resultRow.kind === "emoji"
+                                text: resultRow.kind === "emoji" ? resultRow.entry.emoji : ""
                                 font.pixelSize: 19
+                            }
+
+                            MaterialIcon {
+                                anchors.centerIn: parent
+                                visible: resultRow.kind === "window" || resultRow.kind === "action"
+                                icon: resultRow.kind === "window" ? "desktop_windows" : resultRow.entry.icon
+                                font.pixelSize: 18
+                                color: index === resultList.currentIndex ? Colors.accentText : Colors.subtext
                             }
                         }
 
-                        // Name + description (apps: generic name; emoji: category)
+                        // Name + description (apps: generic name; windows:
+                        // app class; actions: "Action"; emoji: category)
                         Column {
                             anchors.verticalCenter: parent.verticalCenter
                             width: parent.width - 36 - 12 - 10 - termBadge.width - 10
                             spacing: 1
 
                             StyledText {
-                                text: modelData.name
+                                text: resultRow.title
                                 font.weight: Font.Medium
                                 color: index === resultList.currentIndex ? Colors.accentText : Colors.text
                                 width: parent.width
                                 elide: Text.ElideRight
                             }
                             StyledText {
-                                readonly property string subtitle: modelData.genericName || modelData.category || ""
-                                visible: !!subtitle
-                                text: subtitle
+                                visible: !!resultRow.subtitle
+                                text: resultRow.subtitle
                                 font.pixelSize: Config.fontSize - 2
                                 color: index === resultList.currentIndex ? Qt.rgba(Colors.accentText.r, Colors.accentText.g, Colors.accentText.b, 0.7) : Colors.subtext
                                 width: parent.width
@@ -364,7 +479,7 @@ PanelWindow {
                         // Terminal badge — shows when app needs terminal
                         Rectangle {
                             id: termBadge
-                            visible: modelData.runInTerminal === true
+                            visible: resultRow.kind === "app" && resultRow.entry.runInTerminal === true
                             width: visible ? termRow.implicitWidth + 10 : 0
                             height: 20
                             radius: 10
@@ -399,15 +514,14 @@ PanelWindow {
                         cursorShape: Qt.PointingHandCursor
                         onClicked: mouse => {
                             if (mouse.button === Qt.RightButton) {
-                                if (launcher.emojiMode || !modelData.actions || modelData.actions.length === 0) return;
+                                if (resultRow.kind !== "app" || !resultRow.entry.actions || resultRow.entry.actions.length === 0) return;
                                 const pos = resultMouseArea.mapToItem(QsWindow.contentItem, mouse.x, mouse.y);
                                 launcher.contextMenuPos = pos;
-                                launcher.contextMenuEntry = modelData;
+                                launcher.contextMenuEntry = resultRow.entry;
                                 return;
                             }
-                            if (launcher.emojiMode) launcher.copyEmoji(modelData);
-                            else launcher.launchApp(modelData);
-                            Bridge.launcherOpen = false;
+                            if (resultRow.kind === "emoji") { launcher.copyEmoji(resultRow.entry); Bridge.launcherOpen = false; }
+                            else launcher.activateResult(resultRow.modelData);
                         }
                     }
                 }
