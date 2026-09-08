@@ -126,6 +126,7 @@ Item {
                                 anchors.fill: parent
                                 visible: row.thumbSource !== ""
                                 source: row.thumbSource
+                                sourceSize: Qt.size(64, 64)
                                 fillMode: Image.PreserveAspectCrop
                                 asynchronous: true
                                 cache: false

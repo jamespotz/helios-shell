@@ -95,6 +95,41 @@ Item {
             }
         }
 
+        // ─── OCR quick action ────────────────────────────────────────
+        // Pill chip, same visual as the "Open"/"Folder" quick-action chips
+        // below. Always captures a region regardless of the mode picker
+        // above — OCR only makes sense on a selected region.
+        Row {
+            anchors.horizontalCenter: parent.horizontalCenter
+
+            Rectangle {
+                width: ocrRow.implicitWidth + 16
+                height: 30
+                radius: height / 2
+                color: ocrChipHover.hovered ? Colors.surfaceHigh : Colors.surface
+                Behavior on color { ColorAnimation { duration: Config.animFast } }
+
+                Row {
+                    id: ocrRow
+                    anchors.centerIn: parent
+                    spacing: 5
+                    MaterialIcon { icon: "text_fields"; font.pixelSize: 14; color: Colors.accent; anchors.verticalCenter: parent.verticalCenter }
+                    StyledText { text: "OCR Region"; font.pixelSize: Config.fontSize - 1; color: Colors.accent; font.weight: Font.Medium; anchors.verticalCenter: parent.verticalCenter }
+                }
+
+                HoverHandler { id: ocrChipHover }
+                MouseArea {
+                    anchors.fill: parent
+                    cursorShape: Qt.PointingHandCursor
+                    enabled: !Screenshot.capturing
+                    onClicked: {
+                        Bridge.closeIsland();
+                        Screenshot.captureOcrRegion();
+                    }
+                }
+            }
+        }
+
         // ─── Status label ────────────────────────────────────────────
         // Minimal centered text: idle hint or capture result.
         StyledText {
@@ -106,7 +141,7 @@ Item {
                  : Colors.subtext
             text: Screenshot.capturing ? "Capturing…"
                 : Screenshot.lastError.length > 0 ? Screenshot.lastError
-                : Screenshot.lastCopied ? "Saved to clipboard"
+                : Screenshot.lastCopied ? (Screenshot.purpose === Screenshot.purposeOcr ? "Text copied to clipboard" : "Saved to clipboard")
                 : "Tap to capture"
             opacity: 0.85
             Behavior on color { ColorAnimation { duration: Config.animFast } }
@@ -142,7 +177,9 @@ Item {
                         anchors.verticalCenter: parent.verticalCenter
                     }
                     StyledText {
-                        text: Screenshot.lastError.length > 0 ? "Capture failed" : "Screenshot saved"
+                        text: Screenshot.lastError.length > 0 ? "Capture failed"
+                            : Screenshot.purpose === Screenshot.purposeOcr ? "Text extracted"
+                            : "Screenshot saved"
                         font.weight: Font.Medium
                         font.pixelSize: Config.fontSize
                         color: Screenshot.lastError.length > 0 ? Colors.danger : Colors.success

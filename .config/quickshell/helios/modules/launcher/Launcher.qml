@@ -103,7 +103,6 @@ PanelWindow {
         { label: "Open Privacy Dashboard", icon: "shield", keywords: "microphone camera mic webcam screen recording clipboard settings", run: () => Bridge.toggleIsland(launcher.screen ? launcher.screen.name : "", "privacy") },
         { label: "Open Audio Mixer", icon: "graphic_eq", keywords: "per-app volume output routing settings", run: () => Bridge.toggleIsland(launcher.screen ? launcher.screen.name : "", "mixer") },
         { label: "Open Automation Rules", icon: "bolt", keywords: "headphones monitor battery trigger action settings", run: () => Bridge.toggleIsland(launcher.screen ? launcher.screen.name : "", "automation") },
-        { label: "Workspace Overview", icon: "grid_view", keywords: "workspaces windows mission control overview", run: () => Bridge.toggleOverview() },
     ].concat(FocusModes.presets.map(p => ({
         label: (FocusModes.activeId === p.id ? "Turn Off " : "Turn On ") + p.name,
         icon: p.icon || "center_focus_strong",

@@ -94,6 +94,18 @@ hl.bind(mainMod .. " + SHIFT + R",
   { description = "Reload/relaunch helios" })
 
 
+-- System update (SUPER + SHIFT + U) -------------------------------------
+
+-- Runs topgrade in a terminal (sudo needs a real tty to prompt on) and
+-- reports progress through the "task" IPC target, same as the
+-- `quickshell ipc call task ...` example in shell.qml, so the Island shows
+-- live progress alongside the terminal output. --wait-after-command keeps
+-- the window open so errors are visible instead of the terminal vanishing.
+hl.bind(mainMod .. " + SHIFT + U",
+  hl.dsp.exec_cmd("ghostty --wait-after-command=true -e sh ~/.config/hypr/helios-topgrade.sh"),
+  { description = "Run topgrade with Island progress" })
+
+
 -- Screenshot (SUPER + SHIFT + S for region, SUPER + Print for fullscreen, SUPER + ALT + S for window)
 hl.bind(mainMod .. " + SHIFT + S", hl.dsp.exec_cmd(helios .. " screenshot region"),
   { description = "Screenshot region (helios)" })
@@ -101,6 +113,8 @@ hl.bind(mainMod .. " + Print", hl.dsp.exec_cmd(helios .. " screenshot full"),
   { description = "Screenshot fullscreen (helios)" })
 hl.bind(mainMod .. " + ALT + S", hl.dsp.exec_cmd(helios .. " screenshot window"),
   { description = "Screenshot active window (helios)" })
+hl.bind(mainMod .. " + ALT + O", hl.dsp.exec_cmd(helios .. " screenshot ocr"),
+  { description = "OCR screen region to clipboard (helios)" })
 
 -- Night light / Do Not Disturb / Caffeine toggles
 hl.bind(mainMod .. " + SHIFT + N", hl.dsp.exec_cmd(helios .. " nightlight toggle"),
