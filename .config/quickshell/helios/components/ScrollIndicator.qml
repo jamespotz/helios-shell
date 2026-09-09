@@ -18,7 +18,7 @@ Item {
     anchors.right: target.right
     anchors.rightMargin: 3
     width: 6
-    visible: target.contentHeight > target.height + 1
+    visible: false
 
     readonly property bool active: hoverHandler.hovered || target.moving
     opacity: active ? 1 : 0

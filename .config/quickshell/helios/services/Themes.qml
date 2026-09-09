@@ -12,110 +12,36 @@ import "../services"
 QtObject {
     id: root
 
-    readonly property var presets: ({
+    // Loaded from data/themes.json (see themesDataFile below). The single
+    // helios entry here is only a safety net if that file is missing/corrupt.
+    property var presets: ({
         helios: {
             label: "Helios", background: "#14121a", surface: "#282331", surfaceHigh: "#3a3342",
             overlay: "#6f6580", text: "#eae6f0", subtext: "#b3a9c4", accent: "#f0a868",
             accentText: "#2c1c0f", danger: "#e5707e", warning: "#eec172", success: "#8fd08a"
-        },
-        kanagawa: {
-            label: "Kanagawa", background: "#1f1f28", surface: "#2a2a37", surfaceHigh: "#363646",
-            overlay: "#727169", text: "#dcd7ba", subtext: "#c8c093", accent: "#7e9cd8",
-            accentText: "#1f1f28", danger: "#e46876", warning: "#dca561", success: "#98bb6c"
-        },
-        tokyonight: {
-            label: "Tokyo Night", background: "#1a1b26", surface: "#24283b", surfaceHigh: "#2f334d",
-            overlay: "#565f89", text: "#c0caf5", subtext: "#a9b1d6", accent: "#7aa2f7",
-            accentText: "#1a1b26", danger: "#f7768e", warning: "#e0af68", success: "#9ece6a"
-        },
-        dracula: {
-            label: "Dracula", background: "#282a36", surface: "#2f3241", surfaceHigh: "#3c3f51",
-            overlay: "#6272a4", text: "#f8f8f2", subtext: "#bfbfda", accent: "#bd93f9",
-            accentText: "#282a36", danger: "#ff5555", warning: "#f1fa8c", success: "#50fa7b"
-        },
-        gruvbox: {
-            label: "Gruvbox", background: "#1d2021", surface: "#282828", surfaceHigh: "#3c3836",
-            overlay: "#7c6f64", text: "#ebdbb2", subtext: "#d5c4a1", accent: "#d79921",
-            accentText: "#1d2021", danger: "#fb4934", warning: "#fabd2f", success: "#b8bb26"
-        },
-        catppuccinMocha: {
-            label: "Catppuccin Mocha", background: "#1e1e2e", surface: "#181825", surfaceHigh: "#313244",
-            overlay: "#6c7086", text: "#cdd6f4", subtext: "#a6adc8", accent: "#cba6f7",
-            accentText: "#1e1e2e", danger: "#f38ba8", warning: "#f9e2af", success: "#a6e3a1"
-        },
-        catppuccinLatte: {
-            label: "Catppuccin Latte", background: "#eff1f5", surface: "#e6e9ef", surfaceHigh: "#dce0e8",
-            overlay: "#9ca0b0", text: "#4c4f69", subtext: "#5c5f77", accent: "#8839ef",
-            accentText: "#eff1f5", danger: "#d20f39", warning: "#df8e1d", success: "#40a02b"
-        },
-        gruvboxLight: {
-            label: "Gruvbox Light", background: "#fbf1c7", surface: "#ebdbb2", surfaceHigh: "#d5c4a1",
-            overlay: "#7c6f64", text: "#3c3836", subtext: "#504945", accent: "#af3a03",
-            accentText: "#fbf1c7", danger: "#9d0006", warning: "#b57614", success: "#79740e"
-        },
-        kanagawaLotus: {
-            label: "Kanagawa Lotus", background: "#f2ecbc", surface: "#e5ddb0", surfaceHigh: "#dcd5ac",
-            overlay: "#716e61", text: "#545464", subtext: "#8a8980", accent: "#4d699b",
-            accentText: "#f2ecbc", danger: "#c84053", warning: "#e98a00", success: "#6f894e"
-        },
-        tokyoNightDay: {
-            label: "Tokyo Night Day", background: "#e1e2e7", surface: "#d0d5e3", surfaceHigh: "#c4c8da",
-            overlay: "#b4b5b9", text: "#3760bf", subtext: "#6172b0", accent: "#2e7de9",
-            accentText: "#e1e2e7", danger: "#f52a65", warning: "#8c6c3e", success: "#587539"
-        },
-        rosePineDawn: {
-            label: "Rosé Pine Dawn", background: "#faf4ed", surface: "#fffaf3", surfaceHigh: "#f2e9e1",
-            overlay: "#9893a5", text: "#464261", subtext: "#797593", accent: "#907aa9",
-            accentText: "#faf4ed", danger: "#b4637a", warning: "#ea9d34", success: "#6d8f89"
-        },
-        solarizedLight: {
-            label: "Solarized Light", background: "#fdf6e3", surface: "#eee8d5", surfaceHigh: "#e3dcc6",
-            overlay: "#93a1a1", text: "#657b83", subtext: "#839496", accent: "#268bd2",
-            accentText: "#fdf6e3", danger: "#dc322f", warning: "#b58900", success: "#859900"
-        },
-        nord: {
-            label: "Nord", background: "#2e3440", surface: "#3b4252", surfaceHigh: "#434c5e",
-            overlay: "#4c566a", text: "#eceff4", subtext: "#d8dee9", accent: "#88c0d0",
-            accentText: "#2e3440", danger: "#bf616a", warning: "#ebcb8b", success: "#a3be8c"
-        },
-        everforest: {
-            label: "Everforest", background: "#2b3339", surface: "#323c41", surfaceHigh: "#3a464c",
-            overlay: "#859289", text: "#d3c6aa", subtext: "#9da9a0", accent: "#7fbbb3",
-            accentText: "#2b3339", danger: "#e67e80", warning: "#dbbc7f", success: "#a7c080"
-        },
-        nordLight: {
-            label: "Nord Light", background: "#eceff4", surface: "#e5e9f0", surfaceHigh: "#d8dee9",
-            overlay: "#4c566a", text: "#2e3440", subtext: "#3b4252", accent: "#5e81ac",
-            accentText: "#eceff4", danger: "#bf616a", warning: "#d08770", success: "#a3be8c"
-        },
-        everforestLight: {
-            label: "Everforest Light", background: "#fffbef", surface: "#f8f5e4", surfaceHigh: "#f2efdf",
-            overlay: "#939f91", text: "#5c6a72", subtext: "#829181", accent: "#3a94c5",
-            accentText: "#fffbef", danger: "#f85552", warning: "#dfa000", success: "#8da101"
-        },
-        gruvboxMaterialDark: {
-            label: "Gruvbox Material Dark Hard", background: "#2a2827", surface: "#504945", surfaceHigh: "#5a524c",
-            overlay: "#5a524c", text: "#fbf1c7", subtext: "#ebdbb2", accent: "#a9b665",
-            accentText: "#292828", danger: "#ea6962", warning: "#d3869b", success: "#89b482"
-        },
-        gruvboxMaterialLight: {
-            label: "Gruvbox Material Light Hard", background: "#fbf1c7", surface: "#e0cfa9", surfaceHigh: "#a89984",
-            overlay: "#a89984", text: "#282828", subtext: "#3c3836", accent: "#6c782e",
-            accentText: "#292828", danger: "#c14a4a", warning: "#945e80", success: "#4c7a5d"
-        },
-        synthwaveElectricDark: {
-            label: "Synthwave Electric Dark", background: "#000008", surface: "#151529", surfaceHigh: "#212147",
-            overlay: "#4d80ff", text: "#e6f0ff", subtext: "#cce0ff", accent: "#ff6600",
-            accentText: "#000000", danger: "#ff3366", warning: "#ffcc00", success: "#0080ff"
-        },
-        synthwaveElectricLight: {
-            label: "Synthwave Electric Light", background: "#ffffff", surface: "#f5f5ff", surfaceHigh: "#ebebff",
-            overlay: "#3366cc", text: "#1a1a33", subtext: "#333366", accent: "#cc5200",
-            accentText: "#ffffff", danger: "#cc1a40", warning: "#cc9900", success: "#0066cc"
         }
     })
 
-    readonly property var presetOrder: ["helios", "kanagawa", "tokyonight", "dracula", "gruvbox", "catppuccinMocha", "catppuccinLatte", "gruvboxLight", "kanagawaLotus", "tokyoNightDay", "rosePineDawn", "solarizedLight", "nord", "everforest", "nordLight", "everforestLight", "gruvboxMaterialDark", "gruvboxMaterialLight", "synthwaveElectricDark", "synthwaveElectricLight"]
+    property var presetOrder: ["helios"]
+
+    property FileView themesDataFile: FileView {
+        path: Quickshell.env("HOME") + "/.config/quickshell/helios/data/themes.json"
+        printErrors: false
+        preload: true
+        blockLoading: true
+        onLoaded: {
+            try {
+                const parsed = JSON.parse(themesDataFile.text());
+                if (parsed && parsed.presets && Array.isArray(parsed.order)) {
+                    root.presets = parsed.presets;
+                    root.presetOrder = parsed.order;
+                }
+            } catch (e) {
+                // Missing/corrupt data file — falls back to the built-in helios preset above.
+            }
+            root.restoreFromSettings();
+        }
+    }
 
     // Matugen scheme variants selectable for dynamic (wallpaper-driven)
     // mode. `swatch` is a small set of fixed representative colors (not
