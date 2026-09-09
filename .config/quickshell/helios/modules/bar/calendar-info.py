@@ -73,6 +73,7 @@ def collect_local_events():
     )
 
     events = []
+    successful_sources = 0
     for source in sources:
         try:
             client = ECal.Client.connect_sync(
@@ -84,6 +85,7 @@ def collect_local_events():
             ok, comps = client.get_object_list_sync(sexp, None)
         except Exception:
             continue
+        successful_sources += 1
         for comp in comps:
             # get_dtstart()/get_dtend() return an ICalGLib.Time directly (not
             # wrapped in an ECalComponentDateTime.value) and get_summary()
@@ -109,7 +111,7 @@ def collect_local_events():
                 event["endTime"] = "%02d:%02d" % (te.get_hour(), te.get_minute())
             events.append(event)
 
-    return events
+    return events, not sources or successful_sources > 0
 
 
 def load_subscriptions():
@@ -298,9 +300,10 @@ def collect_subscription_events(subscriptions):
 
 if __name__ == "__main__":
     try:
-        local_events = collect_local_events()
+        local_events, local_fetch_succeeded = collect_local_events()
     except Exception:
         local_events = []
+        local_fetch_succeeded = False
 
     subscription_events, subscription_errors = collect_subscription_events(
         load_subscriptions()
@@ -309,4 +312,8 @@ if __name__ == "__main__":
     all_events = local_events + subscription_events
     all_events.sort(key=lambda e: (e["date"], e["startTime"] or ""))
 
-    print(json.dumps({"events": all_events, "subscriptionErrors": subscription_errors}))
+    print(json.dumps({
+        "events": all_events,
+        "subscriptionErrors": subscription_errors,
+        "fetchSucceeded": local_fetch_succeeded,
+    }))

@@ -9,13 +9,9 @@ import "../../components"
 Column {
     id: root
 
-    // Landscape cells matching actual wallpaper aspect ratio (portrait cells
-    // cropped desktop wallpapers down to an unrecognizable sliver), tightly
-    // packed, bottom-aligned. The current card grows via `scale` anchored to
-    // the shared bottom edge (see delegate below).
-    readonly property int cardWidth: 130
-    readonly property int cardHeight: 78
-    spacing: 12
+    readonly property int cardWidth: Math.floor((width - 24) / 4)
+    readonly property int cardHeight: 72
+    spacing: 10
 
     Component.onCompleted: carousel.forceActiveFocus(Qt.TabFocusReason)
 
@@ -25,14 +21,13 @@ Column {
         onTriggered: carousel.forceActiveFocus(Qt.TabFocusReason)
     }
 
-    // --- Wallpaper carousel ---------------------------------------------
     Row {
         width: parent.width
 
         StyledText {
             id: carouselTitle
-            font.bold: true
-            text: "Choose Wallpaper"
+            font.weight: Font.DemiBold
+            text: "Wallpaper"
         }
 
         Item { width: parent.width - carouselTitle.implicitWidth - carouselCount.implicitWidth; height: 1 }
@@ -42,14 +37,14 @@ Column {
             visible: WallpaperLibrary.images.length > 0
             opacity: 0.6
             font.pixelSize: Config.fontSize - 2
-            text: (carousel.currentIndex + 1) + " / " + WallpaperLibrary.images.length
+            text: (carousel.currentIndex + 1) + " of " + WallpaperLibrary.images.length
         }
     }
 
     Item {
         id: carouselWrap
         width: parent.width
-        height: WallpaperLibrary.images.length > 0 ? 145 : 0
+        height: WallpaperLibrary.images.length > 0 ? root.cardHeight : 0
         clip: true
 
         ListView {
@@ -57,19 +52,16 @@ Column {
             anchors.fill: parent
             orientation: ListView.Horizontal
             model: WallpaperLibrary.images
-            spacing: 2
+            spacing: 8
             clip: true
             boundsBehavior: Flickable.StopAtBounds
             snapMode: ListView.SnapOneItem
-            highlightRangeMode: ListView.StrictlyEnforceRange
-            preferredHighlightBegin: (width - root.cardWidth) / 2
-            preferredHighlightEnd: preferredHighlightBegin + root.cardWidth
             keyNavigationWraps: false
             activeFocusOnTab: true
             focus: true
             Keys.priority: Keys.BeforeItem
-            Keys.onLeftPressed: choose(currentIndex - 1)
-            Keys.onRightPressed: choose(currentIndex + 1)
+            Keys.onLeftPressed: browse(currentIndex - 1)
+            Keys.onRightPressed: browse(currentIndex + 1)
 
             // Not a plain `currentIndex: Math.max(0, ...)` binding — on a
             // fresh shell start this view can be built before WallpaperLibrary.path
@@ -83,9 +75,13 @@ Column {
             // explicitly on every change (not just at creation) survives that.
             function syncToCurrent() {
                 const idx = Math.max(0, WallpaperLibrary.images.indexOf(WallpaperLibrary.path));
-                if (carousel.currentIndex === idx) return;
                 carousel.currentIndex = idx;
-                carousel.positionViewAtIndex(idx, ListView.SnapPosition);
+                // The model loads asynchronously. currentIndex may already be
+                // zero before delegates exist, so always position after layout.
+                Qt.callLater(() => {
+                    if (carousel.count > 0)
+                        carousel.positionViewAtIndex(carousel.currentIndex, ListView.Beginning);
+                });
             }
 
             Component.onCompleted: syncToCurrent()
@@ -96,13 +92,20 @@ Column {
                 function onPathChanged() { carousel.syncToCurrent() }
             }
 
-            function choose(index) {
+            function browse(index) {
                 if (index < 0 || index >= count) return;
                 currentIndex = index;
                 positionViewAtIndex(index, ListView.Center);
-                WallpaperLibrary.setPath(WallpaperLibrary.images[index]);
+                forceActiveFocus(Qt.TabFocusReason);
+            }
+
+            function choose(index) {
+                if (index < 0 || index >= count) return;
+                const selectedPath = WallpaperLibrary.images[index];
+                browse(index);
+                WallpaperLibrary.setPath(selectedPath);
                 Qt.callLater(() => forceActiveFocus(Qt.TabFocusReason));
-                const extension = WallpaperLibrary.images[index].split(".").pop().toLowerCase();
+                const extension = selectedPath.split(".").pop().toLowerCase();
                 if (["mp4", "webm", "mkv", "mov"].includes(extension)) videoFocusRestore.restart();
             }
 
@@ -112,15 +115,13 @@ Column {
                 required property int index
 
                 width: root.cardWidth
-                height: carousel.height
-                z: current ? 2 : 1
-                activeFocusOnTab: true
+                height: root.cardHeight
 
                 readonly property bool selected: WallpaperLibrary.path === modelData
+                readonly property bool browsed: ListView.isCurrentItem
                 readonly property bool isVideoThumb: ["mp4", "webm", "mkv", "mov"].includes(modelData.split(".").pop().toLowerCase())
                 readonly property string videoThumbPath: Quickshell.env("HOME") + "/.cache/helios/wallpaper-thumbs/" + modelData.replace(/[^A-Za-z0-9]/g, "_") + ".jpg"
                 readonly property bool videoThumbReady: !!WallpaperLibrary.readyThumbnails[thumb.videoThumbPath]
-                readonly property bool current: ListView.isCurrentItem
 
                 Component.onCompleted: {
                     if (thumb.isVideoThumb) WallpaperLibrary.requestThumbnail(thumb.modelData, thumb.videoThumbPath);
@@ -128,19 +129,7 @@ Column {
 
                 Item {
                     id: card
-                    anchors.horizontalCenter: parent.horizontalCenter
-                    anchors.bottom: parent.bottom
-                    transformOrigin: Item.Bottom
-                    width: root.cardWidth
-                    height: root.cardHeight
-                    // Flat: every non-current card stays the exact same
-                    // size (uniform shelf), only the current one grows —
-                    // per-distance shrinking left uneven gaps between
-                    // neighbors instead of a tight, even filmstrip.
-                    scale: thumb.current ? 1.3 : 1
-                    z: thumb.current ? 2 : 1
-
-                    Behavior on scale { NumberAnimation { duration: Config.animFast; easing.type: Easing.OutCubic } }
+                    anchors.fill: parent
 
                     readonly property bool showPlaceholder: thumb.isVideoThumb && (!thumb.videoThumbReady || img.status === Image.Error)
 
@@ -159,7 +148,7 @@ Column {
                             fillMode: Image.PreserveAspectCrop
                             asynchronous: true
                             visible: !card.showPlaceholder
-                            sourceSize: Qt.size(card.width * 2, card.height * 2)
+                            sourceSize: Qt.size(root.cardWidth * 2, root.cardHeight * 2)
                         }
 
                         MaterialIcon {
@@ -173,12 +162,12 @@ Column {
 
                     Rectangle {
                         visible: thumb.isVideoThumb && !card.showPlaceholder
-                        anchors.left: parent.left
+                        anchors.right: parent.right
                         anchors.bottom: parent.bottom
-                        anchors.margins: 7
-                        width: 22
-                        height: 22
-                        radius: 11
+                        anchors.margins: 6
+                        width: 20
+                        height: 20
+                        radius: 10
                         color: "black"
                         opacity: 0.6
 
@@ -186,7 +175,7 @@ Column {
                             anchors.centerIn: parent
                             icon: "movie"
                             filled: true
-                            font.pixelSize: 12
+                            font.pixelSize: 11
                             color: "white"
                         }
                     }
@@ -194,19 +183,23 @@ Column {
                     Rectangle {
                         anchors.fill: parent
                         radius: Colors.radiusSmall
-                        color: "transparent"
-                        border.width: thumb.selected ? 1 : 0
+                        color: thumb.browsed && !thumb.selected
+                            ? Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.16)
+                            : "transparent"
+                        border.width: thumb.browsed ? 2 : thumb.selected ? 1 : 0
                         border.color: Colors.accent
+
+                        Behavior on color { ColorAnimation { duration: Config.animFast; easing.type: Easing.OutCubic } }
                     }
 
                     MaterialIcon {
                         visible: thumb.selected
-                        anchors.bottom: parent.bottom
+                        anchors.top: parent.top
                         anchors.right: parent.right
-                        anchors.margins: 5
+                        anchors.margins: 6
                         icon: "check_circle"
                         filled: true
-                        font.pixelSize: 13
+                        font.pixelSize: 16
                         color: Colors.accent
                     }
 
@@ -229,85 +222,45 @@ Column {
                     }
                 }
 
-                // Filename caption for the current card — sits outside
-                // `card` (not a child of it) so it isn't itself scaled up
-                // and blurred by card's transform; position is computed from
-                // card's known base size + scale instead. Card is now
-                // bottom-anchored and grows upward, so the caption sits
-                // above its (moving) top edge rather than below it.
-                Rectangle {
-                    id: caption
-                    visible: thumb.current
-                    anchors.horizontalCenter: parent.horizontalCenter
-                    y: parent.height - card.height * card.scale - height - 6
-                    width: Math.min(root.cardWidth * 2, captionText.implicitWidth + 16)
-                    height: 20
-                    radius: 6
-                    color: "black"
-                    opacity: 0.55
-
-                    StyledText {
-                        id: captionText
-                        anchors.centerIn: parent
-                        width: Math.min(implicitWidth, root.cardWidth * 2 - 16)
-                        elide: Text.ElideMiddle
-                        color: "white"
-                        font.pixelSize: Config.fontSize - 3
-                        text: thumb.modelData.split("/").pop()
-                    }
-                }
-
                 Keys.onReturnPressed: carousel.choose(thumb.index)
                 Keys.onSpacePressed: carousel.choose(thumb.index)
             }
         }
+    }
 
-        // Fades the outermost thumbnails into the panel background instead
-        // of hard-cutting them at the viewport edge — reads as the filmstrip
-        // receding into the distance rather than just being clipped.
-        Rectangle {
-            anchors.left: parent.left
-            anchors.top: parent.top
-            anchors.bottom: parent.bottom
-            width: 28
-            gradient: Gradient {
-                orientation: Gradient.Horizontal
-                GradientStop { position: 0; color: Colors.surface }
-                GradientStop { position: 1; color: Qt.rgba(Colors.surface.r, Colors.surface.g, Colors.surface.b, 0) }
-            }
-        }
-        Rectangle {
-            anchors.right: parent.right
-            anchors.top: parent.top
-            anchors.bottom: parent.bottom
-            width: 28
-            gradient: Gradient {
-                orientation: Gradient.Horizontal
-                GradientStop { position: 0; color: Qt.rgba(Colors.surface.r, Colors.surface.g, Colors.surface.b, 0) }
-                GradientStop { position: 1; color: Colors.surface }
-            }
+    Row {
+        width: parent.width
+        height: WallpaperLibrary.images.length > 0 ? 28 : 0
+        visible: WallpaperLibrary.images.length > 0
+
+        StyledText {
+            anchors.verticalCenter: parent.verticalCenter
+            width: parent.width - previousButton.width - nextButton.width - 12
+            elide: Text.ElideMiddle
+            opacity: 0.75
+            font.weight: Font.Medium
+            font.pixelSize: Config.fontSize - 2
+            text: carousel.currentIndex >= 0 && WallpaperLibrary.images[carousel.currentIndex]
+                ? WallpaperLibrary.images[carousel.currentIndex].split("/").pop()
+                : ""
         }
 
         IconButton {
-            anchors.left: parent.left
-            anchors.leftMargin: 4
+            id: previousButton
             anchors.verticalCenter: parent.verticalCenter
             icon: "chevron_left"
+            bounceOnHover: true
             enabled: carousel.currentIndex > 0
-            opacity: enabled ? 1 : 0.3
-            onClicked: carousel.choose(carousel.currentIndex - 1)
-            onActiveFocusChanged: if (activeFocus) carousel.forceActiveFocus(Qt.TabFocusReason)
+            onClicked: carousel.browse(carousel.currentIndex - 1)
         }
 
         IconButton {
-            anchors.right: parent.right
-            anchors.rightMargin: 4
+            id: nextButton
             anchors.verticalCenter: parent.verticalCenter
             icon: "chevron_right"
+            bounceOnHover: true
             enabled: carousel.currentIndex < carousel.count - 1
-            opacity: enabled ? 1 : 0.3
-            onClicked: carousel.choose(carousel.currentIndex + 1)
-            onActiveFocusChanged: if (activeFocus) carousel.forceActiveFocus(Qt.TabFocusReason)
+            onClicked: carousel.browse(carousel.currentIndex + 1)
         }
     }
 

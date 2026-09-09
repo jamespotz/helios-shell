@@ -21,14 +21,31 @@ import "./modules/polkit"
 
 ShellRoot {
     id: shellRoot
+    property bool startupWallpaperRestored: false
 
-    // Restore services whose state affects always-on shell behavior. Panel-only
-    // services initialize when their panel first opens.
+    function restoreStartupWallpaper() {
+        if (shellRoot.startupWallpaperRestored || !WallpaperLibrary.settingsReady)
+            return;
+        shellRoot.startupWallpaperRestored = true;
+        if (WallpaperLibrary.path)
+            WallpaperPlayback.apply(WallpaperLibrary.path, true);
+    }
+
+    Connections {
+        target: WallpaperLibrary
+        function onSettingsLoaded() { shellRoot.restoreStartupWallpaper() }
+    }
+
+    // Restore always-on state and start slow panel data loads while the shell
+    // is idle. The island then reads the populated singleton caches.
     QtObject {
         Component.onCompleted: {
             Themes.currentLabel();
             NightLight.enabled;    // restores persisted state + spawns wlsunset if needed
             IdleInhibit.enabled;   // restores persisted state + spawns hypridle if needed
+            WallpaperLibrary.images;
+            shellRoot.restoreStartupWallpaper();
+            WifiNetworks.networks;
         }
     }
 

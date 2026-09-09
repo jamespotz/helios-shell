@@ -22,9 +22,11 @@ Rectangle {
     implicitHeight: 44
     radius: Colors.radiusSmall
     opacity: root.enabled ? 1 : 0.4
+    scale: Config.reducedMotion ? 1 : buttonMouse.pressed ? 0.97 : 1
     color: active ? root.tint : (hoverHandler.hovered ? Colors.surfaceHigh : Colors.surface)
 
     Behavior on color { ColorAnimation { duration: Config.animFast; easing.type: Easing.OutCubic } }
+    Behavior on scale { NumberAnimation { duration: Config.reducedMotion ? 0 : Config.animFast; easing.type: Easing.OutCubic } }
 
     Row {
         anchors.centerIn: parent
@@ -67,6 +69,7 @@ Rectangle {
     }
 
     MouseArea {
+        id: buttonMouse
         anchors.fill: parent
         enabled: root.enabled
         cursorShape: Qt.PointingHandCursor

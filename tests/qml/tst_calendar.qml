@@ -78,6 +78,17 @@ ShellRoot {
         root.compare(calendar.state.events, events);
     }
 
+    function test_failedEmptyCacheStaysStale() {
+        root.compare(calendar._cachedRefreshTime({
+            savedAt: 1234,
+            result: { events: [], subscriptionErrors: [], fetchSucceeded: false }
+        }), 0);
+        root.compare(calendar._cachedRefreshTime({
+            savedAt: 1234,
+            result: { events: [], subscriptionErrors: [], fetchSucceeded: true }
+        }), 1234);
+    }
+
     function test_sanitizeSubscriptionTrimsAndValidates() {
         calendar.subscriptions = [];
         root.persistenceRequests = 0;
@@ -104,6 +115,7 @@ ShellRoot {
             root.test_eventsByDateGroupsAndPreservesOrder();
             root.test_eventsByDateHandlesEmptyInput();
             root.test_cachedEventsPreserveLinks();
+            root.test_failedEmptyCacheStaysStale();
             root.test_sanitizeSubscriptionTrimsAndValidates();
             root.test_generateSubscriptionIdAvoidsCollisionAndIsNonEmpty();
             root.pass();

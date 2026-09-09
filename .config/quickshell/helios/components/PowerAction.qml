@@ -21,8 +21,10 @@ PanelBackground {
 
     width: 110
     height: 110
+    scale: Config.reducedMotion ? 1 : actionMouse.pressed ? 0.96 : 1
     color: armed ? Colors.danger : Colors.surface
     Behavior on color { ColorAnimation { duration: Config.animFast } }
+    Behavior on scale { NumberAnimation { duration: Config.reducedMotion ? 0 : Config.animFast; easing.type: Easing.OutCubic } }
 
     Column {
         anchors.centerIn: parent
@@ -61,6 +63,7 @@ PanelBackground {
     HoverHandler { id: actionHover }
 
     MouseArea {
+        id: actionMouse
         anchors.fill: parent
         cursorShape: Qt.PointingHandCursor
         onClicked: root.activate()

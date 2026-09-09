@@ -70,6 +70,13 @@ QtObject {
         return grouped;
     }
 
+    function _cachedRefreshTime(cached) {
+        if (!cached || !cached.result || !Array.isArray(cached.result.events)) return 0;
+        const result = cached.result;
+        if (result.events.length === 0 && result.fetchSucceeded !== true) return 0;
+        return Number(cached.savedAt) || 0;
+    }
+
     function _beginRefresh() { root.refreshing = true; }
     function _cancelRefresh() { root.refreshing = false; }
     function _completeRefresh(result) {
@@ -171,6 +178,10 @@ QtObject {
             onStreamFinished: {
                 try {
                     const parsed = JSON.parse(text);
+                    if (parsed.fetchSucceeded === false && parsed.events.length === 0) {
+                        root._cancelRefresh();
+                        return;
+                    }
                     root._completeRefresh(parsed);
                     root.lastRefreshAt = Date.now();
                     eventsFile.setText(JSON.stringify({ savedAt: root.lastRefreshAt, result: parsed }));
@@ -214,7 +225,7 @@ QtObject {
             try {
                 const cached = JSON.parse(eventsFile.text());
                 if (cached && cached.result && Array.isArray(cached.result.events)) {
-                    root.lastRefreshAt = Number(cached.savedAt) || 0;
+                    root.lastRefreshAt = root._cachedRefreshTime(cached);
                     root._completeRefresh(cached.result);
                 }
             } catch (e) {

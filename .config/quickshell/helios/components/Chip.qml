@@ -27,9 +27,11 @@ Rectangle {
     implicitHeight: 28
     radius: height / 2
     opacity: root.enabled ? 1 : 0.4
+    scale: Config.reducedMotion ? 1 : chipMouse.pressed ? 0.94 : 1
     color: active ? root.tint : (hoverHandler.hovered ? Colors.surfaceHigh : root.inactiveTint)
 
     Behavior on color { ColorAnimation { duration: Config.animFast; easing.type: Easing.OutCubic } }
+    Behavior on scale { NumberAnimation { duration: Config.reducedMotion ? 0 : Config.animFast; easing.type: Easing.OutCubic } }
 
     Row {
         id: content
@@ -69,6 +71,7 @@ Rectangle {
     }
 
     MouseArea {
+        id: chipMouse
         anchors.fill: parent
         enabled: root.enabled
         cursorShape: Qt.PointingHandCursor

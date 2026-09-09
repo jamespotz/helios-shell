@@ -11,18 +11,13 @@ Item {
     property string draftFolder: WallpaperLibrary.folderPath
     property bool folderEditorOpen: false
 
-    // Loader recreates this tab each time it's opened, so pick up any
-    // files added/removed on disk since last time — but only if a folder
-    // is actually configured, no point scanning nothing.
-    Component.onCompleted: if (WallpaperLibrary.folderPath) WallpaperLibrary.scanFolder()
-
-    implicitWidth: 430
+    implicitWidth: 440
     implicitHeight: col.implicitHeight
 
     Column {
         id: col
         width: parent.width
-        spacing: 12
+        spacing: 16
 
         WallpaperCarousel {
             width: parent.width
@@ -31,15 +26,15 @@ Item {
         // --- Folder (collapsed disclosure row) --------------------------------
         HoverRow {
             width: parent.width
-            height: 36
+            height: 46
             highlighted: root.folderEditorOpen
             onClicked: root.folderEditorOpen = !root.folderEditorOpen
 
             Row {
                 anchors.left: parent.left
-                anchors.leftMargin: 10
+                anchors.leftMargin: 8
                 anchors.right: parent.right
-                anchors.rightMargin: 10
+                anchors.rightMargin: 8
                 anchors.verticalCenter: parent.verticalCenter
                 spacing: 8
 
@@ -136,7 +131,7 @@ Item {
         // --- Transition ----------------------------------------------------
         StyledText {
             width: parent.width
-            font.bold: true
+            font.weight: Font.DemiBold
             text: "Transition"
         }
 

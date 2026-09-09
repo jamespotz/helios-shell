@@ -31,9 +31,11 @@ Rectangle {
                 width: parent.width / root.model.length
                 height: parent.height
                 radius: height / 2
+                scale: Config.reducedMotion ? 1 : segmentMouse.pressed ? 0.94 : 1
                 color: segment.active ? Colors.accent : (segHover.hovered ? Colors.surface : "transparent")
 
                 Behavior on color { ColorAnimation { duration: Config.animFast; easing.type: Easing.OutCubic } }
+                Behavior on scale { NumberAnimation { duration: Config.reducedMotion ? 0 : Config.animFast; easing.type: Easing.OutCubic } }
 
                 Row {
                     anchors.centerIn: parent
@@ -66,6 +68,7 @@ Rectangle {
                 HoverHandler { id: segHover }
 
                 MouseArea {
+                    id: segmentMouse
                     anchors.fill: parent
                     cursorShape: Qt.PointingHandCursor
                     onClicked: root.activated(segment.modelData.value)

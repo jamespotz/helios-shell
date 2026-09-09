@@ -9,9 +9,6 @@ Item {
     readonly property var devices: root.bluetooth.devices
     readonly property var connectedDevice: root.devices.find(d => d.connected) || null
     readonly property var audioProfile: root.connectedDevice ? root.connectedDevice.audio : null
-    readonly property string audioProfileLabel: root.audioProfile
-        ? [root.audioProfile.codec, root.audioProfile.profile].filter(part => !!part).join(" · ")
-        : "—"
     // Trusted, not just Paired: some devices (confirmed for the Soundcore
     // R60i NC) never persist a real bond — BlueZ reports Paired: false the
     // moment they disconnect, even though Trusted (the actual "this is my
@@ -34,16 +31,23 @@ Item {
         return dev.connected ? "bluetooth_connected" : "bluetooth";
     }
 
-    // "orbit" is the focused single-device view from the mockup; "list"
-    // is the old flat device list, still useful with several paired devices.
-    property string viewMode: root.connectedDevice ? "orbit" : "list"
+    function typeLabel(dev) {
+        const raw = (dev.icon || "").toLowerCase();
+        if (raw.includes("headset") || raw.includes("headphone")) return "Audio device";
+        if (raw.includes("phone")) return "Phone";
+        if (raw.includes("keyboard")) return "Keyboard";
+        if (raw.includes("mouse")) return "Mouse";
+        if (raw.includes("audio") || raw.includes("speaker")) return "Audio device";
+        if (raw.includes("watch")) return "Wearable";
+        return dev.name ? "Available" : "Unnamed device";
+    }
 
     // Which device (by address) has its auto-connect switch expanded open in
-    // list mode — pressing a device's row toggles this rather than showing
+    // the list. Pressing a device's row toggles this rather than showing
     // it always, to keep the list compact.
     property string expandedDevice: ""
 
-    implicitWidth: root.viewMode === "orbit" ? 720 : 320
+    implicitWidth: 320
     implicitHeight: col.implicitHeight
 
     Component.onCompleted: Bluetooth.setActive(true)
@@ -56,20 +60,26 @@ Item {
 
         Item {
             width: parent.width
-            height: 24
+            height: 48
 
-            MaterialIcon {
+            Column {
                 anchors.left: parent.left
                 anchors.verticalCenter: parent.verticalCenter
-                icon: root.bluetooth.powered ? "bluetooth" : "bluetooth_disabled"
+                spacing: 2
+
+                StyledText {
+                    text: "Bluetooth"
+                    font.weight: Font.DemiBold
+                    font.pixelSize: Config.fontSize + 2
+                }
+                StyledText {
+                    text: !root.bluetooth.available ? "No adapter"
+                        : (root.bluetooth.powered ? (root.bluetooth.scanning ? "Scanning…" : "On") : "Off")
+                    opacity: 0.6
+                    font.pixelSize: Config.fontSize - 2
+                }
             }
-            StyledText {
-                anchors.left: parent.left
-                anchors.leftMargin: 26
-                anchors.verticalCenter: parent.verticalCenter
-                text: !root.bluetooth.available ? "No adapter"
-                    : (root.bluetooth.powered ? (root.bluetooth.scanning ? "Scanning…" : "On") : "Off")
-            }
+
             Toggle {
                 anchors.right: parent.right
                 anchors.verticalCenter: parent.verticalCenter
@@ -88,71 +98,30 @@ Item {
             width: parent.width
         }
 
-        // --- Orbit view: focused view of the connected device ------------------
-        OrbitPanel {
-            id: orbitView
-            visible: root.viewMode === "orbit" && root.bluetooth.powered
-            active: root.viewMode === "orbit" && root.bluetooth.powered
-
-            centerIcon: "headset"
-            centerTitle: root.connectedDevice ? root.connectedDevice.name : "No device"
-            centerSubtitle: root.connectedDevice ? "Connected" : "Not connected"
-
-            scanLabel: root.bluetooth.scanning ? "Scanning…" : "Scan Devices"
-            onScanClicked: Bluetooth.setScanning(!root.bluetooth.scanning)
-            onSwitchViewClicked: root.viewMode = "list"
-
-            infoCards: [
-                {
-                    angle: 180, width: 180, icon: "dns", monospace: true,
-                    value: root.connectedDevice ? root.connectedDevice.address : "—",
-                    label: "MAC Address"
-                },
-                {
-                    angle: 0, width: 180, icon: "battery_full", monospace: false,
-                    value: root.connectedDevice && root.connectedDevice.batteryAvailable
-                        ? Math.round(root.connectedDevice.battery * 100) + "%" : "—",
-                    label: "Battery"
-                },
-                {
-                    angle: 90, width: 190, icon: "graphic_eq", monospace: false,
-                    value: root.audioProfileLabel,
-                    label: "Audio Profile"
-                }
-            ]
-        }
-
         Item {
             width: parent.width
             height: profileSwitch.implicitHeight
-            visible: root.viewMode === "orbit" && root.bluetooth.powered && !!root.audioProfile
+            visible: root.bluetooth.powered && !!root.audioProfile
 
             SegmentedControl {
                 id: profileSwitch
-                width: 220
-                anchors.horizontalCenter: parent.horizontalCenter
+                width: 180
+                anchors.left: parent.left
                 model: [
-                    { value: "music", label: "Music", icon: "music_note" },
-                    { value: "call", label: "Call", icon: "call" }
+                    { value: "music", label: "Audio", icon: "" },
+                    { value: "call", label: "Calls", icon: "" }
                 ]
                 currentValue: root.audioProfile ? root.audioProfile.category : null
                 onActivated: value => Bluetooth.setAudioProfile(root.connectedDevice.id, value)
             }
         }
 
-        StyledText {
-            visible: root.viewMode === "orbit" && root.bluetooth.powered && root.devices.length === 0
-            text: "No devices found"
-            opacity: 0.6
-            font.pixelSize: Config.fontSize - 2
-        }
-
-        // --- List view: Scan/Refresh + Pairing/Discoverable + My Devices / Nearby --
+        // Scan/Refresh + Pairing/Discoverable + My Devices / Nearby
         // Flat text links, not cards — icon + accent-colored label, no
         // background at rest or on hover (just a slight dim), left-aligned.
         Row {
             width: parent.width
-            visible: root.viewMode === "list" && root.bluetooth.powered
+            visible: root.bluetooth.powered
             spacing: 20
 
             Item {
@@ -214,7 +183,7 @@ Item {
 
         Column {
             width: parent.width
-            visible: root.viewMode === "list" && root.bluetooth.powered && myDevices.length > 0
+            visible: root.bluetooth.powered && myDevices.length > 0
             spacing: 4
 
             StyledText { text: "MY DEVICES"; opacity: 0.5; font.bold: true; font.pixelSize: Config.fontSize - 3 }
@@ -244,7 +213,7 @@ Item {
                         Row {
                             anchors.left: parent.left
                             anchors.leftMargin: 8
-                            anchors.right: infoBtn.left
+                            anchors.right: !myRow.modelData.connected && !myRow.expanded ? connectButton.left : infoBtn.left
                             anchors.rightMargin: 8
                             anchors.verticalCenter: parent.verticalCenter
                             spacing: 10
@@ -256,6 +225,14 @@ Item {
                                 StyledText { text: myRow.modelData.name; font.weight: Font.DemiBold }
                                 Row {
                                     spacing: 4
+                                    Rectangle {
+                                        visible: myRow.modelData.connected
+                                        width: 7
+                                        height: 7
+                                        radius: 4
+                                        color: Colors.success
+                                        anchors.verticalCenter: parent.verticalCenter
+                                    }
                                     StyledText {
                                         text: myRow.modelData.connected ? "Connected" : "Not Connected"
                                         opacity: 0.6
@@ -285,6 +262,18 @@ Item {
                                     }
                                 }
                             }
+                        }
+
+                        PrimaryButton {
+                            id: connectButton
+                            visible: !myRow.modelData.connected && !myRow.expanded
+                            anchors.right: infoBtn.left
+                            anchors.rightMargin: 6
+                            anchors.verticalCenter: parent.verticalCenter
+                            width: 76
+                            height: 28
+                            text: "Connect"
+                            onClicked: Bluetooth.connect(myRow.modelData.id)
                         }
 
                         // Slides over the name/status text when expanded — matches
@@ -340,7 +329,7 @@ Item {
 
         Column {
             width: parent.width
-            visible: root.viewMode === "list" && root.bluetooth.powered && nearbyDevices.length > 0
+            visible: root.bluetooth.powered && nearbyDevices.length > 0
             spacing: 4
 
             StyledText { text: "NEARBY"; opacity: 0.5; font.bold: true; font.pixelSize: Config.fontSize - 3 }
@@ -362,11 +351,23 @@ Item {
                         spacing: 10
 
                         MaterialIcon { icon: root.iconFor(nearRow.modelData); font.pixelSize: 18; anchors.verticalCenter: parent.verticalCenter }
-                        StyledText {
+                        Column {
                             anchors.verticalCenter: parent.verticalCenter
-                            elide: Text.ElideRight
                             width: parent.width - 28
-                            text: nearRow.modelData.name || nearRow.modelData.address
+
+                            StyledText {
+                                width: parent.width
+                                elide: Text.ElideRight
+                                text: nearRow.modelData.name || nearRow.modelData.address
+                                font.weight: Font.DemiBold
+                            }
+                            StyledText {
+                                width: parent.width
+                                elide: Text.ElideRight
+                                text: root.typeLabel(nearRow.modelData)
+                                opacity: 0.6
+                                font.pixelSize: Config.fontSize - 3
+                            }
                         }
                     }
 
@@ -387,33 +388,10 @@ Item {
         }
 
         StyledText {
-            visible: root.viewMode === "list" && root.bluetooth.powered && root.devices.length === 0
+            visible: root.bluetooth.powered && root.devices.length === 0
             text: "No devices found"
             opacity: 0.6
             font.pixelSize: Config.fontSize - 2
-        }
-
-        Item {
-            width: switchRow.implicitWidth
-            height: switchRow.implicitHeight
-            visible: root.viewMode === "list" && root.bluetooth.powered && !!root.connectedDevice
-
-            Row {
-                id: switchRow
-                spacing: 6
-                opacity: orbitLinkHover.containsMouse ? 1 : 0.7
-                MaterialIcon { icon: "blur_on"; font.pixelSize: 14 }
-                StyledText { text: "Switch to orbit view"; font.pixelSize: Config.fontSize - 2 }
-            }
-
-            MouseArea {
-                id: orbitLinkHover
-                anchors.fill: parent
-                anchors.margins: -6
-                hoverEnabled: true
-                cursorShape: Qt.PointingHandCursor
-                onClicked: root.viewMode = "orbit"
-            }
         }
     }
 }

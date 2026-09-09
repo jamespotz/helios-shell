@@ -16,8 +16,10 @@ Rectangle {
     radius: Colors.radiusSmall
     color: highlighted ? Colors.surfaceHigh : "transparent"
     opacity: root.enabled ? 1 : 0.4
+    scale: Config.reducedMotion ? 1 : rowMouse.pressed ? 0.985 : 1
 
     Behavior on color { ColorAnimation { duration: Config.animFast; easing.type: Easing.OutCubic } }
+    Behavior on scale { NumberAnimation { duration: Config.reducedMotion ? 0 : Config.animFast; easing.type: Easing.OutCubic } }
 
     // Hover overlay — subtle, layered on top of highlight state
     Rectangle {
@@ -45,6 +47,7 @@ Rectangle {
     }
 
     MouseArea {
+        id: rowMouse
         anchors.fill: parent
         enabled: root.enabled
         cursorShape: Qt.PointingHandCursor

@@ -209,8 +209,10 @@ QtObject {
 
     property Process addNetworkProc: Process { onExited: root.refreshNetworks() }
 
-    // First-ever load only — after that, WifiTab just reads the cached
-    // state above instead of re-scanning every time it's opened. The scan
-    // button (or any connect/forget/add action) refreshes it explicitly.
-    Component.onCompleted: refreshNetworks()
+    // First-ever load only. Start the real scan at shell startup so opening
+    // WifiTab only reads this cache. Manual scans and network actions refresh it.
+    Component.onCompleted: {
+        if (Networking.wifiEnabled) root.scan();
+        else root.refreshNetworks();
+    }
 }

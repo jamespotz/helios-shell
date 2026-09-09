@@ -73,7 +73,14 @@ QtObject {
 
     property Process daemonKill: Process { command: ["awww", "kill"] }
     property Process videoPlayer: Process {}
-    property Process daemon: Process { command: ["awww-daemon"]; running: true }
+    // Keep wallpaper daemon outside Quickshell's process tree. Restarting
+    // Quickshell must not tear down active desktop wallpaper.
+    property Process daemon: Process {
+        command: [
+            "systemd-run", "--user", "--collect", "--quiet",
+            "--unit=helios-awww-daemon", "awww-daemon"
+        ]
+    }
 
     property Timer respawnTimer: Timer {
         property int operationId: 0

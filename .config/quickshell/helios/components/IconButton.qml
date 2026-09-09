@@ -10,6 +10,7 @@ Rectangle {
     property string icon: ""
     property int iconSize: 16
     property bool active: false
+    property bool bounceOnHover: false
     property color iconColor: Colors.text
 
     signal clicked()
@@ -18,11 +19,18 @@ Rectangle {
     implicitHeight: 30
     radius: height / 2
     opacity: root.enabled ? 1 : 0.4
+    scale: Config.reducedMotion ? 1
+        : mouse.pressed ? 0.9
+        : root.bounceOnHover && mouse.containsMouse ? 1.12 : 1
     color: active ? Colors.accent
         : mouse.containsMouse ? Qt.rgba(Colors.overlay.r, Colors.overlay.g, Colors.overlay.b, 0.2)
         : "transparent"
 
     Behavior on color { ColorAnimation { duration: Config.animFast; easing.type: Easing.OutCubic } }
+    Behavior on scale {
+        enabled: !Config.reducedMotion
+        SpringAnimation { spring: 7; damping: 0.35; epsilon: 0.002 }
+    }
 
     MaterialIcon {
         anchors.centerIn: parent

@@ -16,11 +16,13 @@ Rectangle {
     implicitHeight: 24
     radius: height / 2
     opacity: root.enabled ? 1 : 0.4
+    scale: Config.reducedMotion ? 1 : toggleMouse.pressed ? 0.92 : 1
     color: checked ? Colors.success : Colors.surfaceHigh
     border.width: hoverHandler.hovered ? 2 : 0
     border.color: Colors.accent
 
     Behavior on color { ColorAnimation { duration: Config.animMedium; easing.type: Easing.OutCubic } }
+    Behavior on scale { NumberAnimation { duration: Config.reducedMotion ? 0 : Config.animFast; easing.type: Easing.OutCubic } }
 
     // Knob — pure white regardless of theme, matching Apple's switch design
     Rectangle {
@@ -51,6 +53,7 @@ Rectangle {
     }
 
     MouseArea {
+        id: toggleMouse
         anchors.fill: parent
         enabled: root.enabled
         cursorShape: Qt.PointingHandCursor
