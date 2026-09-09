@@ -40,6 +40,6 @@ Item {
     MouseArea {
         anchors.fill: parent
         cursorShape: Qt.PointingHandCursor
-        onClicked: Bridge.toggleIsland(root.targetScreen.name, "clipboard")
+        onClicked: IslandNavigation.toggle(root.targetScreen.name, "clipboard")
     }
 }

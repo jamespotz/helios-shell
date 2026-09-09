@@ -112,9 +112,9 @@ Item {
                     // region — the portal picker and gsr itself shouldn't have
                     // to fight it either) releases that grab before capture
                     // starts.
-                    const screen = Bridge.islandScreen;
+                    const screen = IslandNavigation.screen;
                     const startingNew = !ScreenRecorder.recording;
-                    if (startingNew) Bridge.closeIsland();
+                    if (startingNew) IslandNavigation.close();
                     ScreenRecorder.toggle(screen);
                 }
             }

@@ -118,24 +118,27 @@ Item {
             id: searchField
             width: parent.width
             placeholder: "Filter shortcuts…"
-            onEscapePressed: Bridge.closeIsland()
+            onEscapePressed: IslandNavigation.close()
         }
 
         // Bind list
-        Flickable {
-            id: flick
+        Item {
             width: parent.width
             height: root.listHeight
-            clip: true
-            contentWidth: width
-            contentHeight: list.implicitHeight
-            boundsBehavior: Flickable.StopAtBounds
-            flickableDirection: Flickable.VerticalFlick
 
-            Column {
-                id: list
-                width: flick.width
-                spacing: 4
+            Flickable {
+                id: flick
+                anchors.fill: parent
+                clip: true
+                contentWidth: width
+                contentHeight: list.implicitHeight
+                boundsBehavior: Flickable.StopAtBounds
+                flickableDirection: Flickable.VerticalFlick
+
+                Column {
+                    id: list
+                    width: flick.width
+                    spacing: 4
 
                 Repeater {
                     model: root.filtered
@@ -221,6 +224,7 @@ Item {
                         MaterialIcon { icon: "search_off"; font.pixelSize: 28; color: Colors.overlay; anchors.horizontalCenter: parent.horizontalCenter }
                         StyledText { text: "No matching shortcuts"; color: Colors.subtext; anchors.horizontalCenter: parent.horizontalCenter }
                     }
+                }
                 }
             }
 

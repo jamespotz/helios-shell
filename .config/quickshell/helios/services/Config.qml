@@ -122,8 +122,17 @@ QtObject {
     readonly property string timeFormat: root.use24HourClock ? "HH:mm"
         : root.clockAmPmUppercase ? "h:mm AP" : "h:mm ap"
 
+    // Settings window respects this for its open/close and page-switch
+    // transitions — user-tunable from Settings > Appearance.
+    readonly property bool reducedMotion: settingsAdapter.reducedMotion
+
+    function setReducedMotion(value) {
+        settingsAdapter.reducedMotion = value;
+        root.settingsFile.writeAdapter();
+    }
+
     // Transition awww plays when the wallpaper changes (its own
-    // --transition-type values — see services/Wallpaper.qml).
+    // --transition-type values — see WallpaperPlayback.qml.
     readonly property string wallpaperTransitionStyle: settingsAdapter.wallpaperTransitionStyle
     readonly property var wallpaperTransitionStyles: ["simple", "center", "outer", "left", "right", "top", "bottom", "any", "random"]
 
@@ -164,6 +173,8 @@ QtObject {
 
             property bool use24HourClock: false
             property bool clockAmPmUppercase: true
+
+            property bool reducedMotion: false
         }
     }
 }

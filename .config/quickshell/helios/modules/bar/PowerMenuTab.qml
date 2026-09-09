@@ -19,7 +19,7 @@ Item {
         PowerAction {
             icon: "lock"
             label: "Lock"
-            onActivated: { Bridge.lock(); Bridge.closeIsland(); }
+            onActivated: { Bridge.lock(); IslandNavigation.close(); }
         }
         PowerAction {
             icon: "logout"
@@ -32,12 +32,12 @@ Item {
             // evaluates it as Lua — a bare dispatcher name like "exit" isn't
             // valid Lua and fails silently. binds.lua already uses the
             // working form for the same dispatcher: hl.dsp.exit().
-            onActivated: { Hyprland.dispatch("hl.dsp.exit()"); Bridge.closeIsland(); }
+            onActivated: { Hyprland.dispatch("hl.dsp.exit()"); IslandNavigation.close(); }
         }
         PowerAction {
             icon: "dark_mode"
             label: "Suspend"
-            onActivated: { Quickshell.execDetached(["systemctl", "suspend"]); Bridge.closeIsland(); }
+            onActivated: { Quickshell.execDetached(["systemctl", "suspend"]); IslandNavigation.close(); }
         }
         PowerAction {
             icon: "restart_alt"
@@ -45,7 +45,7 @@ Item {
             destructive: true
             armed: root.pendingAction === label
             onArmRequested: root.pendingAction = label
-            onActivated: { Quickshell.execDetached(["systemctl", "reboot"]); Bridge.closeIsland(); }
+            onActivated: { Quickshell.execDetached(["systemctl", "reboot"]); IslandNavigation.close(); }
         }
         PowerAction {
             icon: "power_settings_new"
@@ -53,7 +53,7 @@ Item {
             destructive: true
             armed: root.pendingAction === label
             onArmRequested: root.pendingAction = label
-            onActivated: { Quickshell.execDetached(["systemctl", "poweroff"]); Bridge.closeIsland(); }
+            onActivated: { Quickshell.execDetached(["systemctl", "poweroff"]); IslandNavigation.close(); }
         }
     }
 }

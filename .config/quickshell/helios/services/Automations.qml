@@ -66,7 +66,7 @@ QtObject {
         root._prevHeadphoneIds = root.connectedHeadphoneIds;
         if (added.length === 0 || !root.headphonesRule) return;
         const screen = Hyprland.focusedMonitor ? Hyprland.focusedMonitor.name : (Quickshell.screens.length > 0 ? Quickshell.screens[0].name : "");
-        if (screen) Bridge.toggleIsland(screen, "media");
+        if (screen) IslandNavigation.toggle(screen, "media");
     }
 
     // ─── Rule: external monitor connects → restore its last layout ───────

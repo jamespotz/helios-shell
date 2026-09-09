@@ -86,7 +86,7 @@ Item {
 
                     width: clipList.width
                     height: 44
-                    onClicked: { Clipboard.copy(row.modelData.line); Bridge.closeIsland(); }
+                    onClicked: { Clipboard.copy(row.modelData.line); IslandNavigation.close(); }
 
                     Process {
                         id: thumbDecoder

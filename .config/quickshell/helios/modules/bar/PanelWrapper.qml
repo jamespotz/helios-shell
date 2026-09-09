@@ -18,8 +18,8 @@ Item {
     // for. To make a specific tab render shorter (and scrollable) without
     // touching its real content height, cap its effective viewport height
     // here instead, per tab.
-    readonly property var _tabMaxHeight: ({ "island": 360 })
-    readonly property int _effectiveMaxHeight: root._tabMaxHeight[Bridge.islandTab] || root.maxContentHeight
+    readonly property int _effectiveMaxHeight: IslandNavigation.current && IslandNavigation.current.maxHeight > 0
+        ? IslandNavigation.current.maxHeight : root.maxContentHeight
 
     implicitWidth: pane.width
     implicitHeight: tabs.height + pane.spacing + Math.min(panelLoader.implicitHeight, root._effectiveMaxHeight)
@@ -41,7 +41,7 @@ Item {
             StyledText {
                 anchors.left: parent.left
                 anchors.verticalCenter: parent.verticalCenter
-                text: Bridge.islandTab
+                text: IslandNavigation.current ? IslandNavigation.current.label : ""
                 opacity: 0.6
                 font.pixelSize: Config.fontSize - 1
             }
@@ -55,7 +55,7 @@ Item {
                 icon: "close"
                 iconSize: 14
                 iconColor: Colors.subtext
-                onClicked: Bridge.closeIsland()
+                onClicked: IslandNavigation.close()
             }
         }
 
@@ -77,31 +77,7 @@ Item {
                 Loader {
                     id: panelLoader
                     width: flick.width
-                    sourceComponent: Bridge.islandTab === "mixer" ? mixerTab
-                        : Bridge.islandTab === "bluetooth" ? bluetoothTab
-                        : Bridge.islandTab === "wifi" ? wifiTab
-                        : Bridge.islandTab === "focus" ? focusTab
-                        : Bridge.islandTab === "privacy" ? privacyTab
-                        : Bridge.islandTab === "automation" ? automationTab
-                        : Bridge.islandTab === "media" ? mediaTab
-                        : Bridge.islandTab === "clipboard" ? clipboardTab
-                        : Bridge.islandTab === "recorder" ? recorderTab
-                        : Bridge.islandTab === "screenshot" ? screenshotTab
-                        : Bridge.islandTab === "weather" ? weatherTab
-                        : Bridge.islandTab === "calendar" ? calendarTab
-                        : Bridge.islandTab === "system" ? systemTab
-                        : Bridge.islandTab === "notifications" ? notificationsTab
-                        : Bridge.islandTab === "nightlight" ? nightlightTab
-                        : Bridge.islandTab === "display" ? displayTab
-                        : Bridge.islandTab === "idlelock" ? idleTab
-                        : Bridge.islandTab === "wallpaper" ? wallpaperTab
-                        : Bridge.islandTab === "theme" ? themeTab
-                        : Bridge.islandTab === "island" ? islandTab
-                        : Bridge.islandTab === "power" ? powerTab
-                        : Bridge.islandTab === "powermenu" ? powerMenuTab
-                        : Bridge.islandTab === "keybinds" ? keybindsTab
-                        : Bridge.islandTab === "launcher" ? launcherTab
-                        : volumeTab
+                    source: IslandNavigation.current ? IslandNavigation.current.source : ""
                 }
             }
 
@@ -109,29 +85,4 @@ Item {
         }
     }
 
-    Component { id: volumeTab; VolumeTab {} }
-    Component { id: mixerTab; AudioMixerTab {} }
-    Component { id: bluetoothTab; BluetoothTab {} }
-    Component { id: wifiTab; WifiTab {} }
-    Component { id: focusTab; FocusTab {} }
-    Component { id: privacyTab; PrivacyTab {} }
-    Component { id: automationTab; AutomationTab {} }
-    Component { id: mediaTab; MediaCard {} }
-    Component { id: clipboardTab; ClipboardTab {} }
-    Component { id: recorderTab; ScreenRecorderTab {} }
-    Component { id: screenshotTab; ScreenshotTab {} }
-    Component { id: weatherTab; WeatherPanel {} }
-    Component { id: calendarTab; CalendarTab {} }
-    Component { id: systemTab; SystemMonitorTab {} }
-    Component { id: notificationsTab; NotificationHistoryTab {} }
-    Component { id: nightlightTab; NightLightTab {} }
-    Component { id: displayTab; DisplayTab {} }
-    Component { id: idleTab; IdleTab {} }
-    Component { id: wallpaperTab; WallpaperSettings {} }
-    Component { id: themeTab; ThemeSettings {} }
-    Component { id: islandTab; IslandSettings {} }
-    Component { id: powerTab; PowerTab {} }
-    Component { id: powerMenuTab; PowerMenuTab {} }
-    Component { id: keybindsTab; KeybindsTab {} }
-    Component { id: launcherTab; LauncherTab {} }
 }

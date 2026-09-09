@@ -32,10 +32,11 @@ ShellRoot {
 
     property int persistenceRequests: 0
     property int refreshRequests: 0
-    CalendarCore {
-        id: calendar
-        onPersistenceRequested: root.persistenceRequests++
-        onRefreshRequested: root.refreshRequests++
+    readonly property var calendar: Calendar
+    Connections {
+        target: Calendar
+        function onPersistenceRequested() { root.persistenceRequests++; }
+        function onRefreshRequested() { root.refreshRequests++; }
     }
 
     function test_eventsByDateGroupsAndPreservesOrder() {
@@ -44,7 +45,7 @@ ShellRoot {
             { summary: "Dentist", date: "2026-09-02", allDay: false, startTime: "14:00", endTime: "15:00", source: "Personal" },
             { summary: "Team sync", date: "2026-09-01", allDay: false, startTime: "13:00", endTime: "13:30", source: "Personal" }
         ];
-        calendar.completeRefresh({ events: events, subscriptionErrors: [] });
+        calendar._completeRefresh({ events: events, subscriptionErrors: [] });
         const grouped = calendar.state.eventsByDate;
         root.compare(Object.keys(grouped).sort(), ["2026-09-01", "2026-09-02"]);
         root.compare(grouped["2026-09-01"].length, 2);
@@ -54,7 +55,7 @@ ShellRoot {
     }
 
     function test_eventsByDateHandlesEmptyInput() {
-        calendar.completeRefresh({ events: [], subscriptionErrors: [] });
+        calendar._completeRefresh({ events: [], subscriptionErrors: [] });
         root.compare(calendar.state.eventsByDate, {});
     }
 
@@ -68,10 +69,10 @@ ShellRoot {
             source: "Work",
             links: ["https://meet.example.com/team"]
         }];
-        calendar.completeRefresh({ events: events, subscriptionErrors: [] });
+        calendar._completeRefresh({ events: events, subscriptionErrors: [] });
         root.compare(calendar.state.eventsByDate["2026-09-03"][0].links, events[0].links);
-        calendar.beginRefresh();
-        calendar.cancelRefresh();
+        calendar._beginRefresh();
+        calendar._cancelRefresh();
         root.verify(calendar.state.ready);
         root.verify(!calendar.state.refreshing);
         root.compare(calendar.state.events, events);

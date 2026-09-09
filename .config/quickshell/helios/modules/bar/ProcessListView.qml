@@ -14,16 +14,6 @@ Item {
     readonly property string currentUser: Quickshell.env("USER")
     readonly property int actionsWidth: 108
 
-    function isProtected(p) {
-        const name = p.name.toLowerCase();
-        return p.pid === 1 || name.indexOf("quickshell") !== -1 || name.indexOf("hyprland") !== -1;
-    }
-    function matchesMode(p) {
-        if (filterMode === "apps") return p.user === currentUser && p.cmdline.charAt(0) !== "[";
-        if (filterMode === "system") return p.user === "root";
-        if (filterMode === "background") return p.cpu_percent < 0.1;
-        return true;
-    }
     function toggleSort(column) {
         if (sortColumn === column) sortDir = -sortDir;
         else {
@@ -36,21 +26,8 @@ Item {
         return mib >= 1024 ? (mib / 1024).toFixed(1) + " GB" : mib.toFixed(mib < 10 ? 1 : 0) + " MB";
     }
 
-    readonly property var processedList: {
-        const query = searchText.trim().toLowerCase();
-        let list = SystemStats.state.processes.filter(p => matchesMode(p) && (query.length === 0
-            || p.name.toLowerCase().indexOf(query) !== -1
-            || (p.cmdline || "").toLowerCase().indexOf(query) !== -1
-            || String(p.pid).indexOf(query) !== -1));
-        const column = sortColumn;
-        const direction = sortDir;
-        return list.slice().sort((a, b) => {
-            const av = a[column], bv = b[column];
-            return typeof av === "string"
-                ? direction * av.toLowerCase().localeCompare(bv.toLowerCase())
-                : direction * (av - bv);
-        });
-    }
+    readonly property var processedList: SystemStats.queryProcesses(
+        root.searchText, root.filterMode, root.sortColumn, root.sortDir, root.currentUser)
 
     implicitWidth: 620
     implicitHeight: content.implicitHeight
@@ -97,7 +74,7 @@ Item {
                 width: 270; height: 36; inputPixelSize: Config.fontSize - 2
                 placeholder: "Filter by name, PID, or command"
                 onTextChanged: root.searchText = text
-                onEscapePressed: Bridge.closeIsland()
+                onEscapePressed: IslandNavigation.close()
             }
             SegmentedControl {
                 anchors.left: search.right; anchors.leftMargin: 10; anchors.right: parent.right
@@ -137,7 +114,7 @@ Item {
                     width: listView.width
                     required property var modelData
                     processData: modelData
-                    protected_: root.isProtected(modelData)
+                    protected_: SystemStats.isProcessProtected(modelData)
                 }
             }
             ScrollIndicator { target: listView }

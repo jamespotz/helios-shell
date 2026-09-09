@@ -42,6 +42,6 @@ Item {
         anchors.fill: parent
         anchors.margins: -6
         cursorShape: Qt.PointingHandCursor
-        onClicked: Bridge.toggleIsland(root.targetScreen.name, "calendar")
+        onClicked: IslandNavigation.toggle(root.targetScreen.name, "calendar")
     }
 }

@@ -1,0 +1,91 @@
+pragma Singleton
+import QtQuick
+
+QtObject {
+    id: root
+
+    readonly property var destinations: [
+        root._destination("volume", "Volume", "VolumeTab.qml"),
+        root._destination("mixer", "Audio Mixer", "AudioMixerTab.qml"),
+        root._destination("bluetooth", "Bluetooth", "BluetoothTab.qml"),
+        root._destination("wifi", "Wi-Fi", "WifiTab.qml"),
+        root._destination("focus", "Focus Modes", "FocusTab.qml"),
+        root._destination("privacy", "Privacy", "PrivacyTab.qml"),
+        root._destination("automation", "Automations", "AutomationTab.qml"),
+        root._destination("media", "Media", "MediaCard.qml"),
+        root._destination("clipboard", "Clipboard", "ClipboardTab.qml"),
+        root._destination("recorder", "Screen Recorder", "ScreenRecorderTab.qml"),
+        root._destination("screenshot", "Screenshot", "ScreenshotTab.qml"),
+        root._destination("weather", "Weather", "WeatherPanel.qml"),
+        root._destination("calendar", "Calendar", "CalendarTab.qml"),
+        root._destination("system", "System Monitor", "SystemMonitorTab.qml"),
+        root._destination("notifications", "Notifications", "NotificationHistoryTab.qml"),
+        root._destination("nightlight", "Night Light", "NightLightTab.qml"),
+        root._destination("display", "Displays", "DisplayTab.qml"),
+        root._destination("idlelock", "Idle & Lock", "IdleTab.qml"),
+        root._destination("wallpaper", "Wallpaper", "WallpaperSettings.qml"),
+        root._destination("theme", "Theme", "ThemeSettings.qml"),
+        root._destination("island", "Island", "IslandSettings.qml", 360),
+        root._destination("power", "Power", "PowerTab.qml"),
+        root._destination("powermenu", "Power", "PowerMenuTab.qml"),
+        root._destination("keybinds", "Keybinds", "KeybindsTab.qml"),
+        root._destination("launcher", "Launcher", "LauncherTab.qml")
+    ]
+
+    property bool _open: false
+    property string _screen: ""
+    property string _destinationId: "volume"
+
+    readonly property bool open: root._open
+    readonly property string screen: root._screen
+    readonly property string destinationId: root._destinationId
+    readonly property var current: root.resolve(root._destinationId)
+
+    signal rejected(string destinationId)
+
+    function _destination(id, label, file, maxHeight) {
+        return {
+            id: id,
+            label: label,
+            source: Qt.resolvedUrl("../modules/bar/" + file),
+            maxHeight: maxHeight || 0,
+            available: true
+        };
+    }
+
+    function resolve(destinationId) {
+        return root.destinations.find(destination => destination.id === destinationId) || null;
+    }
+
+    function show(screenName, destinationId) {
+        const destination = root.resolve(destinationId);
+        if (!destination || !destination.available) {
+            root.rejected(destinationId);
+            return false;
+        }
+        root._screen = screenName;
+        root._destinationId = destination.id;
+        root._open = true;
+        return true;
+    }
+
+    function toggle(screenName, destinationId) {
+        if (root._open && root._screen === screenName && root._destinationId === destinationId) {
+            root.close();
+            return true;
+        }
+        return root.show(screenName, destinationId);
+    }
+
+    function select(destinationId) {
+        const destination = root.resolve(destinationId);
+        if (!destination || !destination.available) {
+            root.rejected(destinationId);
+            return false;
+        }
+        root._destinationId = destination.id;
+        return true;
+    }
+
+    function close() { root._open = false; }
+}

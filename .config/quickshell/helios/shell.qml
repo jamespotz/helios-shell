@@ -41,6 +41,7 @@ ShellRoot {
     Lock {}
     TrayMenu {}
     PolkitAgent {}
+    SettingsWindow {}
 
     // Lets the (experimental) Liquid Glass surface read real desktop pixels
     // through Hyprland's compositor blur instead of faking translucency.
@@ -60,24 +61,22 @@ ShellRoot {
         target: "launcher"
         function toggle() {
             const screen = Utils.screenForMonitor(Quickshell.screens, Hyprland.focusedMonitor) || Quickshell.screens[0];
-            Bridge.toggleIsland(screen.name, "launcher");
+            IslandNavigation.toggle(screen.name, "launcher");
         }
         function open() {
             const screen = Utils.screenForMonitor(Quickshell.screens, Hyprland.focusedMonitor) || Quickshell.screens[0];
-            Bridge.islandScreen = screen.name;
-            Bridge.islandTab = "launcher";
-            Bridge.islandOpen = true;
+            IslandNavigation.show(screen.name, "launcher");
         }
-        function close() { Bridge.closeIsland() }
+        function close() { IslandNavigation.close() }
     }
 
     IpcHandler {
         target: "island"
         function toggle(tab: string) {
             const screen = Utils.screenForMonitor(Quickshell.screens, Hyprland.focusedMonitor) || Quickshell.screens[0];
-            Bridge.toggleIsland(screen.name, tab && tab.length > 0 ? tab : "volume");
+            IslandNavigation.toggle(screen.name, tab && tab.length > 0 ? tab : "volume");
         }
-        function close() { Bridge.closeIsland() }
+        function close() { IslandNavigation.close() }
         function liquidGlass(enabled: bool) { Bridge.liquidGlassEnabled = enabled }
         function appearance(width: int, height: int, gap: int, fontSize: int) {
             Config.setIslandAppearance(width, height, gap, fontSize);
@@ -93,8 +92,8 @@ ShellRoot {
 
     IpcHandler {
         target: "wallpaper"
-        function set(path: string) { Wallpaper.setPath(path) }
-        function folder(path: string) { Wallpaper.setFolder(path) }
+        function set(path: string) { WallpaperLibrary.setPath(path) }
+        function folder(path: string) { WallpaperLibrary.setFolder(path) }
     }
 
     IpcHandler {
@@ -107,23 +106,36 @@ ShellRoot {
         target: "keybinds"
         function toggle() {
             const screen = Utils.screenForMonitor(Quickshell.screens, Hyprland.focusedMonitor) || Quickshell.screens[0];
-            Bridge.toggleIsland(screen.name, "keybinds");
+            IslandNavigation.toggle(screen.name, "keybinds");
         }
-        function close() { Bridge.closeIsland() }
+        function close() { IslandNavigation.close() }
     }
 
     IpcHandler {
         target: "powermenu"
         function toggle() {
             const screen = Utils.screenForMonitor(Quickshell.screens, Hyprland.focusedMonitor) || Quickshell.screens[0];
-            Bridge.toggleIsland(screen.name, "powermenu");
+            IslandNavigation.toggle(screen.name, "powermenu");
         }
-        function close() { Bridge.closeIsland() }
+        function close() { IslandNavigation.close() }
     }
 
     IpcHandler {
         target: "lock"
         function lock() { Bridge.lock() }
+    }
+
+    IpcHandler {
+        target: "settings"
+        function toggle(page: string) {
+            const screen = Utils.screenForMonitor(Quickshell.screens, Hyprland.focusedMonitor) || Quickshell.screens[0];
+            Bridge.toggleSettings(screen.name, page && page.length > 0 ? page : undefined);
+        }
+        function open(page: string) {
+            const screen = Utils.screenForMonitor(Quickshell.screens, Hyprland.focusedMonitor) || Quickshell.screens[0];
+            Bridge.openSettings(screen.name, page && page.length > 0 ? page : undefined);
+        }
+        function close() { Bridge.closeSettings() }
     }
 
     IpcHandler {
@@ -136,7 +148,7 @@ ShellRoot {
         function refresh() { Clipboard.refresh() }
         function toggle() {
             const screen = Utils.screenForMonitor(Quickshell.screens, Hyprland.focusedMonitor) || Quickshell.screens[0];
-            Bridge.toggleIsland(screen.name, "clipboard");
+            IslandNavigation.toggle(screen.name, "clipboard");
         }
     }
 
@@ -240,7 +252,18 @@ ShellRoot {
         // same convention as `clipboard toggle`/`recorder toggle` above.
         function toggle() {
             const screen = Utils.screenForMonitor(Quickshell.screens, Hyprland.focusedMonitor) || Quickshell.screens[0];
-            Bridge.toggleIsland(screen.name, "system");
+            IslandNavigation.toggle(screen.name, "system");
+        }
+    }
+
+    IpcHandler {
+        target: "automation"
+        // Own ipc (vs. `island toggle automation`) so a hotkey keeps working
+        // even if the automation tab's island target ever changes — same
+        // convention as `clipboard toggle`/`recorder toggle` above.
+        function toggle() {
+            const screen = Utils.screenForMonitor(Quickshell.screens, Hyprland.focusedMonitor) || Quickshell.screens[0];
+            IslandNavigation.toggle(screen.name, "automation");
         }
     }
 

@@ -7,15 +7,28 @@ QtObject {
     id: root
     property bool locked: false
 
-    // Dynamic island: each screen's bar is itself the island. islandScreen +
-    // islandTab pick which screen's bar is pinned open and to which panel
-    // ("volume", "bluetooth", "wifi", "media") — the bar morphs shape between
-    // them instead of opening a separate popup.
-    property bool islandOpen: false
-    property string islandScreen: ""
-    property string islandTab: "volume"
-
     property bool dndEnabled: false
+
+    // Settings window — a separate top-level surface from the island (see
+    // SettingsWindow.qml). settingsPage remembers the last page shown so
+    // reopening returns to where the user left off.
+    property bool settingsOpen: false
+    property string settingsScreen: ""
+    property string settingsPage: "appearance"
+
+    function openSettings(screenName, page) {
+        settingsScreen = screenName;
+        if (page) settingsPage = page;
+        settingsOpen = true;
+    }
+    function closeSettings() { settingsOpen = false }
+    function toggleSettings(screenName, page) {
+        if (settingsOpen && settingsScreen === screenName) {
+            settingsOpen = false;
+            return;
+        }
+        openSettings(screenName, page);
+    }
 
     // Custom tray right-click menu — replaces the native QMenu display()
     // with our own styled QML popup. Tray.qml sets these on right-click;
@@ -46,17 +59,6 @@ QtObject {
 
     function lock() { lockRequested() }
 
-    function toggleIsland(screenName, tab) {
-        if (islandOpen && islandScreen === screenName && islandTab === tab) {
-            islandOpen = false;
-            return;
-        }
-        islandScreen = screenName;
-        islandTab = tab;
-        islandOpen = true;
-    }
-    function setIslandTab(tab) { islandTab = tab }
-    function closeIsland() { islandOpen = false }
     function toggleLiquidGlass() { liquidGlassEnabled = !liquidGlassEnabled }
 
     // --- Persisted: liquid glass preference ---------------------------------

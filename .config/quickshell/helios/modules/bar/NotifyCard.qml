@@ -24,27 +24,27 @@ Item {
 
     HoverHandler { id: hoverTracker }
 
-    // Auto-dismiss the single-notification view after a pause — a group
-    // stays put until cleared, see the Row below. Hovering pauses the
-    // countdown instead of losing it. This timer only exists while a
-    // notification is actually on screen, so nothing ticks down for one
-    // arriving behind an open panel.
+    // Auto-dismiss notifications after a pause. Each new notification
+    // restarts the timer, and hovering keeps the current card or stack open.
+    // This timer only exists while notifications are actually on screen, so
+    // nothing ticks down while an open panel covers them.
     Timer {
         id: autoDismissTimer
         interval: 5000
         onTriggered: {
             if (root.hovering) { autoDismissTimer.restart(); return; }
             if (root.count === 1) Notifications.dismiss(root.list[0].id);
+            else if (root.count > 1) Notifications.dismissAll();
         }
     }
 
     onCountChanged: {
-        if (root.count === 1) autoDismissTimer.restart();
+        if (root.count > 0) autoDismissTimer.restart();
         else autoDismissTimer.stop();
     }
 
     Component.onCompleted: {
-        if (root.count === 1) autoDismissTimer.restart();
+        if (root.count > 0) autoDismissTimer.restart();
     }
 
     Column {

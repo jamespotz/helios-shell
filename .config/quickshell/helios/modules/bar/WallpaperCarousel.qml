@@ -9,7 +9,6 @@ import "../../components"
 Column {
     id: root
 
-    required property var thumbnailHost
     // Landscape cells matching actual wallpaper aspect ratio (portrait cells
     // cropped desktop wallpapers down to an unrecognizable sliver), tightly
     // packed, bottom-aligned. The current card grows via `scale` anchored to
@@ -40,24 +39,24 @@ Column {
 
         StyledText {
             id: carouselCount
-            visible: Wallpaper.images.length > 0
+            visible: WallpaperLibrary.images.length > 0
             opacity: 0.6
             font.pixelSize: Config.fontSize - 2
-            text: (carousel.currentIndex + 1) + " / " + Wallpaper.images.length
+            text: (carousel.currentIndex + 1) + " / " + WallpaperLibrary.images.length
         }
     }
 
     Item {
         id: carouselWrap
         width: parent.width
-        height: Wallpaper.images.length > 0 ? 145 : 0
+        height: WallpaperLibrary.images.length > 0 ? 145 : 0
         clip: true
 
         ListView {
             id: carousel
             anchors.fill: parent
             orientation: ListView.Horizontal
-            model: Wallpaper.images
+            model: WallpaperLibrary.images
             spacing: 2
             clip: true
             boundsBehavior: Flickable.StopAtBounds
@@ -71,15 +70,39 @@ Column {
             Keys.priority: Keys.BeforeItem
             Keys.onLeftPressed: choose(currentIndex - 1)
             Keys.onRightPressed: choose(currentIndex + 1)
-            currentIndex: Math.max(0, Wallpaper.images.indexOf(Wallpaper.path))
+
+            // Not a plain `currentIndex: Math.max(0, ...)` binding — on a
+            // fresh shell start this view can be built before WallpaperLibrary.path
+            // and WallpaperLibrary.images (both loaded async, from disk and from a
+            // `find` scan) have settled. The model going from empty to
+            // populated makes the ListView itself write to currentIndex as
+            // part of resetting for the new model, which silently breaks a
+            // declarative binding here same as any other external write —
+            // so once the real data arrives a moment later, nothing
+            // recomputes it and the view is stuck showing index 0. Re-syncing
+            // explicitly on every change (not just at creation) survives that.
+            function syncToCurrent() {
+                const idx = Math.max(0, WallpaperLibrary.images.indexOf(WallpaperLibrary.path));
+                if (carousel.currentIndex === idx) return;
+                carousel.currentIndex = idx;
+                carousel.positionViewAtIndex(idx, ListView.SnapPosition);
+            }
+
+            Component.onCompleted: syncToCurrent()
+
+            Connections {
+                target: WallpaperLibrary
+                function onImagesChanged() { carousel.syncToCurrent() }
+                function onPathChanged() { carousel.syncToCurrent() }
+            }
 
             function choose(index) {
                 if (index < 0 || index >= count) return;
                 currentIndex = index;
                 positionViewAtIndex(index, ListView.Center);
-                Wallpaper.setPath(Wallpaper.images[index]);
+                WallpaperLibrary.setPath(WallpaperLibrary.images[index]);
                 Qt.callLater(() => forceActiveFocus(Qt.TabFocusReason));
-                const extension = Wallpaper.images[index].split(".").pop().toLowerCase();
+                const extension = WallpaperLibrary.images[index].split(".").pop().toLowerCase();
                 if (["mp4", "webm", "mkv", "mov"].includes(extension)) videoFocusRestore.restart();
             }
 
@@ -93,14 +116,14 @@ Column {
                 z: current ? 2 : 1
                 activeFocusOnTab: true
 
-                readonly property bool selected: Wallpaper.path === modelData
+                readonly property bool selected: WallpaperLibrary.path === modelData
                 readonly property bool isVideoThumb: ["mp4", "webm", "mkv", "mov"].includes(modelData.split(".").pop().toLowerCase())
                 readonly property string videoThumbPath: Quickshell.env("HOME") + "/.cache/helios/wallpaper-thumbs/" + modelData.replace(/[^A-Za-z0-9]/g, "_") + ".jpg"
-                readonly property bool videoThumbReady: !!root.thumbnailHost.readyThumbnails[thumb.videoThumbPath]
+                readonly property bool videoThumbReady: !!WallpaperLibrary.readyThumbnails[thumb.videoThumbPath]
                 readonly property bool current: ListView.isCurrentItem
 
                 Component.onCompleted: {
-                    if (thumb.isVideoThumb) root.thumbnailHost.requestThumbnail(thumb.modelData, thumb.videoThumbPath);
+                    if (thumb.isVideoThumb) WallpaperLibrary.requestThumbnail(thumb.modelData, thumb.videoThumbPath);
                 }
 
                 Item {

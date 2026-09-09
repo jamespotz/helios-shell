@@ -45,7 +45,7 @@ QtObject {
         if (monitorName) root.monitor = monitorName;
         root.starting = true;
 
-        // The island tab closes itself (Bridge.closeIsland()) right before
+        // The island tab closes itself (IslandNavigation.close()) right before
         // calling this, to hand the pointer/keyboard grab it was holding
         // (Bar.qml's HyprlandFocusGrab, "click outside closes it") back to
         // Hyprland before slurp/the portal try to claim it — closing the

@@ -4,12 +4,15 @@ singleton Bluetooth 1.0 Bluetooth.qml
 BluetoothDeviceCore 1.0 BluetoothDeviceCore.qml
 singleton Config 1.0 Config.qml
 singleton Bridge 1.0 Bridge.qml
+singleton IslandNavigation 1.0 IslandNavigation.qml
 singleton AppLaunch 1.0 AppLaunch.qml
+singleton Launcher 1.0 Launcher.qml
 singleton Notifications 1.0 Notifications.qml
 NotificationCore 1.0 NotificationCore.qml
 singleton Weather 1.0 Weather.qml
 singleton ExtraApps 1.0 ExtraApps.qml
-singleton Wallpaper 1.0 Wallpaper.qml
+singleton WallpaperLibrary 1.0 WallpaperLibrary.qml
+singleton WallpaperPlayback 1.0 WallpaperPlayback.qml
 singleton Themes 1.0 Themes.qml
 singleton Cava 1.0 Cava.qml
 singleton Clipboard 1.0 Clipboard.qml
@@ -23,12 +26,10 @@ singleton IdleInhibit 1.0 IdleInhibit.qml
 singleton Equalizer 1.0 Equalizer.qml
 singleton Emoji 1.0 Emoji.qml
 singleton SystemStats 1.0 SystemStats.qml
-SystemMonitorCore 1.0 SystemMonitorCore.qml
 singleton BatteryHistory 1.0 BatteryHistory.qml
 singleton MediaSession 1.0 MediaSession.qml
 MediaSessionCore 1.0 MediaSessionCore.qml
 singleton Calendar 1.0 Calendar.qml
-CalendarCore 1.0 CalendarCore.qml
 singleton Tasks 1.0 Tasks.qml
 singleton FocusModes 1.0 FocusModes.qml
 singleton CameraActivity 1.0 CameraActivity.qml

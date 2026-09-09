@@ -15,7 +15,7 @@ PanelWindow {
     required property var modelData
     screen: modelData
 
-    readonly property bool panelOpen: Bridge.islandOpen && Bridge.islandScreen === modelData.name
+    readonly property bool panelOpen: IslandNavigation.open && IslandNavigation.screen === modelData.name
     readonly property bool notifyMode: !panelOpen && Notifications.state.popups.length > 0
     readonly property bool taskMode: !panelOpen && !notifyMode && Tasks.items.length > 0
     readonly property bool meetingMode: !panelOpen && !notifyMode && !taskMode && Calendar.upcomingAlert !== null
@@ -23,7 +23,7 @@ PanelWindow {
     property bool hovering: false
     readonly property bool expanded: panelOpen || notifyMode || taskMode || meetingMode || batteryMode || hovering
 
-    readonly property string mode: panelOpen ? Bridge.islandTab
+    readonly property string mode: panelOpen ? IslandNavigation.destinationId
         : notifyMode ? "notify"
         : taskMode ? "task"
         : meetingMode ? "meeting"
@@ -54,15 +54,12 @@ PanelWindow {
     // instead of being covered by them.
     WlrLayershell.layer: WlrLayer.Top
     WlrLayershell.namespace: "helios:bar"
-    // OnDemand only grants keyboard focus in response to a real click on
-    // the surface — opening the island via an IPC-driven keybind (no click
-    // ever happens) left it visible but keyboard-focus-less, so Escape (and
-    // typing into e.g. the launcher's search field) silently went to
-    // whatever window was focused before. Exclusive grabs focus the instant
-    // the surface becomes keyboard-interactive, regardless of how it was
-    // opened. Pointer-based click-outside-to-close (HyprlandFocusGrab,
-    // below) is unaffected — that grab is pointer-only.
-    WlrLayershell.keyboardFocus: bar.expanded ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
+    // IPC-opened panel content needs immediate keyboard focus for search
+    // fields and shortcuts. Passive cards must never steal keyboard input
+    // from the active application when they appear.
+    WlrLayershell.keyboardFocus: bar.panelOpen ? WlrKeyboardFocus.Exclusive
+        : bar.expanded ? WlrKeyboardFocus.OnDemand
+        : WlrKeyboardFocus.None
 
     anchors.top: true
     // A small gap from the true screen edge so the pill's top-corner
@@ -127,7 +124,7 @@ PanelWindow {
         active: false
         onCleared: {
             if (bar.suppressCollapse) return;
-            if (bar.panelOpen) Bridge.closeIsland();
+            if (bar.panelOpen) IslandNavigation.close();
         }
     }
 
@@ -164,7 +161,7 @@ PanelWindow {
         // real ancestor of every panel tab's content (visual > Rectangle >
         // Loader). A sibling of `visual` never sees keys typed into it.
         Keys.onEscapePressed: {
-            if (bar.panelOpen) Bridge.closeIsland();
+            if (bar.panelOpen) IslandNavigation.close();
             else if (bar.notifyMode) Notifications.dismissAll();
             else if (bar.meetingMode) Calendar.dismissAlert();
             else if (bar.batteryMode) Bluetooth.dismissLowBattery();

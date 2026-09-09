@@ -193,7 +193,7 @@ Item {
                     width: parent.width
                     icon: "label"
                     placeholder: "Name (e.g. Work)"
-                    onEscapePressed: Bridge.closeIsland()
+                    onEscapePressed: IslandNavigation.close()
                 }
                 SearchField {
                     id: urlField
@@ -201,7 +201,7 @@ Item {
                     icon: "link"
                     placeholder: "https://calendar.google.com/…/basic.ics"
                     onAccepted: addButton.clicked()
-                    onEscapePressed: Bridge.closeIsland()
+                    onEscapePressed: IslandNavigation.close()
                 }
                 PrimaryButton {
                     id: addButton

@@ -10,263 +10,23 @@ import "../../components"
 Item {
     id: root
 
-    property var results: []
-    // Set by refresh() whenever the query is a "/em[oji] <term>" search —
-    // switches the results delegate from app rows to emoji rows and the
-    // accept/click action from launching to copying.
-    property bool emojiMode: false
-
-    // Open windows, refreshed from `hyprctl clients -j` on open (and again
-    // if that fetch is still in flight when the query starts matching
-    // against it). Only included in unrefined (non-emoji) search once the
-    // user has typed something — an empty query keeps showing "most used
-    // apps" like before.
-    property var windows: []
-
-    function refreshWindows() {
-        windowsProc.running = false;
-        windowsProc.running = true;
-    }
-
-    Process {
-        id: windowsProc
-        command: ["hyprctl", "clients", "-j"]
-        stdout: StdioCollector {
-            onStreamFinished: {
-                try {
-                    root.windows = JSON.parse(text)
-                        .filter(w => w.mapped !== false && w.title)
-                        .map(w => ({ address: w.address, title: w.title, appClass: w["class"] || w.initialClass || "" }));
-                } catch (e) {
-                    root.windows = [];
-                }
-                root.refresh();
-            }
-        }
-    }
-
-    function focusWindow(win) {
-        focusProc.command = ["hyprctl", "dispatch", "focuswindow", "address:" + win.address];
-        focusProc.running = false;
-        focusProc.running = true;
-    }
-
-    Process { id: focusProc }
-
-    // Shell actions ("command palette" entries) — direct calls into the
-    // same service singletons the rest of the shell already uses, so this
-    // list is just a search-friendly index over existing functionality
-    // rather than a second implementation of any of it.
-    readonly property var actionsList: [
-        { label: "Toggle Do Not Disturb", icon: "notifications", keywords: "dnd silence", run: () => Bridge.toggleDnd() },
-        { label: "Toggle Night Light", icon: "eco", keywords: "color temperature blue light", run: () => NightLight.toggle() },
-        { label: "Toggle Caffeine (keep awake)", icon: "bolt", keywords: "idle inhibit sleep", run: () => IdleInhibit.toggleInhibit() },
-        { label: "Lock Screen", icon: "lock", keywords: "session", run: () => Bridge.lock() },
-        { label: "Power Menu", icon: "power_settings_new", keywords: "shutdown restart logout suspend", run: () => Bridge.setIslandTab("powermenu") },
-        { label: "Keybind Cheatsheet", icon: "keyboard", keywords: "shortcuts binds", run: () => Bridge.setIslandTab("keybinds") },
-        { label: "Screenshot — Fullscreen", icon: "crop", keywords: "capture screen", run: () => Screenshot.captureFullscreen() },
-        { label: "Screenshot — Region", icon: "crop", keywords: "capture screen slurp", run: () => Screenshot.captureRegion() },
-        { label: "Screenshot — Active Window", icon: "crop", keywords: "capture screen", run: () => Screenshot.captureWindow() },
-        { label: "Toggle Screen Recording", icon: "movie", keywords: "record video gpu-screen-recorder", run: () => ScreenRecorder.toggle(Bridge.islandScreen) },
-        { label: "Open Wi-Fi", icon: "wifi", keywords: "network settings", run: () => Bridge.setIslandTab("wifi") },
-        { label: "Open Bluetooth", icon: "bluetooth", keywords: "devices settings", run: () => Bridge.setIslandTab("bluetooth") },
-        { label: "Open Volume", icon: "graphic_eq", keywords: "audio sound settings", run: () => Bridge.setIslandTab("volume") },
-        { label: "Open Media Player", icon: "music_note", keywords: "mpris playback settings", run: () => Bridge.setIslandTab("media") },
-        { label: "Toggle Liquid Glass", icon: "auto_awesome", keywords: "blur translucent settings", run: () => Bridge.toggleLiquidGlass() },
-        { label: "Clipboard History", icon: "content_paste", keywords: "cliphist settings", run: () => Bridge.setIslandTab("clipboard") },
-        { label: "Open Weather", icon: "cloud", keywords: "forecast settings", run: () => Bridge.setIslandTab("weather") },
-        { label: "Open Wallpaper", icon: "image", keywords: "background settings", run: () => Bridge.setIslandTab("wallpaper") },
-        { label: "Open Theme", icon: "palette", keywords: "colors matugen settings", run: () => Bridge.setIslandTab("theme") },
-        { label: "Open Display Settings", icon: "desktop_windows", keywords: "resolution scale vrr monitor settings", run: () => Bridge.setIslandTab("display") },
-        { label: "Open Idle & Lock Settings", icon: "schedule", keywords: "hypridle timeout dim dpms settings", run: () => Bridge.setIslandTab("idlelock") },
-        { label: "Open Power Profile", icon: "balance", keywords: "saver performance battery settings", run: () => Bridge.setIslandTab("power") },
-        { label: "Open System Monitor", icon: "dns", keywords: "cpu memory processes settings", run: () => Bridge.setIslandTab("system") },
-        { label: "Open Notification History", icon: "notifications", keywords: "history settings", run: () => Bridge.setIslandTab("notifications") },
-        { label: "Open Calendar", icon: "calendar_month", keywords: "events settings", run: () => Bridge.setIslandTab("calendar") },
-        { label: "Open Island Settings", icon: "tune", keywords: "appearance size settings", run: () => Bridge.setIslandTab("island") },
-        { label: "Open Focus Modes", icon: "center_focus_strong", keywords: "dnd caffeine power profile night light settings", run: () => Bridge.setIslandTab("focus") },
-        { label: "Open Privacy Dashboard", icon: "shield", keywords: "microphone camera mic webcam screen recording clipboard settings", run: () => Bridge.setIslandTab("privacy") },
-        { label: "Open Audio Mixer", icon: "graphic_eq", keywords: "per-app volume output routing settings", run: () => Bridge.setIslandTab("mixer") },
-        { label: "Open Automation Rules", icon: "bolt", keywords: "headphones monitor battery trigger action settings", run: () => Bridge.setIslandTab("automation") },
-    ].concat(FocusModes.presets.map(p => ({
-        label: (FocusModes.activeId === p.id ? "Turn Off " : "Turn On ") + p.name,
-        icon: p.icon || "center_focus_strong",
-        keywords: "focus mode dnd caffeine",
-        run: () => FocusModes.toggle(p)
-    })))
-
     // Right-click context menu — freedesktop "Desktop Actions" for the app
     // under contextMenuEntry (e.g. Ghostty's "New Window"), positioned at
     // contextMenuPos in the island surface's own coordinate space. null
     // entry means no menu is open.
     property var contextMenuEntry: null
     property point contextMenuPos: Qt.point(0, 0)
-
-    // --- Launch frequency tracking ------------------------------------------
-    // Drives the "most used" ranking in refresh() below — persisted so it
-    // survives restarts through FileView. Keyed by entry.name since that's
-    // already the dedup key refresh() uses to merge DesktopEntries + ExtraApps.
-    property var launchCounts: ({})
-
-    function countFor(name) { return root.launchCounts[name] || 0; }
-    function recordLaunch(name) {
-        if (!name) return;
-        root.launchCounts = Object.assign({}, root.launchCounts, { [name]: root.countFor(name) + 1 });
-        launchCountsFile.setText(JSON.stringify(root.launchCounts));
-    }
-
-    property FileView launchCountsFile: FileView {
-        path: Quickshell.statePath("launcher-app-usage.json")
-        printErrors: false
-        atomicWrites: true
-        preload: true
-        blockLoading: true
-        onLoaded: {
-            try {
-                const parsed = JSON.parse(launchCountsFile.text());
-                if (parsed && typeof parsed === "object") root.launchCounts = parsed;
-            } catch (e) {
-                // First run / empty file — start with no usage history.
-            }
-        }
-    }
-
-    function matchesKeywords(entry, query) {
-        const kw = entry.keywords;
-        if (!kw || kw.length === 0) return false;
-        if (typeof kw.some === "function") return kw.some(k => k.toLowerCase().includes(query));
-        return String(kw).toLowerCase().includes(query);
-    }
-
-    // Relevance tiers so e.g. "fire" ranks Firefox (name match) above some
-    // unrelated app whose keywords merely happen to contain "fire". Ties
-    // within a tier fall back to launch frequency — see refresh() below.
-    // Shared across every result kind (app/window/action) so they can be
-    // ranked against each other in one merged list.
-    function matchScore(entry, query) {
-        const name = entry.name.toLowerCase();
-        if (name === query) return 4;
-        if (name.startsWith(query)) return 3;
-        if (name.includes(query)) return 2;
-        if ((entry.genericName || "").toLowerCase().includes(query)) return 1;
-        if (root.matchesKeywords(entry, query)) return 1;
-        return 0;
-    }
-
-    // Deduped app list, independent of the search query — hoisted out of
-    // refresh() so it only recomputes when DesktopEntries/ExtraApps actually
-    // change instead of on every keystroke.
-    readonly property var allApps: {
-        const seen = new Set();
-        return DesktopEntries.applications.values.filter(e => !e.noDisplay)
-            .concat(ExtraApps.list)
-            .filter(e => {
-                if (seen.has(e.name)) return false;
-                seen.add(e.name);
-                return true;
-            });
-    }
+    readonly property var results: Launcher.results
+    readonly property bool emojiMode: Launcher.emojiMode
 
     function refresh() {
-        const raw = searchField.text.trim();
-        // "/em" or "/emoji", optionally followed by a search term.
-        const emojiPrefix = raw.match(/^\/em(?:oji)?(?:\s+(.*))?$/i);
-        let newResults;
-        if (emojiPrefix) {
-            root.emojiMode = true;
-            newResults = Emoji.search(emojiPrefix[1] || "", 9);
-        } else {
-            root.emojiMode = false;
-
-            const query = raw.toLowerCase();
-            const all = root.allApps;
-            if (!query) {
-                // No query: lead with whatever's actually used most (Spotlight-
-                // style "frequently used" ranking) instead of DesktopEntries'
-                // arbitrary filesystem-scan order.
-                newResults = all.slice().sort((a, b) => {
-                    return root.countFor(b.name) - root.countFor(a.name) || a.name.localeCompare(b.name);
-                }).slice(0, 9).map(e => ({ kind: "app", entry: e }));
-            } else {
-                // Unified command palette: apps, open windows, and shell
-                // actions ranked together in one list, each tagged with
-                // "kind" so the delegate below can render/run it correctly.
-                const appMatches = all
-                    .map(e => ({ kind: "app", data: e, score: root.matchScore(e, query) }))
-                    .filter(m => m.score > 0);
-
-                const windowMatches = root.windows
-                    .map(w => ({ kind: "window", data: w, score: root.matchScore({ name: w.title, genericName: w.appClass }, query) }))
-                    .filter(m => m.score > 0);
-
-                const actionMatches = root.actionsList
-                    .map(a => ({ kind: "action", data: a, score: root.matchScore({ name: a.label, keywords: a.keywords }, query) }))
-                    .filter(m => m.score > 0);
-
-                newResults = appMatches.concat(windowMatches, actionMatches)
-                    .sort((a, b) => {
-                        return b.score - a.score
-                            || (a.kind === "app" ? root.countFor(a.data.name) : 0) - (b.kind === "app" ? root.countFor(b.data.name) : 0)
-                            || (a.kind === "app" ? 0 : 1) - (b.kind === "app" ? 0 : 1);
-                    })
-                    .slice(0, 9)
-                    .map(m => ({ kind: m.kind, entry: m.data }));
-            }
-        }
-        results = newResults;
-        // Results reorder/shrink on every keystroke — clamp the arrow-key
-        // selection so it can't point past the new array (was: stale index
-        // survived a narrowing refresh, so Enter indexed out of bounds).
+        Launcher.search(searchField.text);
         resultList.currentIndex = results.length > 0 ? Math.min(resultList.currentIndex, results.length - 1) : 0;
     }
-
-    // Launch an app — ExtraApps entries already handle terminal wrapping in
-    // their own execute(); AppLaunch.launch() does the same for a plain
-    // DesktopEntry, whose native execute() does not spawn a terminal even
-    // when runInTerminal is true.
-    function launchApp(entry) {
-        root.recordLaunch(entry.name);
-        AppLaunch.launch(entry);
-    }
-
-    // Runs whichever kind of unified result the user picked — app, open
-    // window, or shell action — then closes the island.
-    function activateResult(result) {
-        if (result.kind === "window") root.focusWindow(result.entry);
-        else if (result.kind === "action") result.entry.run();
-        else root.launchApp(result.entry);
-        Bridge.closeIsland();
-    }
-
-    // Runs a Desktop Action (the context menu's entries, e.g. Ghostty's
-    // "New Window") the same defensive way launchApp() runs the main entry
-    // — DesktopAction.execute() silently did nothing when tested live here
-    // (same gap as DesktopEntry.execute() noted above), while manually
-    // spawning its parsed command works.
-    function runAction(action) {
-        // A Desktop Action (e.g. "New Window") still launches the app it
-        // belongs to, so it counts toward that app's frequency too.
-        root.recordLaunch(root.contextMenuEntry ? root.contextMenuEntry.name : "");
-        const cmd = action.command || [];
-        if (cmd.length > 0) {
-            Quickshell.execDetached(cmd);
-        } else {
-            const exec = (action.execString || "").replace(/%[fFuUdDnNickvm]/g, "").trim();
-            if (exec) Quickshell.execDetached(["sh", "-c", exec]);
-        }
-    }
-
-    // Copies the emoji glyph to the clipboard — Wayland has no portable way
-    // to inject keystrokes into whatever was focused before the launcher
-    // (that's what typing would require), so copy-then-paste is the actual
-    // reliable path, same as every other emoji picker.
-    function copyEmoji(entry) {
-        emojiCopier.command = ["sh", "-c", "printf '%s' \"$1\" | wl-copy", "_", entry.emoji];
-        emojiCopier.running = false;
-        emojiCopier.running = true;
-    }
-
-    Process { id: emojiCopier }
+    function refreshWindows() { Launcher.refreshWindows(); }
+    function activateResult(result) { Launcher.activate(result); }
+    function copyEmoji(entry) { Launcher.activate({ activation: { kind: "emoji", value: entry.emoji } }); }
+    function runAction(action) { Launcher.runDesktopAction(action, root.contextMenuEntry ? root.contextMenuEntry.name : ""); }
 
     Component.onCompleted: {
         searchField.text = "";
@@ -274,21 +34,6 @@ Item {
         root.refreshWindows();
         searchField.focusInput();
         resultList.currentIndex = 0;
-    }
-
-    Connections {
-        target: DesktopEntries
-        function onApplicationsChanged() { root.refresh() }
-    }
-
-    Connections {
-        target: ExtraApps
-        function onListChanged() { root.refresh() }
-    }
-
-    Connections {
-        target: Emoji
-        function onListChanged() { if (root.emojiMode) root.refresh() }
     }
 
     implicitWidth: contentCol.width
@@ -315,15 +60,14 @@ Item {
                 onTextChanged: root.refresh()
                 onEscapePressed: {
                     if (root.contextMenuEntry) root.contextMenuEntry = null;
-                    else Bridge.closeIsland();
+                    else IslandNavigation.close();
                 }
                 onDownPressed: resultList.currentIndex = Math.min(resultList.currentIndex + 1, results.length - 1)
                 onUpPressed: resultList.currentIndex = Math.max(resultList.currentIndex - 1, 0)
                 onAccepted: {
                     if (results.length === 0) return;
                     const result = results[resultList.currentIndex];
-                    if (root.emojiMode) { root.copyEmoji(result); Bridge.closeIsland(); }
-                    else root.activateResult(result);
+                    root.activateResult(result);
                 }
             }
 
@@ -358,15 +102,11 @@ Item {
                 required property var modelData
                 required property int index
 
-                // Emoji-mode rows carry the raw emoji entry directly;
-                // every other mode carries { kind, entry } from refresh().
-                readonly property string kind: root.emojiMode ? "emoji" : modelData.kind
-                readonly property var entry: root.emojiMode ? modelData : modelData.entry
-                readonly property string title: kind === "window" ? entry.title : kind === "action" ? entry.label : entry.name
-                readonly property string subtitle: kind === "window" ? entry.appClass
-                    : kind === "action" ? "Action"
-                    : kind === "emoji" ? (entry.category || "")
-                    : (entry.genericName || entry.category || "")
+                readonly property string kind: modelData.kind
+                readonly property var entry: modelData.entry
+                readonly property string title: modelData.title
+                readonly property string subtitle: kind === "action" ? "Action"
+                    : kind === "emoji" ? (entry.category || "") : modelData.subtitle
 
                 width: resultList.width
                 height: 50
@@ -487,7 +227,7 @@ Item {
                             root.contextMenuEntry = resultRow.entry;
                             return;
                         }
-                        if (resultRow.kind === "emoji") { root.copyEmoji(resultRow.entry); Bridge.closeIsland(); }
+                        if (resultRow.kind === "emoji") { root.copyEmoji(resultRow.entry); IslandNavigation.close(); }
                         else root.activateResult(resultRow.modelData);
                     }
                 }
@@ -571,7 +311,7 @@ Item {
                         onClicked: {
                             root.runAction(modelData);
                             root.contextMenuEntry = null;
-                            Bridge.closeIsland();
+                            IslandNavigation.close();
                         }
                     }
                 }

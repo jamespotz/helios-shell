@@ -50,6 +50,6 @@ Item {
         anchors.fill: parent
         anchors.margins: -6
         cursorShape: Qt.PointingHandCursor
-        onClicked: Bridge.toggleIsland(root.targetScreen.name, "weather")
+        onClicked: IslandNavigation.toggle(root.targetScreen.name, "weather")
     }
 }

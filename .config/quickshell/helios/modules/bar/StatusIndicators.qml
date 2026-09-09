@@ -16,10 +16,10 @@ Row {
     required property var targetScreen
 
     function isIslandTab(tab) {
-        return Bridge.islandOpen && Bridge.islandScreen === root.targetScreen.name && Bridge.islandTab === tab;
+        return IslandNavigation.open && IslandNavigation.screen === root.targetScreen.name && IslandNavigation.destinationId === tab;
     }
     function openIslandTab(tab) {
-        Bridge.toggleIsland(root.targetScreen.name, tab);
+        IslandNavigation.toggle(root.targetScreen.name, tab);
     }
 
     PwObjectTracker {
@@ -146,8 +146,8 @@ Row {
 
     IconButton {
         icon: "settings"
-        active: root.isIslandTab("island")
-        onClicked: root.openIslandTab("island")
+        active: Bridge.settingsOpen && Bridge.settingsScreen === root.targetScreen.name
+        onClicked: Bridge.toggleSettings(root.targetScreen.name)
     }
 
     IconButton {

@@ -151,7 +151,7 @@ Item {
                 id: clipBtn
                 anchors.verticalCenter: parent.verticalCenter
                 icon: "open_in_new"
-                onClicked: Bridge.setIslandTab("clipboard")
+                onClicked: IslandNavigation.select("clipboard")
             }
         }
     }

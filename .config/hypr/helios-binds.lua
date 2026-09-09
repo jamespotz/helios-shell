@@ -23,8 +23,8 @@ hl.bind(mainMod .. " + ESCAPE", hl.dsp.exec_cmd(helios .. " powermenu toggle"),
   { description = "Toggle helios power menu" })
 hl.bind(mainMod .. " + K", hl.dsp.exec_cmd(helios .. " keybinds toggle"),
   { description = "Toggle Helios keybind cheatsheet" })
-hl.bind(mainMod .. " + COMMA", hl.dsp.exec_cmd(helios .. " island toggle island"),
-  { description = "Toggle Helios island settings" })
+hl.bind(mainMod .. " + COMMA", hl.dsp.exec_cmd(helios .. " settings toggle \"\""),
+  { description = "Toggle Helios settings window" })
 
 -- OSD / brightness -------------------------------------------------------
 
@@ -101,10 +101,11 @@ hl.bind(mainMod .. " + SHIFT + R",
 -- Runs topgrade in a terminal (sudo needs a real tty to prompt on) and
 -- reports progress through the "task" IPC target, same as the
 -- `quickshell ipc call task ...` example in shell.qml, so the Island shows
--- live progress alongside the terminal output. --wait-after-command keeps
--- the window open so errors are visible instead of the terminal vanishing.
+-- live progress alongside the terminal output. A separate Ghostty instance
+-- makes Hyprland focus the update window instead of opening a hidden tab in an
+-- existing Ghostty window. --wait-after-command keeps errors visible.
 hl.bind(mainMod .. " + SHIFT + U",
-  hl.dsp.exec_cmd("ghostty --wait-after-command=true -e sh ~/.config/hypr/helios-topgrade.sh"),
+  hl.dsp.exec_cmd("ghostty --gtk-single-instance=false --wait-after-command=true -e sh ~/.config/hypr/helios-topgrade.sh"),
   { description = "Run topgrade with Island progress" })
 
 
@@ -139,6 +140,10 @@ hl.bind(mainMod .. " + ALT + A", hl.dsp.exec_cmd(helios .. " island toggle volum
   { description = "Toggle audio output/input island" })
 hl.bind(mainMod .. " + ALT + E", hl.dsp.exec_cmd(helios .. " island toggle power"),
   { description = "Toggle power profile island" })
+-- Own `automation toggle` ipc (see shell.qml) rather than `island toggle
+-- automation` directly, same reasoning as the systemmonitor bind below.
+hl.bind(mainMod .. " + ALT + U", hl.dsp.exec_cmd(helios .. " automation toggle"),
+  { description = "Toggle device automation rules island" })
 
 -- System monitor: own ipc target (see systemmonitor toggle in shell.qml),
 -- bound to the literal Ctrl+Alt+Delete chord rather than the mainMod

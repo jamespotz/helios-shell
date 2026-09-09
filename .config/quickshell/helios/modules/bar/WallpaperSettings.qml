@@ -8,47 +8,13 @@ import "../../components"
 Item {
     id: root
 
-    property string draftFolder: Wallpaper.folderPath
+    property string draftFolder: WallpaperLibrary.folderPath
     property bool folderEditorOpen: false
-    property var thumbnailQueue: []
-    property var readyThumbnails: ({})
 
     // Loader recreates this tab each time it's opened, so pick up any
     // files added/removed on disk since last time — but only if a folder
     // is actually configured, no point scanning nothing.
-    Component.onCompleted: if (Wallpaper.folderPath) Wallpaper.scanFolder()
-
-    function requestThumbnail(sourcePath, outputPath) {
-        if (root.readyThumbnails[outputPath] || thumbnailGenerator.outputPath === outputPath
-                || root.thumbnailQueue.some(job => job.outputPath === outputPath)) return;
-        root.thumbnailQueue = root.thumbnailQueue.concat([{
-            sourcePath: sourcePath,
-            outputPath: outputPath
-        }]);
-        root.startNextThumbnail();
-    }
-
-    function startNextThumbnail() {
-        if (thumbnailGenerator.running || root.thumbnailQueue.length === 0) return;
-        const job = root.thumbnailQueue[0];
-        root.thumbnailQueue = root.thumbnailQueue.slice(1);
-        thumbnailGenerator.outputPath = job.outputPath;
-        thumbnailGenerator.command = ["sh", "-c",
-            "mkdir -p \"$(dirname \"$2\")\" && { [ -f \"$2\" ] || "
-                + "ffmpeg -y -loglevel error -ss 00:00:00.5 -i \"$1\" -frames:v 1 -vf scale=320:-1 \"$2\"; }",
-            "_", job.sourcePath, job.outputPath];
-        thumbnailGenerator.running = true;
-    }
-
-    Process {
-        id: thumbnailGenerator
-        property string outputPath: ""
-        onExited: exitCode => {
-            if (exitCode === 0)
-                root.readyThumbnails = Object.assign({}, root.readyThumbnails, { [outputPath]: true });
-            root.startNextThumbnail();
-        }
-    }
+    Component.onCompleted: if (WallpaperLibrary.folderPath) WallpaperLibrary.scanFolder()
 
     implicitWidth: 430
     implicitHeight: col.implicitHeight
@@ -60,7 +26,6 @@ Item {
 
         WallpaperCarousel {
             width: parent.width
-            thumbnailHost: root
         }
 
         // --- Folder (collapsed disclosure row) --------------------------------
@@ -83,7 +48,7 @@ Item {
                     width: parent.width - 15 - 15 - 16
                     elide: Text.ElideMiddle
                     opacity: 0.8
-                    text: Wallpaper.folderPath || "No folder set"
+                    text: WallpaperLibrary.folderPath || "No folder set"
                     anchors.verticalCenter: parent.verticalCenter
                 }
                 MaterialIcon {
@@ -119,7 +84,7 @@ Item {
                     text: root.draftFolder
 
                     onTextChanged: root.draftFolder = text
-                    Keys.onReturnPressed: Wallpaper.setFolder(root.draftFolder)
+                    Keys.onReturnPressed: WallpaperLibrary.setFolder(root.draftFolder)
 
                     StyledText {
                         visible: input.text.length === 0
@@ -156,13 +121,13 @@ Item {
                 MouseArea {
                     anchors.fill: parent
                     cursorShape: Qt.PointingHandCursor
-                    onClicked: Wallpaper.setFolder(root.draftFolder)
+                    onClicked: WallpaperLibrary.setFolder(root.draftFolder)
                 }
             }
         }
 
         StyledText {
-            visible: Wallpaper.folderPath !== "" && Wallpaper.images.length === 0
+            visible: WallpaperLibrary.folderPath !== "" && WallpaperLibrary.images.length === 0
             text: "No images found"
             opacity: 0.6
             font.pixelSize: Config.fontSize - 2

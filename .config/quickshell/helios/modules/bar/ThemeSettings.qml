@@ -384,5 +384,32 @@ Item {
                 }
             }
         }
+
+        // ─── Reduce motion ────────────────────────────────────────────────
+        Row {
+            width: parent.width
+
+            Column {
+                width: parent.width - reduceMotionToggle.width
+                anchors.verticalCenter: parent.verticalCenter
+                spacing: 1
+
+                StyledText { font.weight: Font.Medium; text: "Reduce motion" }
+                StyledText {
+                    width: parent.width
+                    wrapMode: Text.WordWrap
+                    color: Colors.subtext
+                    font.pixelSize: Config.fontSize - 3
+                    text: "Fewer animated transitions in the Settings window."
+                }
+            }
+
+            Toggle {
+                id: reduceMotionToggle
+                anchors.verticalCenter: parent.verticalCenter
+                checked: Config.reducedMotion
+                onToggled: v => Config.setReducedMotion(v)
+            }
+        }
     }
 }

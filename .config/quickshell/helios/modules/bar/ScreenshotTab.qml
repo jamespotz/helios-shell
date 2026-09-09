@@ -88,7 +88,7 @@ Item {
                     cursorShape: Qt.PointingHandCursor
                     enabled: !Screenshot.capturing
                     onClicked: {
-                        Bridge.closeIsland();
+                        IslandNavigation.close();
                         Screenshot.capture(Screenshot.mode);
                     }
                 }
@@ -123,7 +123,7 @@ Item {
                     cursorShape: Qt.PointingHandCursor
                     enabled: !Screenshot.capturing
                     onClicked: {
-                        Bridge.closeIsland();
+                        IslandNavigation.close();
                         Screenshot.captureOcrRegion();
                     }
                 }

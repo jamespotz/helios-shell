@@ -12,11 +12,27 @@ QtObject {
     id: root
 
     property bool _active: false
-    readonly property CalendarCore _core: CalendarCore {
-        onPersistenceRequested: subscriptions => subscriptionsFile.setText(JSON.stringify(subscriptions))
-        onRefreshRequested: root.refresh()
-    }
-    readonly property var state: root._core.state
+    property var events: []
+    property var subscriptions: []
+    property var subscriptionErrors: []
+    property bool ready: false
+    property bool refreshing: false
+
+    signal persistenceRequested(var subscriptions)
+    signal refreshRequested()
+
+    readonly property var state: ({
+        ready: root.ready,
+        refreshing: root.refreshing,
+        events: root.events,
+        eventsByDate: root._eventsByDate(root.events),
+        subscriptions: root.subscriptions.map(subscription => ({
+            id: subscription.id,
+            label: subscription.label,
+            url: subscription.url,
+            error: root.subscriptionErrors.find(error => error.id === subscription.id) || null
+        }))
+    })
 
     readonly property string cacheDir: Quickshell.env("HOME") + "/.cache/helios"
     readonly property string subscriptionsPath: root.cacheDir + "/calendar-subscriptions.json"
@@ -24,8 +40,45 @@ QtObject {
     readonly property int refreshInterval: 5 * 60 * 1000
     property double lastRefreshAt: 0
 
-    function subscribe(label, url) { return root._core.subscribe(label, url); }
-    function unsubscribe(id) { return root._core.unsubscribe(id); }
+    function subscribe(label, url) {
+        const cleanLabel = String(label || "").trim();
+        const cleanUrl = String(url || "").trim();
+        if (!cleanLabel || !cleanUrl) return false;
+        const taken = new Set(root.subscriptions.map(subscription => subscription.id));
+        let id;
+        do id = "sub-" + Math.random().toString(36).slice(2, 10); while (taken.has(id));
+        root.subscriptions = root.subscriptions.concat([{ id: id, label: cleanLabel, url: cleanUrl }]);
+        root.persistenceRequested(root.subscriptions);
+        root.refreshRequested();
+        return true;
+    }
+
+    function unsubscribe(id) {
+        if (!root.subscriptions.some(subscription => subscription.id === id)) return false;
+        root.subscriptions = root.subscriptions.filter(subscription => subscription.id !== id);
+        root.persistenceRequested(root.subscriptions);
+        root.refreshRequested();
+        return true;
+    }
+
+    function _eventsByDate(list) {
+        const grouped = {};
+        for (const event of (list || [])) {
+            if (!grouped[event.date]) grouped[event.date] = [];
+            grouped[event.date].push(event);
+        }
+        return grouped;
+    }
+
+    function _beginRefresh() { root.refreshing = true; }
+    function _cancelRefresh() { root.refreshing = false; }
+    function _completeRefresh(result) {
+        const next = result || {};
+        root.events = next.events || [];
+        root.subscriptionErrors = next.subscriptionErrors || [];
+        root.ready = true;
+        root.refreshing = false;
+    }
 
     // ─── Upcoming-meeting alert ─────────────────────────────────────────
     // Surfaces one timed event at a time, starting 5 minutes before it
@@ -107,7 +160,7 @@ QtObject {
     }
 
     function refresh() {
-        root._core.beginRefresh();
+        root._beginRefresh();
         proc.running = false;
         proc.running = true;
     }
@@ -118,12 +171,12 @@ QtObject {
             onStreamFinished: {
                 try {
                     const parsed = JSON.parse(text);
-                    root._core.completeRefresh(parsed);
+                    root._completeRefresh(parsed);
                     root.lastRefreshAt = Date.now();
                     eventsFile.setText(JSON.stringify({ savedAt: root.lastRefreshAt, result: parsed }));
                 } catch (e) {
                     console.warn("[Calendar] failed to parse calendar-info.py output:", e);
-                    root._core.cancelRefresh();
+                    root._cancelRefresh();
                 }
             }
         }
@@ -144,7 +197,7 @@ QtObject {
         onLoaded: {
             try {
                 const parsed = JSON.parse(subscriptionsFile.text());
-                if (Array.isArray(parsed)) root._core.subscriptions = parsed;
+                if (Array.isArray(parsed)) root.subscriptions = parsed;
             } catch (e) {
                 // First run / empty file.
             }
@@ -162,7 +215,7 @@ QtObject {
                 const cached = JSON.parse(eventsFile.text());
                 if (cached && cached.result && Array.isArray(cached.result.events)) {
                     root.lastRefreshAt = Number(cached.savedAt) || 0;
-                    root._core.completeRefresh(cached.result);
+                    root._completeRefresh(cached.result);
                 }
             } catch (e) {
                 // First run / empty cache.
@@ -171,6 +224,9 @@ QtObject {
     }
 
     Component.onCompleted: root.ensureCacheDirProc.running = true
+
+    onPersistenceRequested: subscriptions => subscriptionsFile.setText(JSON.stringify(subscriptions))
+    onRefreshRequested: root.refresh()
 
     // Refresh every 5 minutes while the tab is open — cheap (one local
     // D-Bus query, no network) and picks up events added elsewhere
