@@ -72,10 +72,30 @@ QtObject {
             label: "Solarized Light", background: "#fdf6e3", surface: "#eee8d5", surfaceHigh: "#e3dcc6",
             overlay: "#93a1a1", text: "#657b83", subtext: "#839496", accent: "#268bd2",
             accentText: "#fdf6e3", danger: "#dc322f", warning: "#b58900", success: "#859900"
+        },
+        nord: {
+            label: "Nord", background: "#2e3440", surface: "#3b4252", surfaceHigh: "#434c5e",
+            overlay: "#4c566a", text: "#eceff4", subtext: "#d8dee9", accent: "#88c0d0",
+            accentText: "#2e3440", danger: "#bf616a", warning: "#ebcb8b", success: "#a3be8c"
+        },
+        everforest: {
+            label: "Everforest", background: "#2b3339", surface: "#323c41", surfaceHigh: "#3a464c",
+            overlay: "#859289", text: "#d3c6aa", subtext: "#9da9a0", accent: "#7fbbb3",
+            accentText: "#2b3339", danger: "#e67e80", warning: "#dbbc7f", success: "#a7c080"
+        },
+        nordLight: {
+            label: "Nord Light", background: "#eceff4", surface: "#e5e9f0", surfaceHigh: "#d8dee9",
+            overlay: "#4c566a", text: "#2e3440", subtext: "#3b4252", accent: "#5e81ac",
+            accentText: "#eceff4", danger: "#bf616a", warning: "#d08770", success: "#a3be8c"
+        },
+        everforestLight: {
+            label: "Everforest Light", background: "#fffbef", surface: "#f8f5e4", surfaceHigh: "#f2efdf",
+            overlay: "#939f91", text: "#5c6a72", subtext: "#829181", accent: "#3a94c5",
+            accentText: "#fffbef", danger: "#f85552", warning: "#dfa000", success: "#8da101"
         }
     })
 
-    readonly property var presetOrder: ["helios", "kanagawa", "tokyonight", "dracula", "gruvbox", "catppuccinMocha", "catppuccinLatte", "gruvboxLight", "kanagawaLotus", "tokyoNightDay", "rosePineDawn", "solarizedLight"]
+    readonly property var presetOrder: ["helios", "kanagawa", "tokyonight", "dracula", "gruvbox", "catppuccinMocha", "catppuccinLatte", "gruvboxLight", "kanagawaLotus", "tokyoNightDay", "rosePineDawn", "solarizedLight", "nord", "everforest", "nordLight", "everforestLight"]
 
     // Matugen scheme variants selectable for dynamic (wallpaper-driven)
     // mode. `swatch` is a small set of fixed representative colors (not

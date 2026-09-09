@@ -86,7 +86,41 @@ QtObject {
             id: liquidGlassAdapter
             property bool enabled: false
         }
+
+        // onLiquidGlassEnabledChanged below won't fire here if the loaded
+        // value matches the compiled-in default (false) — no actual change,
+        // so hyprglass never hears about it. Apply explicitly once the file
+        // read completes, so its whitelist/blacklist always matches the
+        // persisted preference on every startup, not just on toggles.
+        onLoaded: root._applyHyprglass()
     }
 
-    onLiquidGlassEnabledChanged: root.liquidGlassFile.writeAdapter()
+    // --- hyprglass layer whitelist/blacklist ---------------------------------
+    // "helios:bar" is the only namespace LiquidGlassSurface ever renders for
+    // (see Bar.qml/IslandShape.qml) — StatusIndicators' liquid-glass icon just
+    // toggles this one preference. When on, whitelist the namespace so
+    // hyprglass's shader replaces the plain Hyprland blur already set up in
+    // shell.qml; when off, blacklist it explicitly rather than just clearing
+    // the whitelist, since an empty whitelist means "glass everything".
+    //
+    // The installed hyprglass build (1.0.0) is Lua-config-only — `hyprctl
+    // keyword` errors with "can't work with non-legacy parsers", confirmed
+    // live. `hyprctl eval` runs Lua against the plugin's own hg.layer() API
+    // instead, which applies immediately, no reload needed. Guarded by
+    // `if hg then` in case the plugin isn't loaded on some machine.
+    function _applyHyprglass() {
+        const lua = root.liquidGlassEnabled
+            ? 'local hg = hl.plugin.hyprglass; if hg then hg.config({layers = {enabled = true}}); hg.layer("helios:bar", {}); end'
+            : 'local hg = hl.plugin.hyprglass; if hg then hg.layer("helios:bar", {exclude = true}); end';
+        hyprglassProc.command = ["hyprctl", "eval", lua];
+        hyprglassProc.running = false;
+        hyprglassProc.running = true;
+    }
+
+    property Process hyprglassProc: Process {}
+
+    onLiquidGlassEnabledChanged: {
+        root.liquidGlassFile.writeAdapter();
+        root._applyHyprglass();
+    }
 }

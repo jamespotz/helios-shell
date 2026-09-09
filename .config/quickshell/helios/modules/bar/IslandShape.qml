@@ -2,9 +2,9 @@ import QtQuick
 import "../../services"
 
 // The island's background — Apple-style vibrancy material: a translucent
-// surface with subtle gradient depth, soft inner shadow, and a fine
-// separator border. The pill floats off the screen edge (Bar.qml's
-// margins.top) so all four corners' continuous rounding is visible.
+// surface with subtle gradient depth and soft inner shadow. The pill floats
+// off the screen edge (Bar.qml's margins.top) so all four corners'
+// continuous rounding is visible.
 Item {
     id: root
 
@@ -24,28 +24,5 @@ Item {
         active: root.liquidGlassEnabled
         cornerRadius: root.cornerRadius
         fallbackColor: root.fillColor
-    }
-
-    // Subtle inner highlight along the top edge — mimics the way Apple's
-    // dark-mode materials catch a hair of light at the top. Kept a literal
-    // white (like LiquidGlassSurface's own rim) since it's a physical
-    // light-catch effect, not themed UI chrome.
-    Rectangle {
-        anchors.fill: parent
-        radius: root.cornerRadius
-        color: "transparent"
-        border.width: 0.5
-        border.color: Qt.rgba(1, 1, 1, 0.12)
-    }
-
-    // Fine separator — slightly more visible than the inner highlight,
-    // defines the shape against any wallpaper.
-    Rectangle {
-        anchors.fill: parent
-        anchors.margins: -0.5
-        radius: root.cornerRadius + 0.5
-        color: "transparent"
-        border.width: 0.5
-        border.color: Qt.rgba(Colors.shadow.r, Colors.shadow.g, Colors.shadow.b, 0.4)
     }
 }

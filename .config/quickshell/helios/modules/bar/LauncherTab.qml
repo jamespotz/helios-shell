@@ -12,8 +12,8 @@ Item {
 
     // Right-click context menu — freedesktop "Desktop Actions" for the app
     // under contextMenuEntry (e.g. Ghostty's "New Window"), positioned at
-    // contextMenuPos in the island surface's own coordinate space. null
-    // entry means no menu is open.
+    // contextMenuPos in this item's own coordinate space. null entry
+    // means no menu is open.
     property var contextMenuEntry: null
     property point contextMenuPos: Qt.point(0, 0)
     readonly property var results: Launcher.results
@@ -222,7 +222,7 @@ Item {
                     onClicked: mouse => {
                         if (mouse.button === Qt.RightButton) {
                             if (resultRow.kind !== "app" || !resultRow.entry.actions || resultRow.entry.actions.length === 0) return;
-                            const pos = resultMouseArea.mapToItem(QsWindow.contentItem, mouse.x, mouse.y);
+                            const pos = resultMouseArea.mapToItem(root, mouse.x, mouse.y);
                             root.contextMenuPos = pos;
                             root.contextMenuEntry = resultRow.entry;
                             return;
@@ -251,9 +251,9 @@ Item {
 
     // Right-click context menu — freedesktop Desktop Actions for the app
     // under contextMenuEntry. Kept as its own top-level popup (not nested
-    // in the result delegate) so it isn't clipped by the ListView and can
-    // be positioned at the click point in the island surface's own
-    // coordinate space.
+    // in the result delegate) so it isn't clipped by the ListView, and
+    // positioned in this item's own coordinate space since it's a sibling
+    // of contentCol rather than a reparented window-level overlay.
     Scrim {
         active: root.contextMenuEntry !== null
         dimOpacity: 0
@@ -266,9 +266,9 @@ Item {
         readonly property var actions: root.contextMenuEntry ? root.contextMenuEntry.actions : []
         width: 200
         height: visible ? menuColumn.implicitHeight + 8 : 0
-        // Clamp so the menu never renders past the island surface's edge.
-        x: Math.min(root.contextMenuPos.x, Config.islandMaxWidth - width - 8)
-        y: Math.min(root.contextMenuPos.y, Config.islandMaxHeight - height - 8)
+        // Clamp so the menu never renders past the launcher's own edge.
+        x: Math.min(root.contextMenuPos.x, root.width - width - 8)
+        y: Math.min(root.contextMenuPos.y, root.height - height - 8)
 
         PanelBackground {
             anchors.fill: parent
