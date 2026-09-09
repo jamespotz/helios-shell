@@ -66,9 +66,26 @@ QtObject {
 
     // Apple-style spring: critically damped (no overshoot) with moderate
     // stiffness for a smooth, decisive morph. Both axes must share params
-    // or they desync mid-animation.
-    readonly property real islandSpringStiffness: 4.0
-    readonly property real islandSpringDamping: 1.0
+    // or they desync mid-animation. User-tunable from IslandSettings'
+    // "Behavior" section.
+    readonly property real islandSpringStiffness: settingsAdapter.islandSpringStiffness
+    readonly property real islandSpringDamping: settingsAdapter.islandSpringDamping
+
+    // How long the island stays expanded after the cursor leaves before it
+    // collapses back to the idle bump — user-tunable from IslandSettings'
+    // "Behavior" section.
+    readonly property int hoverCollapseDelay: settingsAdapter.hoverCollapseDelay
+
+    function setIslandBehavior(delay, stiffness, damping) {
+        settingsAdapter.hoverCollapseDelay = delay;
+        settingsAdapter.islandSpringStiffness = stiffness;
+        settingsAdapter.islandSpringDamping = damping;
+        root.settingsFile.writeAdapter();
+    }
+
+    function resetIslandBehavior() {
+        root.setIslandBehavior(260, 4.0, 1.0);
+    }
 
     function setIslandAppearance(width, height, gap, size) {
         settingsAdapter.idleBumpWidth = width;
@@ -175,6 +192,10 @@ QtObject {
             property bool clockAmPmUppercase: true
 
             property bool reducedMotion: false
+
+            property int hoverCollapseDelay: 260
+            property real islandSpringStiffness: 4.0
+            property real islandSpringDamping: 1.0
         }
     }
 }

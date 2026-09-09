@@ -11,6 +11,10 @@ Item {
     property int draftFontSize: Config.fontSize
     property string weatherDraft: Weather.locationOverride
 
+    property int draftCollapseDelay: Config.hoverCollapseDelay
+    property real draftStiffness: Config.islandSpringStiffness
+    property real draftDamping: Config.islandSpringDamping
+
     readonly property var idleWidgetOptions: [
         { key: "showIdleMedia", icon: "music_note", label: "Now-playing cover" },
         { key: "showIdleClock", icon: "schedule", label: "Clock" },
@@ -430,6 +434,146 @@ Item {
                     opacity: 0.6
                     font.pixelSize: Config.fontSize - 2
                     text: "Applies immediately and persists across restarts. Width/height are the idle bump's size — the island still grows past them when hovered or expanded."
+                }
+
+                Item { width: parent.width; height: 13 } // bottom padding
+            }
+        }
+
+        // --- Behavior ------------------------------------------------------
+        Column {
+            width: parent.width
+            spacing: 10
+
+            Column {
+                width: parent.width
+                spacing: 2
+
+                StyledText { font.bold: true; text: "Behavior" }
+                StyledText {
+                    width: parent.width
+                    wrapMode: Text.WordWrap
+                    opacity: 0.6
+                    font.pixelSize: Config.fontSize - 2
+                    text: "How the island reacts to hover and how its morph animation feels."
+                }
+            }
+
+            SettingsCard {
+                contentSpacing: 12
+                Item { width: parent.width; height: 1 } // top padding
+
+                Item {
+                    width: parent.width
+                    height: 40
+
+                    Row {
+                        anchors.left: parent.left
+                        anchors.leftMargin: 14
+                        anchors.verticalCenter: parent.verticalCenter
+                        spacing: 10
+
+                        MaterialIcon { icon: "blur_on"; font.pixelSize: 16; opacity: 0.8; anchors.verticalCenter: parent.verticalCenter }
+                        StyledText { text: "Liquid glass"; anchors.verticalCenter: parent.verticalCenter }
+                    }
+
+                    Toggle {
+                        anchors.right: parent.right
+                        anchors.rightMargin: 14
+                        anchors.verticalCenter: parent.verticalCenter
+                        checked: Bridge.liquidGlassEnabled
+                        onToggled: v => Bridge.liquidGlassEnabled = v
+                    }
+
+                    Rectangle {
+                        anchors.left: parent.left
+                        anchors.right: parent.right
+                        anchors.leftMargin: 14
+                        anchors.bottom: parent.bottom
+                        height: 1
+                        color: Colors.overlay
+                        opacity: 0.15
+                    }
+                }
+
+                Column {
+                    width: parent.width - 28
+                    anchors.left: parent.left
+                    anchors.leftMargin: 14
+                    spacing: 10
+
+                    LabeledNumberField {
+                        label: "Collapse delay"
+                        value: root.draftCollapseDelay
+                        minValue: 0
+                        maxValue: 2000
+                        onValueEdited: v => root.draftCollapseDelay = v
+                    }
+
+                    Column {
+                        width: parent.width
+                        spacing: 4
+
+                        StyledText {
+                            opacity: 0.7
+                            font.pixelSize: Config.fontSize - 2
+                            text: "Morph stiffness — " + root.draftStiffness.toFixed(1)
+                        }
+                        Slider {
+                            width: parent.width
+                            value: root.draftStiffness
+                            maxValue: 12
+                            onMoved: v => root.draftStiffness = Math.round(v * 10) / 10
+                        }
+                    }
+
+                    Column {
+                        width: parent.width
+                        spacing: 4
+
+                        StyledText {
+                            opacity: 0.7
+                            font.pixelSize: Config.fontSize - 2
+                            text: "Morph damping — " + root.draftDamping.toFixed(1)
+                        }
+                        Slider {
+                            width: parent.width
+                            value: root.draftDamping
+                            maxValue: 2
+                            onMoved: v => root.draftDamping = Math.round(v * 10) / 10
+                        }
+                    }
+                }
+
+                Row {
+                    anchors.left: parent.left
+                    anchors.leftMargin: 14
+                    spacing: 8
+
+                    PillButton {
+                        text: "Apply"
+                        primary: true
+                        onClicked: Config.setIslandBehavior(root.draftCollapseDelay, root.draftStiffness, root.draftDamping)
+                    }
+                    PillButton {
+                        text: "Reset"
+                        onClicked: {
+                            Config.resetIslandBehavior();
+                            root.draftCollapseDelay = Config.hoverCollapseDelay;
+                            root.draftStiffness = Config.islandSpringStiffness;
+                            root.draftDamping = Config.islandSpringDamping;
+                        }
+                    }
+                }
+
+                StyledText {
+                    width: parent.width - 28
+                    anchors.left: parent.left
+                    anchors.leftMargin: 14
+                    wrapMode: Text.WordWrap
+                    opacity: 0.6
+                    font.pixelSize: Config.fontSize - 2
+                    text: "Higher stiffness snaps open faster; damping near 1 stays smooth, lower values overshoot before settling. Liquid glass applies immediately."
                 }
 
                 Item { width: parent.width; height: 13 } // bottom padding

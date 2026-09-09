@@ -72,11 +72,21 @@ Item {
                     font.weight: Font.DemiBold
                     font.pixelSize: Config.fontSize + 2
                 }
-                StyledText {
-                    text: !root.bluetooth.available ? "No adapter"
-                        : (root.bluetooth.powered ? (root.bluetooth.scanning ? "Scanning…" : "On") : "Off")
-                    opacity: 0.6
-                    font.pixelSize: Config.fontSize - 2
+                Row {
+                    spacing: 4
+
+                    StyledText {
+                        text: !root.bluetooth.available ? "No adapter" : (root.bluetooth.powered ? "On" : "Off")
+                        opacity: 0.6
+                        font.pixelSize: Config.fontSize - 2
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+                    LoadingSpinner {
+                        visible: root.bluetooth.scanning
+                        active: root.bluetooth.scanning
+                        font.pixelSize: 11
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
                 }
             }
 
@@ -135,9 +145,18 @@ Item {
                     id: scanLinkRow
                     spacing: 6
 
-                    MaterialIcon { icon: "search"; font.pixelSize: 15; color: Colors.accent; anchors.verticalCenter: parent.verticalCenter }
+                    LoadingSpinner {
+                        visible: root.bluetooth.scanning
+                        active: root.bluetooth.scanning
+                        font.pixelSize: 15
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+                    MaterialIcon {
+                        visible: !root.bluetooth.scanning
+                        icon: "search"; font.pixelSize: 15; color: Colors.accent; anchors.verticalCenter: parent.verticalCenter
+                    }
                     StyledText {
-                        text: root.bluetooth.scanning ? "Scanning…" : "Scan"
+                        text: "Scan"
                         color: Colors.accent
                         font.weight: Font.Medium
                         anchors.verticalCenter: parent.verticalCenter

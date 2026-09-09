@@ -36,9 +36,9 @@ PanelWindow {
         { id: "wallpaper", label: "Wallpaper", icon: "wallpaper", group: "Personalization",
           keywords: ["wallpaper", "background", "transition", "folder"] },
         { id: "helios", label: "Helios", icon: "auto_awesome", group: "Personalization",
-          keywords: ["island", "idle bump", "widgets", "clock format", "weather location"] },
+          keywords: ["island", "idle bump", "widgets", "clock format", "weather location", "liquid glass", "spring", "morph", "collapse delay"] },
         { id: "displays", label: "Displays", icon: "monitor", group: "Hardware",
-          keywords: ["resolution", "refresh rate", "scale", "vrr", "adaptive sync"] },
+          keywords: ["resolution", "refresh rate", "scale", "vrr", "adaptive sync", "night light", "blue light", "warmth", "color temperature"] },
         { id: "sound", label: "Sound", icon: "volume_up", group: "Hardware",
           keywords: ["volume", "mixer", "output", "input", "audio", "device"] },
         { id: "bluetooth", label: "Bluetooth", icon: "bluetooth", group: "Hardware",
@@ -322,7 +322,24 @@ PanelWindow {
 
     Component { id: appearancePage; ThemeSettings {} }
     Component { id: wallpaperPage; WallpaperSettings {} }
-    Component { id: displaysPage; DisplayTab {} }
+    // Night Light stacked below the monitor list — same physical-hardware
+    // grouping as Sound (VolumeTab + AudioMixerTab) below.
+    Component {
+        id: displaysPage
+        Item {
+            implicitWidth: displaysCol.width
+            implicitHeight: displaysCol.implicitHeight
+
+            Column {
+                id: displaysCol
+                width: parent.width
+                spacing: 24
+
+                DisplayTab { width: parent.width }
+                NightLightTab { width: parent.width }
+            }
+        }
+    }
     // Volume/device controls (VolumeTab, otherwise only reachable from the
     // island) stacked above the per-app mixer, so Sound covers both without
     // a separate page.

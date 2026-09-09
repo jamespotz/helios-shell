@@ -56,8 +56,6 @@ hl.bind(mainMod .. " + ALT + P", hl.dsp.exec_cmd(helios .. " island toggle wallp
   { description = "Toggle wallpaper picker island" })
 hl.bind(mainMod .. " + ALT + T", hl.dsp.exec_cmd(helios .. " island toggle theme"),
   { description = "Toggle theme picker island" })
-hl.bind(mainMod .. " + ALT + I", hl.dsp.exec_cmd(helios .. " island toggle island"),
-  { description = "Toggle island settings island" })
 hl.bind(mainMod .. " + F", hl.dsp.exec_cmd(helios .. " island toggle recorder"),
   { description = "Toggle screen recorder island" })
 hl.bind(mainMod .. " + ALT + ESCAPE", hl.dsp.exec_cmd(helios .. " island close"),

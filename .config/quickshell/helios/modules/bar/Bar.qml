@@ -86,7 +86,7 @@ PanelWindow {
 
     Timer {
         id: hoverCollapseTimer
-        interval: 260
+        interval: Config.hoverCollapseDelay
         // Tray icons only ever render in the peek (hover-expanded) row —
         // see PeekContent.qml/IdleBump.qml — so while our custom tray menu
         // is open, the cursor leaves the island (it's on the overlay menu

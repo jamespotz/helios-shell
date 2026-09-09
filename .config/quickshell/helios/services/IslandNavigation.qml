@@ -25,7 +25,6 @@ QtObject {
         root._destination("idlelock", "Idle & Lock", "IdleTab.qml"),
         root._destination("wallpaper", "Wallpaper", "WallpaperSettings.qml"),
         root._destination("theme", "Theme", "ThemeSettings.qml"),
-        root._destination("island", "Island", "IslandSettings.qml", 360),
         root._destination("power", "Power", "PowerTab.qml"),
         root._destination("powermenu", "Power", "PowerMenuTab.qml"),
         root._destination("keybinds", "Keybinds", "KeybindsTab.qml"),

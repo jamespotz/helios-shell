@@ -45,6 +45,14 @@ Item {
         wn.connectError = "";
     }
 
+    // The singleton's own startup scan keeps the cache warm so this view
+    // never blocks on a fresh list, but a rescan on every open still keeps
+    // it current — cheap since scan() is just an nmcli rescan trigger, not
+    // a blocking call.
+    Component.onCompleted: {
+        if (Networking.wifiEnabled && !wn.scanning) wn.scan();
+    }
+
     implicitWidth: 320
     implicitHeight: col.implicitHeight
 
@@ -233,12 +241,23 @@ Item {
                 icon: Networking.wifiEnabled ? "wifi" : "wifi_off"
             }
 
-            StyledText {
+            Row {
                 anchors.left: parent.left
                 anchors.leftMargin: 26
                 anchors.verticalCenter: parent.verticalCenter
-                text: !Networking.wifiHardwareEnabled ? "Disabled by hardware switch"
-                    : Networking.wifiEnabled ? (root.wn.scanning ? "Scanning…" : "On") : "Off"
+                spacing: 4
+
+                StyledText {
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: !Networking.wifiHardwareEnabled ? "Disabled by hardware switch"
+                        : Networking.wifiEnabled ? "On" : "Off"
+                }
+                LoadingSpinner {
+                    visible: root.wn.scanning
+                    active: root.wn.scanning
+                    font.pixelSize: 11
+                    anchors.verticalCenter: parent.verticalCenter
+                }
             }
 
             Toggle {
@@ -263,14 +282,21 @@ Item {
                 id: scanLinkRow
                 spacing: 6
 
+                LoadingSpinner {
+                    visible: root.wn.scanning
+                    active: root.wn.scanning
+                    font.pixelSize: 15
+                    anchors.verticalCenter: parent.verticalCenter
+                }
                 MaterialIcon {
+                    visible: !root.wn.scanning
                     icon: "search"
                     font.pixelSize: 15
                     color: Colors.accent
                     anchors.verticalCenter: parent.verticalCenter
                 }
                 StyledText {
-                    text: root.wn.scanning ? "Scanning…" : "Scan"
+                    text: "Scan"
                     color: Colors.accent
                     font.weight: Font.Medium
                     anchors.verticalCenter: parent.verticalCenter

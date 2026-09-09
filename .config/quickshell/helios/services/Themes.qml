@@ -92,10 +92,30 @@ QtObject {
             label: "Everforest Light", background: "#fffbef", surface: "#f8f5e4", surfaceHigh: "#f2efdf",
             overlay: "#939f91", text: "#5c6a72", subtext: "#829181", accent: "#3a94c5",
             accentText: "#fffbef", danger: "#f85552", warning: "#dfa000", success: "#8da101"
+        },
+        gruvboxMaterialDark: {
+            label: "Gruvbox Material Dark Hard", background: "#2a2827", surface: "#504945", surfaceHigh: "#5a524c",
+            overlay: "#5a524c", text: "#fbf1c7", subtext: "#ebdbb2", accent: "#a9b665",
+            accentText: "#292828", danger: "#ea6962", warning: "#d3869b", success: "#89b482"
+        },
+        gruvboxMaterialLight: {
+            label: "Gruvbox Material Light Hard", background: "#fbf1c7", surface: "#e0cfa9", surfaceHigh: "#a89984",
+            overlay: "#a89984", text: "#282828", subtext: "#3c3836", accent: "#6c782e",
+            accentText: "#292828", danger: "#c14a4a", warning: "#945e80", success: "#4c7a5d"
+        },
+        synthwaveElectricDark: {
+            label: "Synthwave Electric Dark", background: "#000008", surface: "#151529", surfaceHigh: "#212147",
+            overlay: "#4d80ff", text: "#e6f0ff", subtext: "#cce0ff", accent: "#ff6600",
+            accentText: "#000000", danger: "#ff3366", warning: "#ffcc00", success: "#0080ff"
+        },
+        synthwaveElectricLight: {
+            label: "Synthwave Electric Light", background: "#ffffff", surface: "#f5f5ff", surfaceHigh: "#ebebff",
+            overlay: "#3366cc", text: "#1a1a33", subtext: "#333366", accent: "#cc5200",
+            accentText: "#ffffff", danger: "#cc1a40", warning: "#cc9900", success: "#0066cc"
         }
     })
 
-    readonly property var presetOrder: ["helios", "kanagawa", "tokyonight", "dracula", "gruvbox", "catppuccinMocha", "catppuccinLatte", "gruvboxLight", "kanagawaLotus", "tokyoNightDay", "rosePineDawn", "solarizedLight", "nord", "everforest", "nordLight", "everforestLight"]
+    readonly property var presetOrder: ["helios", "kanagawa", "tokyonight", "dracula", "gruvbox", "catppuccinMocha", "catppuccinLatte", "gruvboxLight", "kanagawaLotus", "tokyoNightDay", "rosePineDawn", "solarizedLight", "nord", "everforest", "nordLight", "everforestLight", "gruvboxMaterialDark", "gruvboxMaterialLight", "synthwaveElectricDark", "synthwaveElectricLight"]
 
     // Matugen scheme variants selectable for dynamic (wallpaper-driven)
     // mode. `swatch` is a small set of fixed representative colors (not
