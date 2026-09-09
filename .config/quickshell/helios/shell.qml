@@ -188,6 +188,10 @@ ShellRoot {
         function region() { Screenshot.captureRegion() }
         function window() { Screenshot.captureWindow() }
         function ocr() { Screenshot.captureOcrRegion() }
+        function toggle() {
+            const screen = Utils.screenForMonitor(Quickshell.screens, Hyprland.focusedMonitor) || Quickshell.screens[0];
+            IslandNavigation.toggle(screen.name, "screenshot");
+        }
     }
 
     IpcHandler {

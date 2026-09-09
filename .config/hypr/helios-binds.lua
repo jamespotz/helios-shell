@@ -116,6 +116,11 @@ hl.bind(mainMod .. " + ALT + S", hl.dsp.exec_cmd(helios .. " screenshot window")
   { description = "Screenshot active window (helios)" })
 hl.bind(mainMod .. " + ALT + O", hl.dsp.exec_cmd(helios .. " screenshot ocr"),
   { description = "OCR screen region to clipboard (helios)" })
+-- Own `screenshot toggle` ipc: opens the screenshot island tab itself,
+-- unlike the region/full/window/ocr binds above which fire a capture
+-- immediately without showing any panel.
+hl.bind(mainMod .. " + S", hl.dsp.exec_cmd(helios .. " screenshot toggle"),
+  { description = "Toggle screenshot island" })
 
 -- Night light / Do Not Disturb / Caffeine toggles
 hl.bind(mainMod .. " + SHIFT + N", hl.dsp.exec_cmd(helios .. " nightlight toggle"),
