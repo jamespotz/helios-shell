@@ -8,8 +8,9 @@ import "../../components"
 
 // Custom tray right-click menu — replaces the native QMenu display() with
 // our own styled QML popup matching the shell's visual language. Lives as a
-// top-level PanelWindow (same pattern as Launcher/PowerMenu) to avoid the
-// PopupWindow-as-child nesting blocker in Quickshell 0.3.1.
+// top-level PanelWindow (menu positioning needs full-screen coordinates,
+// unlike the launcher/keybinds/power menu, which are now island tabs) to
+// avoid the PopupWindow-as-child nesting blocker in Quickshell 0.3.1.
 //
 // Uses a full-screen transparent surface as a coordinate space (so the menu
 // card can be positioned anywhere on screen with plain x/y), but does NOT

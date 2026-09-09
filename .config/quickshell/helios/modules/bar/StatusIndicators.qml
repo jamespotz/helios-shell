@@ -152,7 +152,7 @@ Row {
 
     IconButton {
         icon: "power_settings_new"
-        active: Bridge.powerMenuOpen
-        onClicked: Bridge.togglePowerMenu()
+        active: root.isIslandTab("powermenu")
+        onClicked: root.openIslandTab("powermenu")
     }
 }

@@ -34,13 +34,21 @@ QtObject {
 
     property string pendingApplyPath: ""
     property bool pendingApplyIsVideo: false
+    property string pendingTransitionType: "simple"
     property bool daemonKilled: false
 
-    function applyToDaemon(text) {
+    function applyToDaemon(text, isRestore) {
+        if (!text) return;
         let p = text;
         if (p.startsWith("~")) p = Quickshell.env("HOME") + p.slice(1);
         root.pendingApplyPath = p;
         root.pendingApplyIsVideo = ["mp4", "webm", "mkv", "mov"].includes(p.split(".").pop().toLowerCase());
+        // Restore is re-asserting whatever's already showing (the common
+        // case, since awww-daemon survives a plain quickshell restart) —
+        // "simple" is the fastest, least eventful transition, instead of
+        // replaying the user's chosen fancy transition over an image that
+        // isn't actually changing.
+        root.pendingTransitionType = isRestore ? "simple" : Config.wallpaperTransitionStyle;
         // Always clear any running mpvpaper first — harmless no-op if none
         // is running, and avoids two players fighting over the same output
         // when switching video -> video or video -> image.
@@ -76,8 +84,9 @@ QtObject {
                 daemonProc.running = true;
                 daemonRespawnTimer.start();
             } else {
+                root.applyRetryCount = 0;
                 applyProc.command = ["awww", "img", root.pendingApplyPath,
-                    "--transition-type", Config.wallpaperTransitionStyle, "--transition-step", 255, "--transition-fps", 144];
+                    "--transition-type", root.pendingTransitionType, "--transition-step", 255, "--transition-fps", 144];
                 applyProc.running = false;
                 applyProc.running = true;
             }
@@ -89,8 +98,9 @@ QtObject {
     property Timer daemonRespawnTimer: Timer {
         interval: 400
         onTriggered: {
+            root.applyRetryCount = 0;
             applyProc.command = ["awww", "img", root.pendingApplyPath,
-                "--transition-type", Config.wallpaperTransitionStyle, "--transition-step", 255, "--transition-fps", 144];
+                "--transition-type", root.pendingTransitionType, "--transition-step", 255, "--transition-fps", 144];
             applyProc.running = false;
             applyProc.running = true;
         }
@@ -98,8 +108,17 @@ QtObject {
 
     property Process videoProc: Process {}
 
+    // See applyProc below for why a failed apply gets retried.
+    property int applyRetryCount: 0
+
+    property Timer applyRetryTimer: Timer {
+        interval: 500
+        onTriggered: { applyProc.running = false; applyProc.running = true; }
+    }
+
     function setPath(text) {
         const trimmed = text.trim();
+        if (!trimmed) return;
         settingsAdapter.path = trimmed;
         root.settingsFile.writeAdapter();
         root.applyToDaemon(trimmed);
@@ -133,20 +152,46 @@ QtObject {
         }
     }
 
-    property Process applyProc: Process {}
+    // awww-daemon (0.12.1-3.fc44, at least) panics and aborts on its own
+    // fairly regularly — confirmed via `coredumpctl list`, dozens of
+    // SIGABRT crashes, sometimes just seconds apart, unrelated to any
+    // particular image. Once it's dead, `awww img` fails immediately with
+    // "failed to connect to socket: Connection refused" against the stale
+    // socket file it leaves behind, and the output goes black until
+    // something respawns it. A failed apply almost always means exactly
+    // this, not "daemon is merely slow" — so respawn (harmless no-op if
+    // it's actually still alive) before retrying, instead of retrying the
+    // same command against a socket nothing is listening on.
+    property Process applyProc: Process {
+        onExited: exitCode => {
+            if (exitCode !== 0 && root.applyRetryCount < 3) {
+                root.applyRetryCount++;
+                daemonProc.running = false;
+                daemonProc.running = true;
+                applyRetryTimer.start();
+            } else {
+                root.applyRetryCount = 0;
+            }
+        }
+    }
 
     // Best-effort: exits immediately (harmlessly) if a daemon is already
-    // running from a previous shell session.
+    // running — either from a previous shell session, or because this is
+    // just a respawn-after-crash retry above finding it already back up.
     property Process daemonProc: Process {
         command: ["awww-daemon"]
         running: true
     }
 
-    // awww-daemon needs a moment to open its IPC socket after spawning —
-    // restoreTimer gives it that before replaying the persisted path.
+    // A plain `helios-reload.sh` restart (SUPER+SHIFT+R) kills and relaunches
+    // only quickshell — awww-daemon isn't in that pkill pattern, so it
+    // survives and is already displaying the right image before this even
+    // runs. This replay exists for the other case: a genuine cold start,
+    // where the daemon really is a fresh spawn and needs the 400ms head
+    // start before its IPC socket is up.
     property Timer restoreTimer: Timer {
         interval: 400
-        onTriggered: if (root.path) root.applyToDaemon(root.path)
+        onTriggered: if (root.path) root.applyToDaemon(root.path, true)
     }
 
     property FileView settingsFile: FileView {

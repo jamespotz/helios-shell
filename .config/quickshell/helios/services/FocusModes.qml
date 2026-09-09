@@ -8,9 +8,9 @@ import Quickshell.Services.UPower
 // inhibit), power profile, night light, and a set of apps to launch,
 // applied together through the services that already own each of those
 // settings (Bridge, IdleInhibit, PowerProfiles, NightLight, AppLaunch).
-// Persisted the same way Launcher persists launch counts: a plain JSON
+// Persisted the same way LauncherTab persists launch counts: a plain JSON
 // FileView, since this is a user-editable list rather than a fixed schema
-// (see launchCountsFile in Launcher.qml for the identical pattern).
+// (see launchCountsFile in LauncherTab.qml for the identical pattern).
 QtObject {
     id: root
 

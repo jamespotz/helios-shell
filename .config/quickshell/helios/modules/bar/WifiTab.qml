@@ -131,12 +131,6 @@ Item {
             font.pixelSize: Config.fontSize - 2
         }
 
-        // --- Bottom bar: Wi-Fi / Bluetooth switch + power -----------------------
-        IslandModeSwitcher {
-            width: parent.width
-            visible: root.viewMode === "orbit"
-        }
-
         StyledText {
             visible: root.viewMode === "list" && Networking.wifiEnabled && root.wn.loaded && root.wn.networks.length === 0
             text: "No networks found"

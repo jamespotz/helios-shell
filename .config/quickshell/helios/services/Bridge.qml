@@ -6,9 +6,6 @@ import Quickshell.Io
 QtObject {
     id: root
     property bool locked: false
-    property bool launcherOpen: false
-    property bool powerMenuOpen: false
-    property bool keybindsOpen: false
 
     // Dynamic island: each screen's bar is itself the island. islandScreen +
     // islandTab pick which screen's bar is pinned open and to which panel
@@ -47,12 +44,6 @@ QtObject {
 
     function toggleDnd() { dndEnabled = !dndEnabled }
 
-    function toggleLauncher() { launcherOpen = !launcherOpen }
-    function toggleLauncherOff() { launcherOpen = false }
-    function togglePowerMenu() { powerMenuOpen = !powerMenuOpen }
-    function closePowerMenu() { powerMenuOpen = false }
-    function toggleKeybinds() { keybindsOpen = !keybindsOpen }
-    function closeKeybinds() { keybindsOpen = false }
     function lock() { lockRequested() }
 
     function toggleIsland(screenName, tab) {

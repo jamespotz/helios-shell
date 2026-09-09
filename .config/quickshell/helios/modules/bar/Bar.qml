@@ -54,7 +54,15 @@ PanelWindow {
     // instead of being covered by them.
     WlrLayershell.layer: WlrLayer.Top
     WlrLayershell.namespace: "helios:bar"
-    WlrLayershell.keyboardFocus: bar.expanded ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
+    // OnDemand only grants keyboard focus in response to a real click on
+    // the surface — opening the island via an IPC-driven keybind (no click
+    // ever happens) left it visible but keyboard-focus-less, so Escape (and
+    // typing into e.g. the launcher's search field) silently went to
+    // whatever window was focused before. Exclusive grabs focus the instant
+    // the surface becomes keyboard-interactive, regardless of how it was
+    // opened. Pointer-based click-outside-to-close (HyprlandFocusGrab,
+    // below) is unaffected — that grab is pointer-only.
+    WlrLayershell.keyboardFocus: bar.expanded ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
 
     anchors.top: true
     // A small gap from the true screen edge so the pill's top-corner
@@ -149,6 +157,19 @@ PanelWindow {
         id: hitArea
         anchors.top: parent.top
         anchors.horizontalCenter: parent.horizontalCenter
+        focus: bar.expanded
+        // Has to live here, not on some deeper wrapper — key events bubble
+        // up the visual *parent* chain from whatever grabbed active focus
+        // (e.g. a tab's own ListView/TextField), and this is the shallowest
+        // real ancestor of every panel tab's content (visual > Rectangle >
+        // Loader). A sibling of `visual` never sees keys typed into it.
+        Keys.onEscapePressed: {
+            if (bar.panelOpen) Bridge.closeIsland();
+            else if (bar.notifyMode) Notifications.dismissAll();
+            else if (bar.meetingMode) Calendar.dismissAlert();
+            else if (bar.batteryMode) Bluetooth.dismissLowBattery();
+            else bar.hovering = false;
+        }
 
         // Falling all the way back to the tiny idle-bump size while
         // `content.item` is still null (the Loader hasn't finished
@@ -187,18 +208,6 @@ PanelWindow {
             onHoveredChanged: {
                 if (hoverTracker.hovered) { hoverCollapseTimer.stop(); bar.hovering = true; }
                 else hoverCollapseTimer.restart();
-            }
-        }
-
-        Item {
-            anchors.fill: parent
-            focus: bar.expanded
-            Keys.onEscapePressed: {
-                if (bar.panelOpen) Bridge.closeIsland();
-                else if (bar.notifyMode) Notifications.dismissAll();
-                else if (bar.meetingMode) Calendar.dismissAlert();
-                else if (bar.batteryMode) Bluetooth.dismissLowBattery();
-                else bar.hovering = false;
             }
         }
 

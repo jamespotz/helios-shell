@@ -10,8 +10,12 @@ Column {
     id: root
 
     required property var thumbnailHost
-    readonly property int cardWidth: 250
-    readonly property int cardHeight: 152
+    // Landscape cells matching actual wallpaper aspect ratio (portrait cells
+    // cropped desktop wallpapers down to an unrecognizable sliver), tightly
+    // packed, bottom-aligned. The current card grows via `scale` anchored to
+    // the shared bottom edge (see delegate below).
+    readonly property int cardWidth: 130
+    readonly property int cardHeight: 78
     spacing: 12
 
     Component.onCompleted: carousel.forceActiveFocus(Qt.TabFocusReason)
@@ -23,16 +27,30 @@ Column {
     }
 
     // --- Wallpaper carousel ---------------------------------------------
-    StyledText {
+    Row {
         width: parent.width
-        font.bold: true
-        text: "Choose Wallpaper"
+
+        StyledText {
+            id: carouselTitle
+            font.bold: true
+            text: "Choose Wallpaper"
+        }
+
+        Item { width: parent.width - carouselTitle.implicitWidth - carouselCount.implicitWidth; height: 1 }
+
+        StyledText {
+            id: carouselCount
+            visible: Wallpaper.images.length > 0
+            opacity: 0.6
+            font.pixelSize: Config.fontSize - 2
+            text: (carousel.currentIndex + 1) + " / " + Wallpaper.images.length
+        }
     }
 
     Item {
         id: carouselWrap
         width: parent.width
-        height: Wallpaper.images.length > 0 ? 190 : 0
+        height: Wallpaper.images.length > 0 ? 145 : 0
         clip: true
 
         ListView {
@@ -40,7 +58,7 @@ Column {
             anchors.fill: parent
             orientation: ListView.Horizontal
             model: Wallpaper.images
-            spacing: -42
+            spacing: 2
             clip: true
             boundsBehavior: Flickable.StopAtBounds
             snapMode: ListView.SnapOneItem
@@ -87,32 +105,25 @@ Column {
 
                 Item {
                     id: card
-                    anchors.centerIn: parent
-                    width: root.cardWidth - 12
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    anchors.bottom: parent.bottom
+                    transformOrigin: Item.Bottom
+                    width: root.cardWidth
                     height: root.cardHeight
-                    rotation: thumb.current ? -4 : (thumb.index < carousel.currentIndex ? -7 : 5)
-                    scale: thumb.current ? 1 : 0.88
-                    opacity: thumb.current ? 1 : 0.66
+                    // Flat: every non-current card stays the exact same
+                    // size (uniform shelf), only the current one grows —
+                    // per-distance shrinking left uneven gaps between
+                    // neighbors instead of a tight, even filmstrip.
+                    scale: thumb.current ? 1.3 : 1
                     z: thumb.current ? 2 : 1
 
-                    Behavior on rotation { NumberAnimation { duration: Config.animFast; easing.type: Easing.OutCubic } }
                     Behavior on scale { NumberAnimation { duration: Config.animFast; easing.type: Easing.OutCubic } }
-                    Behavior on opacity { NumberAnimation { duration: Config.animFast } }
-
-                    Rectangle {
-                        visible: thumb.selected
-                        anchors.fill: parent
-                        anchors.margins: -5
-                        radius: Colors.radiusLarge
-                        color: Colors.accent
-                        opacity: 0.25
-                    }
 
                     readonly property bool showPlaceholder: thumb.isVideoThumb && (!thumb.videoThumbReady || img.status === Image.Error)
 
                     ClippingRectangle {
                         anchors.fill: parent
-                        radius: Colors.radiusLarge
+                        radius: Colors.radiusSmall
                         color: Colors.surfaceHigh
                         clip: true
 
@@ -159,26 +170,26 @@ Column {
 
                     Rectangle {
                         anchors.fill: parent
-                        radius: Colors.radiusLarge
+                        radius: Colors.radiusSmall
                         color: "transparent"
-                        border.width: thumb.selected ? 2 : 0
+                        border.width: thumb.selected ? 1 : 0
                         border.color: Colors.accent
                     }
 
                     MaterialIcon {
                         visible: thumb.selected
-                        anchors.top: parent.top
+                        anchors.bottom: parent.bottom
                         anchors.right: parent.right
-                        anchors.margins: 7
+                        anchors.margins: 5
                         icon: "check_circle"
                         filled: true
-                        font.pixelSize: 18
+                        font.pixelSize: 13
                         color: Colors.accent
                     }
 
                     Rectangle {
                         anchors.fill: parent
-                        radius: Colors.radiusLarge
+                        radius: Colors.radiusSmall
                         color: Colors.overlay
                         opacity: thumbHover.hovered && !thumb.selected ? 0.2 : 0
                     }
@@ -195,8 +206,62 @@ Column {
                     }
                 }
 
+                // Filename caption for the current card — sits outside
+                // `card` (not a child of it) so it isn't itself scaled up
+                // and blurred by card's transform; position is computed from
+                // card's known base size + scale instead. Card is now
+                // bottom-anchored and grows upward, so the caption sits
+                // above its (moving) top edge rather than below it.
+                Rectangle {
+                    id: caption
+                    visible: thumb.current
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    y: parent.height - card.height * card.scale - height - 6
+                    width: Math.min(root.cardWidth * 2, captionText.implicitWidth + 16)
+                    height: 20
+                    radius: 6
+                    color: "black"
+                    opacity: 0.55
+
+                    StyledText {
+                        id: captionText
+                        anchors.centerIn: parent
+                        width: Math.min(implicitWidth, root.cardWidth * 2 - 16)
+                        elide: Text.ElideMiddle
+                        color: "white"
+                        font.pixelSize: Config.fontSize - 3
+                        text: thumb.modelData.split("/").pop()
+                    }
+                }
+
                 Keys.onReturnPressed: carousel.choose(thumb.index)
                 Keys.onSpacePressed: carousel.choose(thumb.index)
+            }
+        }
+
+        // Fades the outermost thumbnails into the panel background instead
+        // of hard-cutting them at the viewport edge — reads as the filmstrip
+        // receding into the distance rather than just being clipped.
+        Rectangle {
+            anchors.left: parent.left
+            anchors.top: parent.top
+            anchors.bottom: parent.bottom
+            width: 28
+            gradient: Gradient {
+                orientation: Gradient.Horizontal
+                GradientStop { position: 0; color: Colors.surface }
+                GradientStop { position: 1; color: Qt.rgba(Colors.surface.r, Colors.surface.g, Colors.surface.b, 0) }
+            }
+        }
+        Rectangle {
+            anchors.right: parent.right
+            anchors.top: parent.top
+            anchors.bottom: parent.bottom
+            width: 28
+            gradient: Gradient {
+                orientation: Gradient.Horizontal
+                GradientStop { position: 0; color: Qt.rgba(Colors.surface.r, Colors.surface.g, Colors.surface.b, 0) }
+                GradientStop { position: 1; color: Colors.surface }
             }
         }
 

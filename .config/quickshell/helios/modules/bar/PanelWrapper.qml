@@ -1,11 +1,10 @@
 import QtQuick
-import Quickshell.Services.UPower
 import "../../services"
 import "../../components"
 
-// Apple Control Center-inspired panel container. The tab bar uses a
-// segmented-control aesthetic: a single rounded background with pill-shaped
-// active indicator that slides between tabs. Content scrolls when tall.
+// Apple Control Center-inspired panel container. Tab switching happens over
+// IPC only (`island toggle <tab>`); this just renders whichever tab is
+// active plus a close button. Content scrolls when tall.
 Item {
     id: root
 
@@ -27,90 +26,26 @@ Item {
 
     Column {
         id: pane
-        // Sized to the active tab's own content — not the tab bar, which
-        // scrolls horizontally instead of forcing every tab to be at least
-        // as wide as all 17 icons combined (~590px). The floor here is a
-        // defensive minimum, well below any real tab's implicitWidth.
+        // Floor is a defensive minimum, well below any real tab's implicitWidth.
         width: Math.max(220, panelLoader.implicitWidth)
         spacing: 14
 
-        // ─── Tab bar: segmented control style ────────────────────────────
+        // ─── Header: current tab label + close. Tab switching is IPC-only
+        // now (`quickshell -c helios ipc call island toggle <tab>`) — no
+        // in-panel icon row.
         Item {
             id: tabs
             width: pane.width
-            height: 36
+            height: 28
 
-            // Background capsule for the tab row
-            Rectangle {
+            StyledText {
                 anchors.left: parent.left
-                anchors.right: closeButton.left
-                anchors.rightMargin: 8
                 anchors.verticalCenter: parent.verticalCenter
-                height: 32
-                radius: Colors.radiusLarge
-                color: Colors.surfaceHigh
-                opacity: 0.4
+                text: Bridge.islandTab
+                opacity: 0.6
+                font.pixelSize: Config.fontSize - 1
             }
 
-            // Tab icons scroll horizontally instead of forcing the panel to
-            // stay as wide as all 17 of them — no visible scrollbar, just
-            // drag/flick, to keep the segmented-pill look intact.
-            Flickable {
-                id: tabScroll
-                anchors.left: parent.left
-                anchors.leftMargin: 4
-                anchors.right: closeButton.left
-                anchors.rightMargin: 8
-                anchors.verticalCenter: parent.verticalCenter
-                height: tabRow.implicitHeight
-                contentWidth: tabRow.implicitWidth
-                clip: true
-                boundsBehavior: Flickable.StopAtBounds
-                flickableDirection: Flickable.HorizontalFlick
-
-                Row {
-                    id: tabRow
-                    spacing: 2
-
-                    Repeater {
-                        model: [
-                            { tab: "volume", icon: "volume_up" },
-                            { tab: "mixer", icon: "graphic_eq" },
-                            { tab: "bluetooth", icon: "bluetooth" },
-                            { tab: "wifi", icon: "wifi" },
-                            { tab: "focus", icon: "center_focus_strong" },
-                            { tab: "privacy", icon: "shield" },
-                            { tab: "automation", icon: "bolt" },
-                            { tab: "media", icon: "music_note" },
-                            { tab: "clipboard", icon: "content_paste" },
-                            { tab: "recorder", icon: "videocam" },
-                            { tab: "screenshot", icon: "screenshot_monitor" },
-                            { tab: "weather", icon: "cloud" },
-                            { tab: "calendar", icon: "calendar_month" },
-                            { tab: "system", icon: "memory" },
-                            { tab: "notifications", icon: "history" },
-                            { tab: "nightlight", icon: "nightlight" },
-                            { tab: "display", icon: "monitor" },
-                            { tab: "idlelock", icon: "bedtime" },
-                            { tab: "wallpaper", icon: "wallpaper" },
-                            { tab: "theme", icon: "palette" },
-                            { tab: "power", icon: powerIcon },
-                            { tab: "island", icon: "tune" }
-                        ]
-
-                        delegate: IconButton {
-                            required property var modelData
-                            required property int index
-
-                            active: Bridge.islandTab === modelData.tab
-                            icon: modelData.icon
-                            onClicked: Bridge.setIslandTab(modelData.tab)
-                        }
-                    }
-                }
-            }
-
-            // Close button — subtle, right-aligned
             IconButton {
                 id: closeButton
                 anchors.right: parent.right
@@ -163,6 +98,9 @@ Item {
                         : Bridge.islandTab === "theme" ? themeTab
                         : Bridge.islandTab === "island" ? islandTab
                         : Bridge.islandTab === "power" ? powerTab
+                        : Bridge.islandTab === "powermenu" ? powerMenuTab
+                        : Bridge.islandTab === "keybinds" ? keybindsTab
+                        : Bridge.islandTab === "launcher" ? launcherTab
                         : volumeTab
                 }
             }
@@ -170,10 +108,6 @@ Item {
             ScrollIndicator { target: flick }
         }
     }
-
-    // Power profile icon helper
-    readonly property string powerIcon: PowerProfiles.profile === PowerProfile.PowerSaver ? "eco"
-        : PowerProfiles.profile === PowerProfile.Performance ? "bolt" : "balance"
 
     Component { id: volumeTab; VolumeTab {} }
     Component { id: mixerTab; AudioMixerTab {} }
@@ -197,4 +131,7 @@ Item {
     Component { id: themeTab; ThemeSettings {} }
     Component { id: islandTab; IslandSettings {} }
     Component { id: powerTab; PowerTab {} }
+    Component { id: powerMenuTab; PowerMenuTab {} }
+    Component { id: keybindsTab; KeybindsTab {} }
+    Component { id: launcherTab; LauncherTab {} }
 }

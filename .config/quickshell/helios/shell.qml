@@ -10,16 +10,18 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 import Quickshell.Hyprland
+import Quickshell.Services.Pipewire
+import Quickshell.Services.UPower
 import "./services"
 import "./services/Utils.js" as Utils
 import "./modules/bar"
-import "./modules/launcher"
 import "./modules/osd"
-import "./modules/powermenu"
-import "./modules/keybinds"
 import "./modules/lock"
+import "./modules/polkit"
 
 ShellRoot {
+    id: shellRoot
+
     // Restore services whose state affects always-on shell behavior. Panel-only
     // services initialize when their panel first opens.
     QtObject {
@@ -35,15 +37,10 @@ ShellRoot {
         Bar {}
     }
 
-    LazyLoader {
-        activeAsync: Bridge.launcherOpen
-        Launcher {}
-    }
     Osd {}
-    PowerMenu {}
-    Keybinds {}
     Lock {}
     TrayMenu {}
+    PolkitAgent {}
 
     // Lets the (experimental) Liquid Glass surface read real desktop pixels
     // through Hyprland's compositor blur instead of faking translucency.
@@ -61,9 +58,17 @@ ShellRoot {
 
     IpcHandler {
         target: "launcher"
-        function toggle() { Bridge.toggleLauncher() }
-        function open() { Bridge.launcherOpen = true }
-        function close() { Bridge.launcherOpen = false }
+        function toggle() {
+            const screen = Utils.screenForMonitor(Quickshell.screens, Hyprland.focusedMonitor) || Quickshell.screens[0];
+            Bridge.toggleIsland(screen.name, "launcher");
+        }
+        function open() {
+            const screen = Utils.screenForMonitor(Quickshell.screens, Hyprland.focusedMonitor) || Quickshell.screens[0];
+            Bridge.islandScreen = screen.name;
+            Bridge.islandTab = "launcher";
+            Bridge.islandOpen = true;
+        }
+        function close() { Bridge.closeIsland() }
     }
 
     IpcHandler {
@@ -100,8 +105,20 @@ ShellRoot {
 
     IpcHandler {
         target: "keybinds"
-        function toggle() { Bridge.toggleKeybinds() }
-        function close() { Bridge.closeKeybinds() }
+        function toggle() {
+            const screen = Utils.screenForMonitor(Quickshell.screens, Hyprland.focusedMonitor) || Quickshell.screens[0];
+            Bridge.toggleIsland(screen.name, "keybinds");
+        }
+        function close() { Bridge.closeIsland() }
+    }
+
+    IpcHandler {
+        target: "powermenu"
+        function toggle() {
+            const screen = Utils.screenForMonitor(Quickshell.screens, Hyprland.focusedMonitor) || Quickshell.screens[0];
+            Bridge.toggleIsland(screen.name, "powermenu");
+        }
+        function close() { Bridge.closeIsland() }
     }
 
     IpcHandler {
@@ -158,6 +175,55 @@ ShellRoot {
         function off() { NightLight.setEnabled(false) }
         function temp(value: int) { NightLight.setTemperature(value) }
         function schedule(enabled: bool) { NightLight.setScheduled(enabled) }
+    }
+
+    IpcHandler {
+        target: "power"
+        function balanced() { PowerProfiles.profile = PowerProfile.Balanced }
+        function powersave() { PowerProfiles.profile = PowerProfile.PowerSaver }
+        function performance() { if (PowerProfiles.hasPerformanceProfile) PowerProfiles.profile = PowerProfile.Performance }
+        // Same order PowerTab.qml renders its segments in. Skips Performance
+        // when the system doesn't expose it (same guard PowerTab uses).
+        function cycle() {
+            const order = PowerProfiles.hasPerformanceProfile
+                ? [PowerProfile.Balanced, PowerProfile.PowerSaver, PowerProfile.Performance]
+                : [PowerProfile.Balanced, PowerProfile.PowerSaver];
+            const next = (order.indexOf(PowerProfiles.profile) + 1) % order.length;
+            PowerProfiles.profile = order[next];
+        }
+    }
+
+    // Same sink/source filtering VolumeTab.qml uses (excludes clock-driver/
+    // MIDI-bridge nodes PipeWire also reports as neither sink nor stream).
+    readonly property var audioSinks: Pipewire.nodes ? Pipewire.nodes.values.filter(n => n.isSink && !n.isStream && (n.type & PwNodeType.AudioSink) === PwNodeType.AudioSink) : []
+    readonly property var audioSources: Pipewire.nodes ? Pipewire.nodes.values.filter(n => !n.isSink && !n.isStream && (n.type & PwNodeType.AudioSource) === PwNodeType.AudioSource) : []
+    PwObjectTracker { objects: shellRoot.audioSinks.concat(shellRoot.audioSources) }
+
+    function findAudioNode(nodes, match) {
+        const needle = match.toLowerCase();
+        return nodes.find(n => n.name === match)
+            || nodes.find(n => String(n.description || "").toLowerCase().includes(needle) || String(n.nickname || "").toLowerCase().includes(needle));
+    }
+
+    IpcHandler {
+        target: "audio"
+        // Matches against node.name first (stable pipewire id), falling
+        // back to a case-insensitive substring match on description/
+        // nickname — e.g. `audio setOutput "USB Headset"`.
+        function outputs(): string {
+            return shellRoot.audioSinks.map(n => n.name + "\t" + (n.description || n.nickname || n.name)).join("\n");
+        }
+        function inputs(): string {
+            return shellRoot.audioSources.map(n => n.name + "\t" + (n.description || n.nickname || n.name)).join("\n");
+        }
+        function setOutput(match: string) {
+            const node = shellRoot.findAudioNode(shellRoot.audioSinks, match);
+            if (node) Pipewire.preferredDefaultAudioSink = node;
+        }
+        function setInput(match: string) {
+            const node = shellRoot.findAudioNode(shellRoot.audioSources, match);
+            if (node) Pipewire.preferredDefaultAudioSource = node;
+        }
     }
 
     IpcHandler {

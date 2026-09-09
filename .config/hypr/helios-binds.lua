@@ -23,6 +23,8 @@ hl.bind(mainMod .. " + ESCAPE", hl.dsp.exec_cmd(helios .. " powermenu toggle"),
   { description = "Toggle helios power menu" })
 hl.bind(mainMod .. " + K", hl.dsp.exec_cmd(helios .. " keybinds toggle"),
   { description = "Toggle Helios keybind cheatsheet" })
+hl.bind(mainMod .. " + COMMA", hl.dsp.exec_cmd(helios .. " island toggle island"),
+  { description = "Toggle Helios island settings" })
 
 -- OSD / brightness -------------------------------------------------------
 
@@ -131,8 +133,12 @@ hl.bind(mainMod .. " + ALT + H", hl.dsp.exec_cmd(helios .. " island toggle notif
   { description = "Toggle notification history island" })
 hl.bind(mainMod .. " + ALT + L", hl.dsp.exec_cmd(helios .. " island toggle nightlight"),
   { description = "Toggle night light island" })
-hl.bind(mainMod .. " + ALT + B", hl.dsp.exec_cmd(helios .. " island toggle idle"),
+hl.bind(mainMod .. " + ALT + B", hl.dsp.exec_cmd(helios .. " island toggle idlelock"),
   { description = "Toggle idle/lock settings island" })
+hl.bind(mainMod .. " + ALT + A", hl.dsp.exec_cmd(helios .. " island toggle volume"),
+  { description = "Toggle audio output/input island" })
+hl.bind(mainMod .. " + ALT + E", hl.dsp.exec_cmd(helios .. " island toggle power"),
+  { description = "Toggle power profile island" })
 
 -- System monitor: own ipc target (see systemmonitor toggle in shell.qml),
 -- bound to the literal Ctrl+Alt+Delete chord rather than the mainMod

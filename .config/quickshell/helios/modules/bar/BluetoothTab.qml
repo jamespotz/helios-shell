@@ -147,12 +147,6 @@ Item {
             font.pixelSize: Config.fontSize - 2
         }
 
-        // --- Bottom bar: Wi-Fi / Bluetooth switch + power -----------------------
-        IslandModeSwitcher {
-            width: parent.width
-            visible: root.viewMode === "orbit"
-        }
-
         // --- List view: Scan/Refresh + Pairing/Discoverable + My Devices / Nearby --
         // Flat text links, not cards — icon + accent-colored label, no
         // background at rest or on hover (just a slight dim), left-aligned.
