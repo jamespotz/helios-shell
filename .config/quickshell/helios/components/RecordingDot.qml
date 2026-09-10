@@ -1,9 +1,9 @@
 import QtQuick
 import "../services"
 
-// Pulsing red dot shown whenever screen recording is active — safety-
-// critical status, kept identical wherever it appears (idle pill, hover
-// peek). The pulse animation only runs while actually recording.
+// Pulsing red dot shown whenever screen recording is active. Safety-
+// critical status, so it stays identical wherever it appears. The pulse
+// animation only runs while actually recording.
 //
 // Sized and animated to stand out against its icon-sized neighbors in the
 // row: a bigger base dot, plus a scale pulse in lockstep with the opacity
@@ -13,9 +13,9 @@ Rectangle {
     id: root
 
     visible: ScreenRecorder.recording
-    width: 10
-    height: 10
-    radius: 5
+    width: 7
+    height: 7
+    radius: 3.5
     color: Colors.danger
     transformOrigin: Item.Center
 

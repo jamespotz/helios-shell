@@ -24,10 +24,16 @@ QtObject {
     property bool starting: false
     property int elapsedSeconds: 0
     property string lastOutputPath: ""
+    property string lastThumbnailPath: ""
 
     property string monitor: "screen"
-    property bool captureAudio: true
+    readonly property bool captureAudio: settingsAdapter.captureAudio
     property string quality: "very_high"
+
+    function setCaptureAudio(enabled) {
+        settingsAdapter.captureAudio = enabled;
+        root.settingsFile.writeAdapter();
+    }
 
     // ponytail: session-only, resets on shell restart. Persist via
     // Bridge-style JsonAdapter if that's ever needed.
@@ -90,9 +96,21 @@ QtObject {
         else root.start(monitorName);
     }
 
+    // setsid + redirecting all stdio to /dev/null fully detaches the opened
+    // app from this Process: without it, some apps' own child processes
+    // (e.g. a video player that logs to stdout — LosslessCut's EPIPE crash)
+    // inherit our still-open pipe, and once xdg-open itself exits and
+    // Quickshell closes that pipe, the still-running app's next write to it
+    // dies with EPIPE.
     function openFolder() {
-        folderOpener.command = ["xdg-open", root.outputDir];
+        folderOpener.command = ["sh", "-c", "setsid xdg-open \"$0\" >/dev/null 2>&1 </dev/null &", root.outputDir];
         folderOpener.running = true;
+    }
+
+    function playLast() {
+        if (!root.lastOutputPath) return;
+        videoOpener.command = ["sh", "-c", "setsid xdg-open \"$0\" >/dev/null 2>&1 </dev/null &", root.lastOutputPath];
+        videoOpener.running = true;
     }
 
     function chooseOutputDir() {
@@ -111,6 +129,7 @@ QtObject {
         const stamp = ts.getFullYear() + pad(ts.getMonth() + 1) + pad(ts.getDate())
             + "-" + pad(ts.getHours()) + pad(ts.getMinutes()) + pad(ts.getSeconds());
         root.lastOutputPath = root.outputDir + "/recording-" + stamp + ".mp4";
+        root.lastThumbnailPath = "";
 
         const args = ["gpu-screen-recorder", "-w", source, "-q", root.quality];
         if (root.captureAudio) args.push("-a", "default_output");
@@ -162,6 +181,27 @@ QtObject {
             root.starting = false;
             root.recording = false;
             elapsedTimer.stop();
+            root._generateThumbnail();
+        }
+    }
+
+    // Grabs a single frame from the finished recording for the island's
+    // preview card. QML's Image can't decode video, so ffmpeg produces a
+    // plain jpg alongside the mp4 that Image can load like any screenshot.
+    function _generateThumbnail() {
+        if (!root.lastOutputPath) return;
+        const thumbPath = root.lastOutputPath.replace(/\.mp4$/, ".jpg");
+        thumbProc.thumbPath = thumbPath;
+        thumbProc.command = ["ffmpeg", "-y", "-ss", "00:00:00.5", "-i", root.lastOutputPath,
+            "-frames:v", "1", "-vf", "scale=320:-1", thumbPath];
+        thumbProc.running = false;
+        thumbProc.running = true;
+    }
+
+    property Process thumbProc: Process {
+        property string thumbPath: ""
+        onExited: exitCode => {
+            if (exitCode === 0) root.lastThumbnailPath = thumbProc.thumbPath;
         }
     }
 
@@ -173,6 +213,7 @@ QtObject {
     }
 
     property Process folderOpener: Process {}
+    property Process videoOpener: Process {}
 
     property Process dirPicker: Process {
         command: ["zenity", "--file-selection", "--directory", "--title=Choose recordings folder"]
@@ -181,6 +222,16 @@ QtObject {
                 const picked = text.trim();
                 if (picked) root.outputDir = picked;
             }
+        }
+    }
+
+    property FileView settingsFile: FileView {
+        path: Quickshell.statePath("screen-recorder.json")
+        watchChanges: true
+
+        JsonAdapter {
+            id: settingsAdapter
+            property bool captureAudio: true
         }
     }
 }

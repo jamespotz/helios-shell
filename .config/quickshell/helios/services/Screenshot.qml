@@ -67,14 +67,19 @@ QtObject {
         dirPicker.running = true;
     }
 
+    // setsid + redirecting all stdio to /dev/null fully detaches the opened
+    // app from this Process: without it, some apps' own child processes
+    // (e.g. an image viewer that logs to stdout) inherit our still-open
+    // pipe, and once xdg-open itself exits and Quickshell closes that pipe,
+    // the still-running app's next write to it dies with EPIPE.
     function openFolder() {
-        folderOpener.command = ["xdg-open", root.outputDir];
+        folderOpener.command = ["sh", "-c", "setsid xdg-open \"$0\" >/dev/null 2>&1 </dev/null &", root.outputDir];
         folderOpener.running = true;
     }
 
     function openLast() {
         if (root.lastPath) {
-            fileOpener.command = ["xdg-open", root.lastPath];
+            fileOpener.command = ["sh", "-c", "setsid xdg-open \"$0\" >/dev/null 2>&1 </dev/null &", root.lastPath];
             fileOpener.running = true;
         }
     }

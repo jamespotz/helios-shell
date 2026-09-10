@@ -11,7 +11,7 @@ Item {
 
     required property var targetScreen
 
-    readonly property bool hasLeftCluster: ScreenRecorder.recording || Config.showWorkspaces || Config.showActiveWindow
+    readonly property bool hasLeftCluster: Config.showWorkspaces || Config.showActiveWindow
     readonly property bool hasRightCluster: Config.showClock || (Config.showWeather && Weather.available)
         || Config.showTray || Config.showClipboard || Config.showStatusIndicators
 
@@ -29,8 +29,6 @@ Item {
             visible: root.hasLeftCluster
             anchors.verticalCenter: parent.verticalCenter
             spacing: 12
-
-            RecordingDot { anchors.verticalCenter: parent.verticalCenter }
 
             Workspaces {
                 visible: Config.showWorkspaces

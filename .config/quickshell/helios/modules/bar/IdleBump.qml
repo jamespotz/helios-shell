@@ -34,10 +34,6 @@ Item {
         anchors.centerIn: parent
         spacing: 8
 
-        // Recording indicator — safety-critical, always visible regardless
-        // of widget toggles.
-        RecordingDot { anchors.verticalCenter: parent.verticalCenter }
-
         Workspaces {
             visible: Config.showIdleWorkspaces
             targetScreen: root.targetScreen
