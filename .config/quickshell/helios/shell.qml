@@ -215,8 +215,8 @@ ShellRoot {
         function balanced() { PowerProfiles.profile = PowerProfile.Balanced }
         function powersave() { PowerProfiles.profile = PowerProfile.PowerSaver }
         function performance() { if (PowerProfiles.hasPerformanceProfile) PowerProfiles.profile = PowerProfile.Performance }
-        // Same order PowerTab.qml renders its segments in. Skips Performance
-        // when the system doesn't expose it (same guard PowerTab uses).
+        // Same order PowerIsland.qml renders its segments in. Skips Performance
+        // when the system doesn't expose it (same guard PowerIsland uses).
         function cycle() {
             const order = PowerProfiles.hasPerformanceProfile
                 ? [PowerProfile.Balanced, PowerProfile.PowerSaver, PowerProfile.Performance]
@@ -226,7 +226,7 @@ ShellRoot {
         }
     }
 
-    // Same sink/source filtering VolumeTab.qml uses (excludes clock-driver/
+    // Same sink/source filtering VolumeIsland.qml uses (excludes clock-driver/
     // MIDI-bridge nodes PipeWire also reports as neither sink nor stream).
     readonly property var audioSinks: Pipewire.nodes ? Pipewire.nodes.values.filter(n => n.isSink && !n.isStream && (n.type & PwNodeType.AudioSink) === PwNodeType.AudioSink) : []
     readonly property var audioSources: Pipewire.nodes ? Pipewire.nodes.values.filter(n => !n.isSink && !n.isStream && (n.type & PwNodeType.AudioSource) === PwNodeType.AudioSource) : []

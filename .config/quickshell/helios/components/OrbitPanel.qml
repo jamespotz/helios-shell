@@ -3,7 +3,7 @@ import "../services"
 
 // Focused "single connection" orbit visualization — a center circle showing
 // the active connection ringed by satellite cards that drift around it.
-// Shared by BluetoothTab and WifiTab's orbit views, which used to
+// Shared by BluetoothIsland and WifiIsland's orbit views, which used to
 // reimplement this (animation, trig, layout) independently. Presentation
 // only: callers pass already-resolved display strings and handle the scan/
 // switch-view actions themselves via signals.

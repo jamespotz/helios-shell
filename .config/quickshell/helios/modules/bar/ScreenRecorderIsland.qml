@@ -120,45 +120,69 @@ Item {
             }
         }
 
-        Row {
-            spacing: 10
-            anchors.horizontalCenter: parent.horizontalCenter
+        Rectangle { width: parent.width; height: 1; color: Colors.overlay; opacity: 0.12 }
 
-            MaterialIcon { icon: "mic"; font.pixelSize: 14; opacity: 0.8; anchors.verticalCenter: parent.verticalCenter }
-            StyledText { text: "Desktop audio"; font.pixelSize: Config.fontSize - 2; anchors.verticalCenter: parent.verticalCenter }
+        Disclosure {
+            width: parent.width
+            summary: ScreenRecorder.captureAudio ? "Audio" : ""
 
-            Toggle {
-                anchors.verticalCenter: parent.verticalCenter
+            ToggleRow {
+                width: parent.width
+                icon: "mic"
+                title: "Desktop audio"
+                subtitle: "Records system sound alongside video"
                 checked: ScreenRecorder.captureAudio
                 enabled: !ScreenRecorder.recording && !ScreenRecorder.starting
                 onToggled: v => ScreenRecorder.captureAudio = v
             }
-        }
 
-        Rectangle { width: parent.width; height: 1; color: Colors.overlay; opacity: 0.15 }
+            Column {
+                width: parent.width
+                spacing: 6
 
-        Row {
-            width: parent.width
-            spacing: 8
+                StyledText { text: "Save to"; font.pixelSize: Config.fontSize - 2; opacity: 0.6 }
 
-            MaterialIcon { icon: "folder_open"; font.pixelSize: 14; opacity: 0.7; anchors.verticalCenter: parent.verticalCenter }
+                Row {
+                    width: parent.width
+                    spacing: 8
 
-            StyledText {
-                id: folderText
-                width: parent.width - 24
-                anchors.verticalCenter: parent.verticalCenter
-                elide: Text.ElideMiddle
-                opacity: folderHover.containsMouse ? 1 : 0.7
-                font.pixelSize: Config.fontSize - 2
-                font.underline: folderHover.containsMouse
-                text: ScreenRecorder.lastOutputPath || ScreenRecorder.outputDir
+                    Rectangle {
+                        width: parent.width - changeBtn.width - 8
+                        height: 34
+                        radius: Colors.radiusSmall
+                        color: Colors.surface
 
-                MouseArea {
-                    id: folderHover
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: ScreenRecorder.openFolder()
+                        Row {
+                            anchors.left: parent.left
+                            anchors.right: parent.right
+                            anchors.verticalCenter: parent.verticalCenter
+                            anchors.margins: 10
+                            spacing: 6
+
+                            MaterialIcon { icon: "folder_open"; font.pixelSize: 14; opacity: 0.6; anchors.verticalCenter: parent.verticalCenter }
+                            StyledText {
+                                width: parent.width - 20
+                                elide: Text.ElideMiddle
+                                font.pixelSize: Config.fontSize - 2
+                                opacity: 0.7
+                                text: ScreenRecorder.lastOutputPath || ScreenRecorder.outputDir
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+                        }
+
+                        MouseArea {
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: ScreenRecorder.openFolder()
+                        }
+                    }
+
+                    PrimaryButton {
+                        id: changeBtn
+                        height: 34
+                        text: "Change"
+                        onClicked: ScreenRecorder.chooseOutputDir()
+                    }
                 }
             }
         }

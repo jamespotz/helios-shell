@@ -3,7 +3,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 
-// Live CPU/memory/GPU/disk/network stats for modules/bar/SystemMonitorTab.qml,
+// Live CPU/memory/GPU/disk/network stats for modules/bar/SystemMonitorIsland.qml,
 // sourced from the user's system-info.py helper (same directory as that tab)
 // which polls psutil + nvidia-smi and prints one JSON snapshot per line.
 // The Python adapter owns sampling, rates, history, and process safety.

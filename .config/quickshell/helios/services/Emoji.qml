@@ -3,7 +3,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 
-// Emoji picker data — powers LauncherTab.qml's "/em <query>" search mode.
+// Emoji picker data — powers LauncherIsland.qml's "/em <query>" search mode.
 // data/emoji.json is vendored from Noctalia (MIT, (c) noctalia-dev):
 // [{emoji, name, keywords[], category}, ...].
 QtObject {

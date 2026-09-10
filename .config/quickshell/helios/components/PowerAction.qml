@@ -1,7 +1,7 @@
 import QtQuick
 import "../services"
 
-PanelBackground {
+Item {
     id: root
 
     property string icon: ""
@@ -12,6 +12,8 @@ PanelBackground {
     signal activated()
     signal armRequested()
 
+    readonly property bool dangerActive: destructive && (armed || actionHover.hovered)
+
     function activate() {
         if (!root.destructive || root.armed)
             root.activated();
@@ -19,12 +21,19 @@ PanelBackground {
             root.armRequested();
     }
 
-    width: 110
-    height: 110
+    implicitWidth: 84
+    implicitHeight: 84
     scale: Config.reducedMotion ? 1 : actionMouse.pressed ? 0.96 : 1
-    color: armed ? Colors.danger : Colors.surface
-    Behavior on color { ColorAnimation { duration: Config.animFast } }
     Behavior on scale { NumberAnimation { duration: Config.reducedMotion ? 0 : Config.animFast; easing.type: Easing.OutCubic } }
+
+    Rectangle {
+        anchors.fill: parent
+        radius: Colors.radiusSmall
+        color: root.dangerActive ? Colors.danger : Colors.surfaceHigh
+        opacity: root.armed ? 1 : (actionHover.hovered ? (root.destructive ? 0.9 : 0.6) : 0)
+        Behavior on color { ColorAnimation { duration: Config.animFast } }
+        Behavior on opacity { NumberAnimation { duration: Config.animFast } }
+    }
 
     Column {
         anchors.centerIn: parent
@@ -34,26 +43,20 @@ PanelBackground {
             anchors.horizontalCenter: parent.horizontalCenter
             icon: root.icon
             font.pixelSize: 30
-            color: root.armed ? Colors.accentText : Colors.text
+            color: root.dangerActive ? Qt.lighter(Colors.danger, 1.4) : Colors.text
+            Behavior on color { ColorAnimation { duration: Config.animFast } }
         }
         StyledText {
             anchors.horizontalCenter: parent.horizontalCenter
             text: root.armed ? "Confirm?" : root.label
-            color: root.armed ? Colors.accentText : Colors.text
+            color: root.dangerActive ? Colors.accentText : root.armed ? Colors.accentText : Colors.subtext
         }
-    }
-
-    Rectangle {
-        anchors.fill: parent
-        radius: parent.radius
-        color: Colors.surfaceHigh
-        opacity: actionHover.hovered ? 0.15 : 0
     }
 
     // Focus ring — keyboard-navigation feedback
     Rectangle {
         anchors.fill: parent
-        radius: parent.radius
+        radius: Colors.radiusSmall
         color: "transparent"
         border.width: 2
         border.color: Colors.accent

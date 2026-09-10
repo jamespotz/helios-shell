@@ -6,7 +6,7 @@ import "../../components"
 
 // Per-app volume mixer with output routing — one row per app currently
 // playing audio (a PipeWire AudioOutStream node), each with its own
-// volume/mute (PwNodeAudioIface, same API VolumeTab.qml uses for the
+// volume/mute (PwNodeAudioIface, same API VolumeIsland.qml uses for the
 // system sink) and a picker to move that one app's output to a different
 // sink. Quickshell's Pipewire service has no "move this stream" call, so
 // routing shells out to `pactl move-sink-input` — same pattern Bluetooth.qml

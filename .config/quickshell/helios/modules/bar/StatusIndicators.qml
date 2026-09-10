@@ -15,10 +15,10 @@ Row {
 
     required property var targetScreen
 
-    function isIslandTab(tab) {
+    function isIslandActive(tab) {
         return IslandNavigation.open && IslandNavigation.screen === root.targetScreen.name && IslandNavigation.destinationId === tab;
     }
-    function openIslandTab(tab) {
+    function openIsland(tab) {
         IslandNavigation.toggle(root.targetScreen.name, tab);
     }
 
@@ -43,46 +43,46 @@ Row {
     IconButton {
         visible: root.hasActiveMedia
         icon: "music_note"
-        active: root.isIslandTab("media")
-        onClicked: root.openIslandTab("media")
+        active: root.isIslandActive("media")
+        onClicked: root.openIsland("media")
     }
 
     IconButton {
         visible: MicActivity.isSystemMicActive
         icon: "mic"
         iconColor: Colors.danger
-        active: root.isIslandTab("privacy")
-        onClicked: root.openIslandTab("privacy")
+        active: root.isIslandActive("privacy")
+        onClicked: root.openIsland("privacy")
     }
 
     IconButton {
         visible: CameraActivity.isSystemCameraActive
         icon: "videocam"
         iconColor: Colors.danger
-        active: root.isIslandTab("privacy")
-        onClicked: root.openIslandTab("privacy")
+        active: root.isIslandActive("privacy")
+        onClicked: root.openIsland("privacy")
     }
 
     IconButton {
         icon: root.muted ? "volume_off"
             : root.volume > 0.5 ? "volume_up"
             : root.volume > 0 ? "volume_down" : "volume_mute"
-        active: root.isIslandTab("volume")
-        onClicked: root.openIslandTab("volume")
+        active: root.isIslandActive("volume")
+        onClicked: root.openIsland("volume")
     }
 
     IconButton {
         icon: root.bluetoothConnected ? "bluetooth_connected"
             : Bluetooth.state.powered ? "bluetooth" : "bluetooth_disabled"
-        active: root.isIslandTab("bluetooth")
-        onClicked: root.openIslandTab("bluetooth")
+        active: root.isIslandActive("bluetooth")
+        onClicked: root.openIsland("bluetooth")
     }
 
     IconButton {
         icon: PowerProfiles.profile === PowerProfile.PowerSaver ? "eco"
             : PowerProfiles.profile === PowerProfile.Performance ? "bolt" : "balance"
-        active: root.isIslandTab("power")
-        onClicked: root.openIslandTab("power")
+        active: root.isIslandActive("power")
+        onClicked: root.openIsland("power")
     }
 
     IconButton {
@@ -112,14 +112,14 @@ Row {
             default: return "wifi_off";
             }
         }
-        active: root.isIslandTab("wifi")
-        onClicked: root.openIslandTab("wifi")
+        active: root.isIslandActive("wifi")
+        onClicked: root.openIsland("wifi")
     }
 
     IconButton {
         icon: ScreenRecorder.recording ? "stop_circle" : "videocam"
-        active: ScreenRecorder.recording || root.isIslandTab("recorder")
-        onClicked: root.openIslandTab("recorder")
+        active: ScreenRecorder.recording || root.isIslandActive("recorder")
+        onClicked: root.openIsland("recorder")
     }
 
     IconButton {
@@ -152,7 +152,7 @@ Row {
 
     IconButton {
         icon: "power_settings_new"
-        active: root.isIslandTab("powermenu")
-        onClicked: root.openIslandTab("powermenu")
+        active: root.isIslandActive("powermenu")
+        onClicked: root.openIsland("powermenu")
     }
 }

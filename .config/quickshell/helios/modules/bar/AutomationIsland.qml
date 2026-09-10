@@ -4,7 +4,7 @@ import "../../components"
 
 // Automation rules — a handful of concrete trigger/action toggles (see
 // services/Automations.qml), not a rule builder. Same toggle-row shape as
-// NightLightTab.qml for a setting with a one-line description.
+// NightLightIsland.qml for a setting with a one-line description.
 Item {
     id: root
 

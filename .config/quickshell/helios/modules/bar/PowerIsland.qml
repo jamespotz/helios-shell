@@ -5,7 +5,7 @@ import "../../components"
 
 // Power profile switcher: a 3-way segmented pill (Power Saver / Balanced /
 // Performance) backed by power-profiles-daemon via Quickshell's UPower
-// service. Mirrors the Wi-Fi/Bluetooth pill switcher in BluetoothTab.qml,
+// service. Mirrors the Wi-Fi/Bluetooth pill switcher in BluetoothIsland.qml,
 // but with a single sliding highlight behind all three segments rather than
 // each segment owning its own fill — reads closer to iOS/macOS toggles.
 Item {

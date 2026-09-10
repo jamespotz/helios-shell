@@ -1,6 +1,7 @@
 import QtQuick
 import Quickshell
 import Quickshell.Wayland
+import Quickshell.Hyprland
 import Quickshell.Services.Pam
 import "../../services"
 import "../../components"
@@ -36,14 +37,51 @@ Loader {
                 id: surface
                 color: Colors.background
 
+                // Session-lock surfaces are opaque by design (the compositor
+                // won't show anything behind them), so "transparency" here
+                // means showing the real wallpaper through a dim tint rather
+                // than a flat color — same translucent-panel convention
+                // (Colors.panelOpacity) SettingsWindow's card uses.
+                // Slow Ken Burns drift — calm, ambient motion rather than
+                // decoration, matching the 60s-per-cycle pace the orbit
+                // views use elsewhere. Clipped so the zoom never reveals an
+                // edge, and skipped entirely under reduced motion.
+                Item {
+                    anchors.fill: parent
+                    clip: true
+
+                    Image {
+                        id: wallpaperImage
+                        anchors.fill: parent
+                        visible: !WallpaperLibrary.isVideo && WallpaperLibrary.source.length > 0
+                        source: visible ? WallpaperLibrary.source : ""
+                        fillMode: Image.PreserveAspectCrop
+                        asynchronous: true
+                        transformOrigin: Item.Center
+
+                        SequentialAnimation on scale {
+                            running: wallpaperImage.visible && !Config.reducedMotion
+                            loops: Animation.Infinite
+                            NumberAnimation { from: 1.0; to: 1.06; duration: 60000; easing.type: Easing.InOutSine }
+                            NumberAnimation { from: 1.06; to: 1.0; duration: 60000; easing.type: Easing.InOutSine }
+                        }
+                    }
+                }
+
+                Rectangle {
+                    anchors.fill: parent
+                    visible: !WallpaperLibrary.isVideo && WallpaperLibrary.source.length > 0
+                    color: Colors.background
+                    opacity: 1 - Colors.panelOpacity
+                }
+
                 Column {
                     anchors.centerIn: parent
                     spacing: 22
 
-                    MaterialIcon {
+                    Avatar {
                         anchors.horizontalCenter: parent.horizontalCenter
-                        icon: "lock"
-                        font.pixelSize: 40
+                        size: 84
                     }
 
                     StyledText {
@@ -141,6 +179,104 @@ Loader {
                     anchors.fill: parent
                     z: -1
                     onClicked: pwInput.forceActiveFocus()
+                }
+
+                // Power menu — a plain list popover (not PowerMenuIsland's
+                // square cards), same second-tap-to-confirm safety on the
+                // destructive entries, same dispatch commands.
+                Item {
+                    id: powerMenu
+                    anchors.right: parent.right
+                    anchors.bottom: parent.bottom
+                    anchors.margins: 24
+                    width: powerButton.width
+                    height: powerButton.height
+
+                    property bool open: false
+                    property string pendingAction: ""
+
+                    readonly property var actions: [
+                        { id: "logout", icon: "logout", label: "Logout" },
+                        { id: "restart", icon: "restart_alt", label: "Restart" },
+                        { id: "poweroff", icon: "power_settings_new", label: "Power Off" }
+                    ]
+
+                    function run(id) {
+                        if (id === "logout")
+                            // See PowerMenuIsland.qml: this Hyprland config wraps
+                            // dispatch payloads through a Lua plugin, so the
+                            // bare "exit" dispatcher name fails silently.
+                            Hyprland.dispatch("hl.dsp.exit()");
+                        else if (id === "restart")
+                            Quickshell.execDetached(["systemctl", "reboot"]);
+                        else if (id === "poweroff")
+                            Quickshell.execDetached(["systemctl", "poweroff"]);
+                    }
+
+                    PanelBackground {
+                        id: menuCard
+                        anchors.right: powerButton.right
+                        anchors.bottom: powerButton.top
+                        anchors.bottomMargin: 12
+                        width: 180
+                        height: menuColumn.implicitHeight + 8
+                        visible: powerMenu.open
+
+                        Column {
+                            id: menuColumn
+                            anchors.fill: parent
+                            anchors.margins: 4
+                            spacing: 2
+
+                            Repeater {
+                                model: powerMenu.actions
+
+                                HoverRow {
+                                    id: actionRow
+                                    required property var modelData
+                                    width: menuColumn.width
+                                    height: 40
+                                    highlighted: powerMenu.pendingAction === actionRow.modelData.id
+                                    onClicked: {
+                                        if (powerMenu.pendingAction === actionRow.modelData.id) {
+                                            powerMenu.open = false;
+                                            powerMenu.pendingAction = "";
+                                            powerMenu.run(actionRow.modelData.id);
+                                        } else {
+                                            powerMenu.pendingAction = actionRow.modelData.id;
+                                        }
+                                    }
+
+                                    Row {
+                                        anchors.left: parent.left
+                                        anchors.leftMargin: 10
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        spacing: 10
+
+                                        MaterialIcon {
+                                            icon: actionRow.modelData.icon
+                                            font.pixelSize: 16
+                                            color: actionRow.highlighted ? Colors.danger : Colors.text
+                                            anchors.verticalCenter: parent.verticalCenter
+                                        }
+                                        StyledText {
+                                            text: actionRow.highlighted ? "Confirm " + actionRow.modelData.label + "?" : actionRow.modelData.label
+                                            color: actionRow.highlighted ? Colors.danger : Colors.text
+                                            font.weight: actionRow.highlighted ? Font.Medium : Font.Normal
+                                            anchors.verticalCenter: parent.verticalCenter
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    IconButton {
+                        id: powerButton
+                        icon: "power_settings_new"
+                        iconSize: 18
+                        onClicked: { powerMenu.open = !powerMenu.open; powerMenu.pendingAction = ""; }
+                    }
                 }
             }
         }

@@ -43,7 +43,7 @@ Item {
         if (bus === "bluetooth") return "bluetooth_audio";
         // Not every session manager mirrors device.bus onto the audio-sink
         // node itself, so also cross-check against the connected Bluetooth
-        // device list (same service BluetoothTab/MediaCard already use) by
+        // device list (same service BluetoothIsland/MediaCard already use) by
         // name — catches real headsets that PipeWire's own props miss.
         const label = (node && (node.description || node.nickname || node.name)) || "";
         const btDevices = Bluetooth.state.devices;

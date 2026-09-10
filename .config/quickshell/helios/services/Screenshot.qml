@@ -4,13 +4,8 @@ import Quickshell
 import Quickshell.Io
 
 // Screenshot service — captures via grim (fullscreen/region via slurp),
-// copies to clipboard with wl-copy, and saves to ~/Pictures/Screenshots.
-// Three modes: fullscreen, region (interactive slurp picker), active window
-// (via hyprctl activewindow geometry).
-//
-// OCR reuses the region-capture pipeline: same grim+slurp geometry, but pipes
-// the image through tesseract and copies the extracted text instead of the
-// image itself. purpose distinguishes the two post-processing paths.
+// optionally OCRs the capture with tesseract, and optionally copies the
+// result to the clipboard with wl-copy. Saves to outputDir either way.
 QtObject {
     id: root
 
@@ -18,25 +13,28 @@ QtObject {
     readonly property string modeRegion: "region"
     readonly property string modeWindow: "window"
 
-    readonly property string purposeImage: "image"
-    readonly property string purposeOcr: "ocr"
-
     property string mode: root.modeFullscreen
-    property string purpose: root.purposeImage
+    property bool ocrEnabled: false
+    property bool copyToClipboardEnabled: true
     property bool capturing: false
     property string lastPath: ""
     property string lastError: ""
     property bool lastCopied: false
+    property string extractedText: ""
 
-    readonly property string outputDir: Quickshell.env("HOME") + "/Pictures/Screenshots"
+    // ponytail: session-only, resets on shell restart. Persist via
+    // Bridge-style JsonAdapter if that's ever needed.
+    property string outputDir: Quickshell.env("HOME") + "/Pictures/Screenshots"
 
-    function capture(captureMode, capturePurpose) {
+    readonly property string _ocrTextPath: "/tmp/helios-screenshot-ocr.txt"
+
+    function capture(captureMode) {
         if (root.capturing) return;
         if (captureMode) root.mode = captureMode;
-        root.purpose = capturePurpose || root.purposeImage;
         root.capturing = true;
         root.lastError = "";
         root.lastCopied = false;
+        root.extractedText = "";
 
         if (root.mode === root.modeRegion) {
             regionPicker.running = false;
@@ -53,10 +51,21 @@ QtObject {
     function captureRegion() { root.capture(root.modeRegion) }
     function captureWindow() { root.capture(root.modeWindow) }
 
-    // OCR the selected region: extract text via tesseract, copy text to
-    // clipboard instead of the image. Region only — that's the useful case
-    // (pick the text you want); fullscreen/window OCR isn't asked for.
-    function captureOcrRegion() { root.capture(root.modeRegion, root.purposeOcr) }
+    // Re-copy the last result on demand (the "Copy" chip after a capture).
+    function copyLast() {
+        if (!root.lastPath) return;
+        clipboardProc.command = ["sh", "-c",
+            root.ocrEnabled && root.extractedText.length > 0
+                ? "wl-copy < '" + root._ocrTextPath + "'"
+                : "wl-copy < '" + root.lastPath + "'"];
+        clipboardProc.running = false;
+        clipboardProc.running = true;
+    }
+
+    function chooseOutputDir() {
+        IslandNavigation.close();
+        dirPicker.running = true;
+    }
 
     function openFolder() {
         folderOpener.command = ["xdg-open", root.outputDir];
@@ -70,30 +79,41 @@ QtObject {
         }
     }
 
+    // Clears the result if lastPath was deleted out from under us (e.g. the
+    // user removed it in a file manager) — checked when the island reopens
+    // rather than watched continuously.
+    function verifyLastPath() {
+        if (!root.lastPath) return;
+        existsCheck.command = ["test", "-f", root.lastPath];
+        existsCheck.running = false;
+        existsCheck.running = true;
+    }
+
     function _shoot(geometry) {
         const ts = new Date();
         const pad = n => String(n).padStart(2, "0");
         const stamp = ts.getFullYear() + pad(ts.getMonth() + 1) + pad(ts.getDate())
             + "-" + pad(ts.getHours()) + pad(ts.getMinutes()) + pad(ts.getSeconds());
-        root.lastPath = root.outputDir + "/screenshot-" + stamp + ".png";
+        root.lastPath = root.outputDir + "/Screen-" + stamp + ".png";
 
-        // Build grim command: grim [-g geometry] output, then either
-        // wl-copy the image (purposeImage) or OCR it and wl-copy the text
-        // (purposeOcr). set -o pipefail so a tesseract failure in the OCR
-        // pipe still surfaces as a non-zero exit.
         let cmd = "set -o pipefail; mkdir -p '" + root.outputDir + "' && grim";
         if (geometry) cmd += " -g '" + geometry + "'";
         cmd += " '" + root.lastPath + "'";
-        cmd += root.purpose === root.purposeOcr
-            ? " && tesseract '" + root.lastPath + "' - -l eng 2>/dev/null | wl-copy"
-            : " && wl-copy < '" + root.lastPath + "'";
+        if (root.ocrEnabled) {
+            cmd += " && tesseract '" + root.lastPath + "' - -l eng 2>/dev/null > '" + root._ocrTextPath + "'";
+        }
+        if (root.copyToClipboardEnabled) {
+            cmd += root.ocrEnabled
+                ? " && wl-copy < '" + root._ocrTextPath + "'"
+                : " && wl-copy < '" + root.lastPath + "'";
+        }
 
         grimProc.command = ["sh", "-c", cmd];
         grimProc.running = false;
         grimProc.running = true;
     }
 
-    // slurp for region selection — same pattern as ScreenRecorder
+    // slurp for region selection
     property Process regionPicker: Process {
         property string geometry: ""
         command: ["sh", "-c", "exec slurp < /dev/null"]
@@ -128,21 +148,48 @@ QtObject {
         }
     }
 
-    // grim capture + wl-copy
+    // grim capture, optional tesseract OCR, optional wl-copy — all one shot
     property Process grimProc: Process {
         onExited: exitCode => {
             root.capturing = false;
             if (exitCode === 0) {
                 root.lastCopied = true;
+                if (root.ocrEnabled) ocrTextReader.running = true;
             } else {
-                root.lastError = root.purpose === root.purposeOcr
-                    ? "OCR failed (exit " + exitCode + ")"
-                    : "Screenshot failed (exit " + exitCode + ")";
+                root.lastError = "Screenshot failed (exit " + exitCode + ")";
                 root.lastPath = "";
             }
         }
     }
 
+    property Process ocrTextReader: Process {
+        command: ["cat", root._ocrTextPath]
+        stdout: StdioCollector {
+            onStreamFinished: root.extractedText = text.trim()
+        }
+    }
+
+    property Process dirPicker: Process {
+        command: ["zenity", "--file-selection", "--directory", "--title=Choose screenshot folder"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                const picked = text.trim();
+                if (picked) root.outputDir = picked;
+            }
+        }
+    }
+
+    property Process existsCheck: Process {
+        onExited: exitCode => {
+            if (exitCode !== 0) {
+                root.lastPath = "";
+                root.extractedText = "";
+                root.lastCopied = false;
+            }
+        }
+    }
+
+    property Process clipboardProc: Process {}
     property Process folderOpener: Process {}
     property Process fileOpener: Process {}
 }

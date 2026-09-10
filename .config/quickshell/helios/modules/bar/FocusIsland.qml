@@ -5,7 +5,7 @@ import "../../components"
 // Focus mode presets — each preset is a saved combination of DND,
 // caffeine, night light, power profile, and apps to launch, applied
 // together with one tap. List view + inline editor, same shape as other
-// settings tabs (see NightLightTab.qml) but for a user-editable collection
+// settings tabs (see NightLightIsland.qml) but for a user-editable collection
 // rather than a fixed set of controls.
 Item {
     id: root

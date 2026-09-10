@@ -6,14 +6,9 @@
 # fine when run directly or via a live `hyprctl dispatch`.
 pkill -f 'quickshell -c helios'
 while pgrep -f 'quickshell -c helios' >/dev/null; do sleep 0.05; done
-# Caps glibc malloc arenas — without this, repeated alloc/free churn
-# fragments per-thread arenas and RSS creeps up over a session without
-# ever being freed back.
-export MALLOC_ARENA_MAX=1
-# Lowers the free()d-chunk size glibc keeps in-heap before returning pages
-# to the OS (default 128KB), and the mmap threshold for large one-off
-# allocs (default 128KB) — same goal as jemalloc's dirty_decay_ms in
-# upstream DankMaterialShell, just the glibc equivalent.
-export MALLOC_TRIM_THRESHOLD_=65536
-export MALLOC_MMAP_THRESHOLD_=65536
+# glibc malloc fragments under the QML engine's alloc/free churn and never
+# hands the pages back, so RSS creeps up over a session (confirmed: ~1.1GB+
+# and still climbing after a few minutes without this). jemalloc doesn't
+# have that behavior — same instance stayed flat around ~270MB.
+export LD_PRELOAD=/lib64/libjemalloc.so.2
 exec quickshell -c helios -d

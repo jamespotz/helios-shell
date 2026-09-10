@@ -17,7 +17,7 @@ import "../../components"
 PanelWindow {
     id: settingsWindow
 
-    visible: Bridge.settingsOpen
+    visible: Bridge.settingsOpen && !Bridge.avatarPickerOpen
     screen: Utils.screenForMonitor(Quickshell.screens, Hyprland.focusedMonitor) || Quickshell.screens[0]
 
     WlrLayershell.layer: WlrLayer.Overlay
@@ -60,7 +60,9 @@ PanelWindow {
         { id: "systemmonitor", label: "System monitor", icon: "memory", group: "System",
           keywords: ["cpu", "gpu", "ram", "memory", "processes", "disk", "network usage"] },
         { id: "automation", label: "Automation", icon: "settings_suggest", group: "System",
-          keywords: ["device rules", "headphones", "trigger", "action", "connect"] }
+          keywords: ["device rules", "headphones", "trigger", "action", "connect"] },
+        { id: "defaultapps", label: "Default Apps", icon: "apps", group: "System",
+          keywords: ["browser", "file manager", "text editor", "xdg-mime", "association"] }
     ]
 
     property string searchText: ""
@@ -120,8 +122,8 @@ PanelWindow {
         anchors.centerIn: parent
         // Content is a fixed 560px, positioned 21px right of the sidebar —
         // the remainder past that (past sidebar 220 + 1px divider) is the
-        // page's own right-side breathing room. Reused tabs (BluetoothTab,
-        // WifiTab, etc.) size their Column to fill exactly the width the
+        // page's own right-side breathing room. Reused tabs (BluetoothIsland,
+        // WifiIsland, etc.) size their Column to fill exactly the width the
         // Loader gives them and anchor controls to its right edge — in the
         // island that edge IS the panel's edge (the panel always shrinks to
         // the tab's own implicitWidth), but here the card is wider than the
@@ -195,6 +197,26 @@ PanelWindow {
                 width: sidebar.width - 20
                 x: 10
                 spacing: 14
+
+                Row {
+                    width: sidebarCol.width
+                    height: 44
+                    spacing: 10
+                    leftPadding: 6
+                    bottomPadding: 6
+
+                    Avatar {
+                        size: 32
+                        editable: true
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+
+                    StyledText {
+                        text: Quickshell.env("USER") || "User"
+                        font.weight: Font.Medium
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+                }
 
                 Repeater {
                     model: settingsWindow.groupedPages
@@ -303,6 +325,7 @@ PanelWindow {
                     : settingsWindow.selectedPage === "keyboard" ? keyboardPage
                     : settingsWindow.selectedPage === "systemmonitor" ? systemMonitorPage
                     : settingsWindow.selectedPage === "automation" ? automationPage
+                    : settingsWindow.selectedPage === "defaultapps" ? defaultAppsPage
                     : settingsWindow.selectedPage === "helios" ? heliosPage
                     : appearancePage
 
@@ -323,7 +346,7 @@ PanelWindow {
     Component { id: appearancePage; ThemeSettings {} }
     Component { id: wallpaperPage; WallpaperSettings {} }
     // Night Light stacked below the monitor list — same physical-hardware
-    // grouping as Sound (VolumeTab + AudioMixerTab) below.
+    // grouping as Sound (VolumeIsland + AudioMixerIsland) below.
     Component {
         id: displaysPage
         Item {
@@ -335,12 +358,12 @@ PanelWindow {
                 width: parent.width
                 spacing: 24
 
-                DisplayTab { width: parent.width }
-                NightLightTab { width: parent.width }
+                DisplayIsland { width: parent.width }
+                NightLightIsland { width: parent.width }
             }
         }
     }
-    // Volume/device controls (VolumeTab, otherwise only reachable from the
+    // Volume/device controls (VolumeIsland, otherwise only reachable from the
     // island) stacked above the per-app mixer, so Sound covers both without
     // a separate page.
     Component {
@@ -354,20 +377,21 @@ PanelWindow {
                 width: parent.width
                 spacing: 24
 
-                VolumeTab { width: parent.width }
-                AudioMixerTab { width: parent.width }
+                VolumeIsland { width: parent.width }
+                AudioMixerIsland { width: parent.width }
             }
         }
     }
-    Component { id: bluetoothPage; BluetoothTab {} }
-    Component { id: wifiPage; WifiTab {} }
-    Component { id: notificationsPage; NotificationHistoryTab {} }
-    Component { id: focusPage; FocusTab {} }
-    Component { id: privacyPage; PrivacyTab {} }
-    Component { id: lockscreenPage; IdleTab {} }
-    Component { id: powerPage; PowerTab {} }
-    Component { id: keyboardPage; KeybindsTab {} }
-    Component { id: systemMonitorPage; SystemMonitorTab {} }
-    Component { id: automationPage; AutomationTab {} }
+    Component { id: bluetoothPage; BluetoothIsland {} }
+    Component { id: wifiPage; WifiIsland {} }
+    Component { id: notificationsPage; NotificationHistoryIsland {} }
+    Component { id: focusPage; FocusIsland {} }
+    Component { id: privacyPage; PrivacyIsland {} }
+    Component { id: lockscreenPage; IdleIsland {} }
+    Component { id: powerPage; PowerIsland {} }
+    Component { id: keyboardPage; KeybindsIsland {} }
+    Component { id: systemMonitorPage; SystemMonitorIsland {} }
+    Component { id: automationPage; AutomationIsland {} }
+    Component { id: defaultAppsPage; DefaultAppsIsland {} }
     Component { id: heliosPage; IslandSettings {} }
 }

@@ -6,7 +6,7 @@ import Quickshell.Services.UPower
 import Quickshell.Bluetooth as QsBluetooth
 
 // Reactive Bluetooth state backed by Quickshell's native BlueZ integration.
-// Keep this adapter's public API stable so BluetoothTab, MediaCard, and Osd do
+// Keep this adapter's public API stable so BluetoothIsland, MediaCard, and Osd do
 // not need to know which backend owns device discovery and actions.
 QtObject {
     id: root

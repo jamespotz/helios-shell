@@ -34,3 +34,4 @@ singleton Tasks 1.0 Tasks.qml
 singleton FocusModes 1.0 FocusModes.qml
 singleton CameraActivity 1.0 CameraActivity.qml
 singleton Automations 1.0 Automations.qml
+singleton DefaultApps 1.0 DefaultApps.qml

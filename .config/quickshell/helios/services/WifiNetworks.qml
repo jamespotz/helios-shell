@@ -3,10 +3,10 @@ import QtQuick
 import Quickshell.Io
 import Quickshell.Networking
 
-// Wifi scan state + nmcli actions, lifted out of WifiTab.qml so the list is
+// Wifi scan state + nmcli actions, lifted out of WifiIsland.qml so the list is
 // cached across the tab closing/reopening (it used to re-run `nmcli device
 // wifi list` from scratch — a rescan-on-open flash — every single time the
-// island's Loader recreated WifiTab) and so the connect/forget/add-network
+// island's Loader recreated WifiIsland) and so the connect/forget/add-network
 // logic lives in one place instead of being tangled into the view.
 //
 // Quickshell.Networking's own WifiDevice.networks only ever surfaced the
@@ -210,7 +210,7 @@ QtObject {
     property Process addNetworkProc: Process { onExited: root.refreshNetworks() }
 
     // First-ever load only. Start the real scan at shell startup so opening
-    // WifiTab only reads this cache. Manual scans and network actions refresh it.
+    // WifiIsland only reads this cache. Manual scans and network actions refresh it.
     Component.onCompleted: {
         if (Networking.wifiEnabled) root.scan();
         else root.refreshNetworks();

@@ -327,7 +327,7 @@ Item {
                                             width: calCol.width / 7
                                             height: width
                                             // Blank pad cells must keep their
-                                            // column (see CalendarTab.qml) —
+                                            // column (see CalendarIsland.qml) —
                                             // `visible` would collapse them
                                             // and shift the month left.
                                             opacity: modelData > 0 ? 1 : 0

@@ -12,7 +12,7 @@ import Quickshell.Services.UPower
 // off by default since auto-acting on a device/battery event is the kind
 // of thing that should be opt-in. The fourth ("meeting starts → DND") is
 // already covered by Calendar.qml's meetingFocusId — that's a Focus Modes
-// concern with its own picker in CalendarTab.qml, not duplicated here.
+// concern with its own picker in CalendarIsland.qml, not duplicated here.
 QtObject {
     id: root
 

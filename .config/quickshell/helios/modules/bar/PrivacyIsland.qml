@@ -151,7 +151,17 @@ Item {
                 id: clipBtn
                 anchors.verticalCenter: parent.verticalCenter
                 icon: "open_in_new"
-                onClicked: IslandNavigation.select("clipboard")
+                onClicked: {
+                    // select() only swaps the island's current tab — it never
+                    // opens the island, so from here (often reached from the
+                    // Settings window, where the island isn't open at all)
+                    // clicking did nothing visible. show() actually opens it.
+                    // Closing Settings first also avoids it sitting on the
+                    // same Overlay layer on top of the island.
+                    const screenName = IslandNavigation.open ? IslandNavigation.screen : Bridge.settingsScreen;
+                    Bridge.closeSettings();
+                    IslandNavigation.show(screenName, "clipboard");
+                }
             }
         }
     }

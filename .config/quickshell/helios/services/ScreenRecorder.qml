@@ -29,7 +29,9 @@ QtObject {
     property bool captureAudio: true
     property string quality: "very_high"
 
-    readonly property string outputDir: Quickshell.env("HOME") + "/Videos/Recordings"
+    // ponytail: session-only, resets on shell restart. Persist via
+    // Bridge-style JsonAdapter if that's ever needed.
+    property string outputDir: Quickshell.env("HOME") + "/Videos/Recordings"
     readonly property string elapsedLabel: {
         const m = Math.floor(root.elapsedSeconds / 60);
         const s = root.elapsedSeconds % 60;
@@ -91,6 +93,11 @@ QtObject {
     function openFolder() {
         folderOpener.command = ["xdg-open", root.outputDir];
         folderOpener.running = true;
+    }
+
+    function chooseOutputDir() {
+        IslandNavigation.close();
+        dirPicker.running = true;
     }
 
     // `source` is whatever gsr's -w flag takes directly: a monitor name,
@@ -166,4 +173,14 @@ QtObject {
     }
 
     property Process folderOpener: Process {}
+
+    property Process dirPicker: Process {
+        command: ["zenity", "--file-selection", "--directory", "--title=Choose recordings folder"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                const picked = text.trim();
+                if (picked) root.outputDir = picked;
+            }
+        }
+    }
 }
