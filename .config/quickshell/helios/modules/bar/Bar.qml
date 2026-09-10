@@ -211,7 +211,12 @@ PanelWindow {
 
         Item {
             id: visual
-            anchors.centerIn: parent
+            // Anchored to hitArea's fixed top edge and horizontal center
+            // (not centerIn) — growing width still expands left/right
+            // symmetrically, but growing height now extends only downward
+            // instead of also pushing the top edge upward.
+            anchors.top: parent.top
+            anchors.horizontalCenter: parent.horizontalCenter
             width: hitArea.width
             height: hitArea.height
 
