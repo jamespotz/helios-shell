@@ -62,15 +62,15 @@ ShellRoot {
 
     // Lets the (experimental) Liquid Glass surface read real desktop pixels
     // through Hyprland's compositor blur instead of faking translucency.
-    // Matches every screen's Bar since they all share the "helios:bar"
-    // layer-shell namespace.
+    // Matches every screen's Bar plus the settings window, which now shares
+    // the same LiquidGlassSurface toggle.
     Process {
         running: true
         command: [
             "hyprctl", "--batch",
-            "keyword layerrule blur,namespace:^(helios:bar)$ ; " +
-            "keyword layerrule ignorealpha 0.15,namespace:^(helios:bar)$ ; " +
-            "keyword layerrule xray 0,namespace:^(helios:bar)$"
+            "keyword layerrule blur,namespace:^(helios:bar|helios:settings)$ ; " +
+            "keyword layerrule ignorealpha 0.15,namespace:^(helios:bar|helios:settings)$ ; " +
+            "keyword layerrule xray 0,namespace:^(helios:bar|helios:settings)$"
         ]
     }
 

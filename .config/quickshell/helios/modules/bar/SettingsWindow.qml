@@ -132,11 +132,20 @@ PanelWindow {
         width: 828
         height: 600
         radius: Colors.radiusLarge
-        color: Colors.surface
-        opacity: Colors.panelOpacity
+        // Opaque by default (LiquidGlassSurface's fallback paints fillColor
+        // at full alpha) and only picks up the translucent vibrancy look
+        // when the same toggle the island uses is on.
+        color: "transparent"
         border.width: 0.5
         border.color: Qt.rgba(Colors.outline.r, Colors.outline.g, Colors.outline.b, 0.5)
         clip: true
+
+        LiquidGlassSurface {
+            anchors.fill: parent
+            active: Bridge.liquidGlassEnabled
+            cornerRadius: card.radius
+            fallbackColor: Colors.surface
+        }
 
         // ─── Header: search + close ──────────────────────────────────────
         Item {
