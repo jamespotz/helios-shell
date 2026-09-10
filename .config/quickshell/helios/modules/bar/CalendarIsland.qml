@@ -49,6 +49,28 @@ Item {
     readonly property var eventsByDate: root.calendar.eventsByDate
     readonly property var selectedDayEvents: root.eventsByDate[root.dateKey(root.selectedDate)] || []
 
+    // Presentation-only — the service only persists id/label/url/enabled,
+    // provider and dot color are derived here so subscribing doesn't need
+    // a picker for either.
+    function providerLabel(url) {
+        const u = String(url || "").toLowerCase();
+        if (u.includes("google.com")) return "Google Calendar";
+        if (u.includes("outlook.") || u.includes("office365")) return "Outlook Calendar";
+        return "Calendar feed";
+    }
+
+    function defaultLabel(url) {
+        const provider = root.providerLabel(url);
+        return provider === "Calendar feed" ? "New calendar" : provider;
+    }
+
+    readonly property var dotPalette: [Colors.accent, Colors.success, Colors.tertiary, Colors.secondary, Colors.warning]
+    function dotColor(id) {
+        let hash = 0;
+        for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) >>> 0;
+        return root.dotPalette[hash % root.dotPalette.length];
+    }
+
     Component.onCompleted: Calendar.setActive(true)
     Component.onDestruction: Calendar.setActive(false)
 
@@ -60,35 +82,30 @@ Item {
         width: parent.width
         spacing: 14
 
-        // --- Month header ------------------------------------------------------
+        // --- Title bar -----------------------------------------------------
         Item {
             width: parent.width
-            height: 28
+            height: 32
 
-            IconButton {
+            StyledText {
                 anchors.left: parent.left
                 anchors.verticalCenter: parent.verticalCenter
-                icon: "chevron_left"
-                onClicked: root.shiftMonth(-1)
-            }
-            StyledText {
-                anchors.centerIn: parent
                 font.bold: true
-                text: root.viewDate.toLocaleDateString(Qt.locale(), "MMMM yyyy")
+                font.pixelSize: Config.fontSize + 2
+                text: "Calendar"
             }
             Row {
                 anchors.right: parent.right
                 anchors.verticalCenter: parent.verticalCenter
-                spacing: 2
+                spacing: 6
 
                 IconButton {
-                    icon: "tune"
-                    active: root.manageOpen
+                    icon: "add"
                     onClicked: root.manageOpen = !root.manageOpen
                 }
                 IconButton {
-                    icon: "chevron_right"
-                    onClicked: root.shiftMonth(1)
+                    icon: "filter_list"
+                    onClicked: root.manageOpen = !root.manageOpen
                 }
             }
         }
@@ -96,12 +113,52 @@ Item {
         // --- Manage calendars (subscriptions) --------------------------------
         Column {
             width: parent.width
-            spacing: 10
+            spacing: 12
             visible: root.manageOpen
             height: root.manageOpen ? implicitHeight : 0
             clip: true
 
-            StyledText { text: "Calendars"; font.bold: true; font.pixelSize: Config.fontSize - 1 }
+            // --- Add a calendar ----------------------------------------------
+            Column {
+                width: parent.width
+                spacing: 8
+
+                StyledText { text: "Add a calendar"; font.pixelSize: Config.fontSize - 2; opacity: 0.7 }
+
+                Row {
+                    width: parent.width
+                    spacing: 8
+
+                    SearchField {
+                        id: urlField
+                        width: parent.width - connectButton.width - 8
+                        icon: "link"
+                        placeholder: "webcal:// or https:// link to an .ics feed"
+                        onAccepted: connectButton.clicked()
+                        onEscapePressed: IslandNavigation.close()
+                    }
+                    PrimaryButton {
+                        id: connectButton
+                        width: 90
+                        height: urlField.height
+                        text: root.calendar.refreshing ? "" : "Connect"
+                        active: true
+                        enabled: !root.calendar.refreshing && urlField.text.trim().length > 0
+                        onClicked: {
+                            const url = urlField.text.trim();
+                            Calendar.subscribe(root.defaultLabel(url), url);
+                            urlField.text = "";
+                        }
+
+                        LoadingSpinner {
+                            visible: root.calendar.refreshing
+                            active: root.calendar.refreshing
+                            font.pixelSize: 16
+                            color: Colors.accentText
+                        }
+                    }
+                }
+            }
 
             StyledText {
                 visible: root.calendar.subscriptions.length === 0
@@ -124,35 +181,55 @@ Item {
                         readonly property var error: subRow.modelData.error
 
                         width: parent.width
-                        height: 32
+                        height: 40
 
                         Row {
                             anchors.fill: parent
-                            spacing: 8
+                            spacing: 10
 
-                            MaterialIcon {
-                                visible: !!subRow.error
-                                icon: "warning"
-                                font.pixelSize: 14
-                                color: Colors.warning
+                            Rectangle {
+                                width: 8; height: 8; radius: 4
                                 anchors.verticalCenter: parent.verticalCenter
+                                color: root.dotColor(subRow.modelData.id)
                             }
+
                             Column {
-                                width: parent.width - (subRow.error ? 18 : 0) - 32
+                                // Row spacing (10) applies between all four children
+                                // (dot, this column, toggle, close button) — three gaps.
+                                width: parent.width - 8 - 42 - 30 - 3 * 10
                                 anchors.verticalCenter: parent.verticalCenter
-                                StyledText {
+                                spacing: 2
+
+                                Row {
                                     width: parent.width
-                                    elide: Text.ElideRight
-                                    text: subRow.modelData.label
+                                    spacing: 4
+
+                                    MaterialIcon {
+                                        visible: !!subRow.error
+                                        icon: "warning"
+                                        font.pixelSize: 12
+                                        color: Colors.warning
+                                        anchors.verticalCenter: parent.verticalCenter
+                                    }
+                                    StyledText {
+                                        width: subRow.error ? parent.width - 16 : parent.width
+                                        elide: Text.ElideRight
+                                        text: subRow.modelData.label
+                                    }
                                 }
                                 StyledText {
-                                    visible: !!subRow.error
                                     width: parent.width
                                     elide: Text.ElideRight
-                                    text: subRow.error ? subRow.error.message : ""
-                                    color: Colors.warning
+                                    text: subRow.error ? subRow.error.message : root.providerLabel(subRow.modelData.url)
+                                    color: subRow.error ? Colors.warning : Colors.subtext
                                     font.pixelSize: Config.fontSize - 4
                                 }
+                            }
+
+                            Toggle {
+                                anchors.verticalCenter: parent.verticalCenter
+                                checked: subRow.modelData.enabled
+                                onToggled: checked => Calendar.setSubscriptionEnabled(subRow.modelData.id, checked)
                             }
                             IconButton {
                                 anchors.verticalCenter: parent.verticalCenter
@@ -181,40 +258,29 @@ Item {
                     onActivated: value => Calendar.setMeetingFocusId(value)
                 }
             }
+        }
 
-            Rectangle { width: parent.width; height: 1; color: Colors.overlay; opacity: 0.15 }
+        // --- Month header ------------------------------------------------------
+        Item {
+            width: parent.width
+            height: 28
 
-            Column {
-                width: parent.width
-                spacing: 8
-
-                SearchField {
-                    id: labelField
-                    width: parent.width
-                    icon: "label"
-                    placeholder: "Name (e.g. Work)"
-                    onEscapePressed: IslandNavigation.close()
-                }
-                SearchField {
-                    id: urlField
-                    width: parent.width
-                    icon: "link"
-                    placeholder: "https://calendar.google.com/…/basic.ics"
-                    onAccepted: addButton.clicked()
-                    onEscapePressed: IslandNavigation.close()
-                }
-                PrimaryButton {
-                    id: addButton
-                    width: parent.width
-                    text: "Add Calendar"
-                    icon: "add"
-                    enabled: labelField.text.trim().length > 0 && urlField.text.trim().length > 0
-                    onClicked: {
-                        Calendar.subscribe(labelField.text, urlField.text);
-                        labelField.text = "";
-                        urlField.text = "";
-                    }
-                }
+            IconButton {
+                anchors.left: parent.left
+                anchors.verticalCenter: parent.verticalCenter
+                icon: "chevron_left"
+                onClicked: root.shiftMonth(-1)
+            }
+            StyledText {
+                anchors.centerIn: parent
+                font.bold: true
+                text: root.viewDate.toLocaleDateString(Qt.locale(), "MMMM yyyy")
+            }
+            IconButton {
+                anchors.right: parent.right
+                anchors.verticalCenter: parent.verticalCenter
+                icon: "chevron_right"
+                onClicked: root.shiftMonth(1)
             }
         }
 
@@ -313,10 +379,11 @@ Item {
                             }
 
                             StyledText {
+                                id: dayNumber
                                 anchors.centerIn: parent
                                 text: cell.modelData
-                                font.pixelSize: Config.fontSize - 6
-                                font.weight: cell.isToday ? Font.Bold : Font.Normal
+                                font.pixelSize: Config.fontSize - 3
+                                font.weight: Font.Bold
                                 color: cell.isToday ? Colors.accentText : Colors.text
                             }
 
@@ -324,8 +391,8 @@ Item {
                             Rectangle {
                                 visible: cell.hasEvents
                                 anchors.horizontalCenter: parent.horizontalCenter
-                                anchors.bottom: parent.bottom
-                                anchors.bottomMargin: 3
+                                anchors.top: dayNumber.bottom
+                                anchors.topMargin: 1
                                 width: 4; height: 4; radius: 2
                                 color: cell.isToday ? Colors.accentText : Colors.accent
                             }
@@ -421,7 +488,7 @@ Item {
                                         }
                                     }
 
-                                    HoverHandler { id: linkHover }
+                                    HoverHandler { id: linkHover; cursorShape: Qt.PointingHandCursor }
                                     TapHandler {
                                         onTapped: Quickshell.execDetached(["xdg-open", linkItem.modelData])
                                     }

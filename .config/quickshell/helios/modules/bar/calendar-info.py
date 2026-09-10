@@ -243,6 +243,8 @@ def collect_subscription_events(subscriptions):
     errors = []
 
     for sub in subscriptions:
+        if sub.get("enabled") is False:
+            continue
         sub_id = sub.get("id", "")
         label = sub.get("label") or "Subscribed calendar"
         url = sub.get("url", "")

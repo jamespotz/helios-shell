@@ -30,6 +30,7 @@ QtObject {
             id: subscription.id,
             label: subscription.label,
             url: subscription.url,
+            enabled: subscription.enabled !== false,
             error: root.subscriptionErrors.find(error => error.id === subscription.id) || null
         }))
     })
@@ -56,6 +57,15 @@ QtObject {
     function unsubscribe(id) {
         if (!root.subscriptions.some(subscription => subscription.id === id)) return false;
         root.subscriptions = root.subscriptions.filter(subscription => subscription.id !== id);
+        root.persistenceRequested(root.subscriptions);
+        root.refreshRequested();
+        return true;
+    }
+
+    function setSubscriptionEnabled(id, enabled) {
+        if (!root.subscriptions.some(subscription => subscription.id === id)) return false;
+        root.subscriptions = root.subscriptions.map(subscription =>
+            subscription.id === id ? Object.assign({}, subscription, { enabled: enabled }) : subscription);
         root.persistenceRequested(root.subscriptions);
         root.refreshRequested();
         return true;

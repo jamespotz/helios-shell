@@ -143,6 +143,8 @@ hl.bind(mainMod .. " + ALT + A", hl.dsp.exec_cmd(helios .. " island toggle volum
   { description = "Toggle audio output/input island" })
 hl.bind(mainMod .. " + ALT + E", hl.dsp.exec_cmd(helios .. " island toggle power"),
   { description = "Toggle power profile island" })
+hl.bind(mainMod .. " + ALT + C", hl.dsp.exec_cmd(helios .. " island toggle calendar"),
+  { description = "Toggle calendar island" })
 -- Own `automation toggle` ipc (see shell.qml) rather than `island toggle
 -- automation` directly, same reasoning as the systemmonitor bind below.
 hl.bind(mainMod .. " + ALT + U", hl.dsp.exec_cmd(helios .. " automation toggle"),
