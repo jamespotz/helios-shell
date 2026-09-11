@@ -10,7 +10,7 @@ A [Quickshell](https://quickshell.org)-based desktop shell for [Hyprland](https:
 - **Notification history** — browse dismissed notifications
 - **Screenshot tool** — fullscreen, region (slurp), active window; copies to clipboard
 - **Night Light** — wlsunset-based color temperature control with schedule
-- **Display settings** — resolution, scale, VRR per monitor via hyprctl
+- **Display settings** — persistent resolution, integer-safe fractional scaling, adaptive sync modes, and HDR per monitor
 - **Idle & Lock** — hypridle integration with dim/lock/DPMS timeouts + caffeine mode
 - **Audio** — output/input device picker, volume control, mute
 - **Bluetooth** — device discovery, connect/disconnect
@@ -21,14 +21,14 @@ A [Quickshell](https://quickshell.org)-based desktop shell for [Hyprland](https:
 - **Clipboard history** — cliphist integration
 - **Screen recording** — gpu-screen-recorder with fullscreen/window/region modes
 - **Weather** — wttr.in with hourly forecast and 3-day daily
-- **Wallpaper** — images/GIFs via awww, video via mpvpaper, with transitions
+- **Wallpaper** — images/GIFs via awww, video via mpvpaper, with transitions and keyboard carousel navigation
 - **Themes** — 10+ presets + dynamic from wallpaper (matugen); syncs GTK, Qt, Ghostty, btop, Neovim, Zed, Bat
 - **Power profiles** — saver/balanced/performance via power-profiles-daemon
-- **Launcher** — app search (XDG + Flatpak + Snap)
+- **Launcher** — focused keyboard search for apps, windows, shell actions, and emoji
 - **OSD** — volume + brightness overlays
 - **Power menu** — lock/logout/suspend/reboot/shutdown
 - **Lock screen** — PAM auth via wlr-session-lock
-- **Keybind cheatsheet** — live from hyprctl binds
+- **Keybind cheatsheet** — searchable and focused on open, live from `hyprctl binds`
 - **Liquid Glass** — optional compositor-blurred translucent surface
 
 ## Dependencies
@@ -107,6 +107,17 @@ Add to Hyprland autostart:
 exec-once = quickshell -c helios
 ```
 
+## Display settings
+
+Display changes update the active monitor and persist in Hyprland's Lua configuration through `modules/bar/display-config.py`. The helper follows `require()` and `utils.safe_load()` imports, edits the matching `hl.monitor({...})` block, then reloads Hyprland.
+
+- Resolution choices come from the monitor's reported modelines.
+- Scale ranges from `1.00` to `2.00` in `0.01` steps. Only values producing whole-number logical width and height appear.
+- Adaptive sync supports global (`-1`), off (`0`), on (`1`), fullscreen (`2`), and video/game fullscreen (`3`).
+- HDR enables Hyprland's `hdr` color-management preset with 10-bit output. Driver, display, and application support still apply.
+
+See [Hyprland monitor color management](https://wiki.hypr.land/configuring/core/monitors/colors) for current compositor requirements.
+
 ## Keybinds
 
 Load `helios-binds.lua` from your Hyprland Lua config:
@@ -162,7 +173,7 @@ Targets: `launcher`, `lock`, `island`, `osd`, `weather`, `wallpaper`, `theme`, `
 .config/quickshell/helios/
 ├── shell.qml              entry point
 ├── services/              singletons (Colors, Config, Bridge, Notifications,
-│                          Weather, Themes, Cava, Clipboard,
+│                          Weather, Themes, Wallpaper, WallpaperLibrary, Cava, Clipboard,
 │                          WifiNetworks, ScreenRecorder, MicActivity,
 │                          Screenshot, NightLight, DisplaySettings, IdleInhibit)
 ├── components/            shared UI (IconButton, Slider, Toggle, StyledText, etc.)
@@ -175,7 +186,7 @@ Targets: `launcher`, `lock`, `island`, `osd`, `weather`, `wallpaper`, `theme`, `
     └── lock/              Session lock (PAM)
 ```
 
-Wallpaper display itself is owned by external daemons, not a Quickshell module — `services/Wallpaper.qml` drives `awww` (images/GIFs) and `mpvpaper` (video).
+Wallpaper state and commands are owned by `services/Wallpaper.qml`. External `awww` and `mpvpaper` processes render images, GIFs, and video.
 
 ## License
 
