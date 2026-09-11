@@ -197,11 +197,13 @@ Item {
 
                     StyledText { text: "Scale"; font.pixelSize: Config.fontSize - 2; color: Colors.subtext }
 
-                    Row {
+                    Flow {
+                        width: parent.width
+                        height: childrenRect.height
                         spacing: 6
 
                         Repeater {
-                            model: [1.0, 1.25, 1.5, 1.75, 2.0]
+                            model: DisplaySettings.validScales(monCol.modelData.width, monCol.modelData.height)
 
                             Chip {
                                 required property var modelData

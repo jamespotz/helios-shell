@@ -23,7 +23,7 @@ if [[ "$1" == "reload" ]]; then
     exit 0
 fi
 if [[ "$1" == "monitors" && "$2" == "-j" ]]; then
-    printf '[{"name":"DP-1","availableModes":[],"colorManagementPreset":"srgb","vrr":false}]\n'
+    printf '[{"name":"DP-1","width":2560,"height":1440,"availableModes":[],"colorManagementPreset":"srgb","vrr":false}]\n'
     exit 0
 fi
 exit 1
@@ -51,5 +51,13 @@ query_output="$(PATH="$test_root/bin:$PATH" python3 \
     --config "$test_root/hyprland.lua" \
     --query --json --all)"
 python3 -c 'import json, sys; monitor = json.load(sys.stdin)[0]; assert monitor["vrrMode"] == 3; assert monitor["colorManagementPreset"] == "hdr"; assert monitor["configuredBitdepth"] == 10' <<< "$query_output"
+
+if PATH="$test_root/bin:$PATH" python3 \
+    "$repo_root/.config/quickshell/helios/modules/bar/display-config.py" \
+    --config "$test_root/hyprland.lua" \
+    --output DP-1 --scale 1.3 2>/dev/null; then
+    printf 'Invalid scale was accepted\n' >&2
+    exit 1
+fi
 
 printf 'DISPLAY_CONFIG_TEST_PASS\n'

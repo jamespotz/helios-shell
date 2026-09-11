@@ -42,6 +42,19 @@ QtObject {
         root.setResolutionMode(monitorName, width + "x" + height + "@" + Number(refreshRate).toFixed(2) + "Hz");
     }
 
+    function validScales(width, height) {
+        const scales = [];
+        for (let hundredths = 100; hundredths <= 200; hundredths++) {
+            const scale = hundredths / 100;
+            const logicalWidth = width / scale;
+            const logicalHeight = height / scale;
+            if (Math.abs(logicalWidth - Math.round(logicalWidth)) < 0.000001
+                    && Math.abs(logicalHeight - Math.round(logicalHeight)) < 0.000001)
+                scales.push(scale);
+        }
+        return scales;
+    }
+
     function setScale(monitorName, scale) {
         root._apply(monitorName, ["-s", String(scale)]);
     }
@@ -57,7 +70,7 @@ QtObject {
     function setHdr(monitorName, enabled) {
         root._apply(monitorName, enabled
             ? ["--cm", "hdr", "--bitdepth", "10"]
-            : ["--cm", "auto"]);
+            : ["--cm", "srgb"]);
     }
 
     // Fetches the target monitor's supported modelines into availableModes.

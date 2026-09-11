@@ -134,6 +134,20 @@ def _hyprctl_monitors():
         clean_stdout = clean_stdout.replace("adding monitors", "", 1)
     return json.loads(clean_stdout)
 
+def validate_scale(target_output, scale):
+    if not 1 <= scale <= 2:
+        raise ValueError("Scale must be between 1 and 2.")
+    monitor = next((item for item in _hyprctl_monitors() if item.get("name") == target_output), None)
+    if monitor is None:
+        raise ValueError(f"Monitor '{target_output}' is not currently connected.")
+    logical_width = monitor.get("width", 0) / scale
+    logical_height = monitor.get("height", 0) / scale
+    if not (logical_width.is_integer() and logical_height.is_integer()):
+        raise ValueError(
+            f"Scale {scale:g} produces non-integer logical size "
+            f"{logical_width:g}x{logical_height:g}."
+        )
+
 def configured_monitor_values(entry_config):
     values = {}
     monitor_pattern = re.compile(r'hl\.monitor\s*\(\s*\{([^{}]*)\}\s*\)', re.DOTALL)
@@ -255,6 +269,13 @@ def main():
                 args.cm is not None, args.bitdepth is not None]):
         print("Error: Provide at least one element property adjustment key, or use --query flag.", file=sys.stderr)
         sys.exit(1)
+
+    if args.scale is not None:
+        try:
+            validate_scale(args.output, float(args.scale))
+        except (ValueError, subprocess.SubprocessError, json.JSONDecodeError) as error:
+            print(f"Error: {error}", file=sys.stderr)
+            sys.exit(1)
 
     if not entry_config.exists():
         print(f"Error: Main config file structure missing: {entry_config}", file=sys.stderr)
