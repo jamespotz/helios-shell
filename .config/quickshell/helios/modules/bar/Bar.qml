@@ -284,7 +284,9 @@ PanelWindow {
 
                 Loader {
                     id: content
-                    anchors.centerIn: parent
+                    anchors.top: parent.top
+                    anchors.topMargin: bar.padV
+                    anchors.horizontalCenter: parent.horizontalCenter
                     opacity: 0
                     sourceComponent: bar.panelOpen ? panelComp
                         : bar.notifyMode ? notifyComp

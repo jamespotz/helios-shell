@@ -72,9 +72,8 @@ QtObject {
     // ─── Rule: external monitor connects → restore its last layout ───────
     // Snapshots resolution/scale/transform/VRR per monitor name on every
     // poll; when a name that had disappeared comes back, replays its last
-    // snapshot through DisplaySettings' own hyprctl-keyword functions
-    // (same commands DisplaySettings.qml's UI calls) rather than a second
-    // hyprctl-invoking implementation.
+    // snapshot through DisplaySettings' own functions (same ones
+    // DisplayIsland's UI calls) rather than a second implementation.
     property var monitorConfigs: ({})
     property var knownScreenNames: []
 

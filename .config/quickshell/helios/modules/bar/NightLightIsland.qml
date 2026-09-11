@@ -2,78 +2,50 @@ import QtQuick
 import "../../services"
 import "../../components"
 
-// Night Light panel — toggle + temperature slider + schedule option.
-// Apple-style: warm gradient preview, clear on/off state, simple slider.
+// Night Light panel — "Comfort" section: toggle + schedule + temperature
+// slider. Apple-style: quiet section label, clear on/off state, simple
+// slider with no chrome around it.
 Item {
     id: root
 
     implicitWidth: 300
-    implicitHeight: col.implicitHeight + 8
+    implicitHeight: col.implicitHeight
 
     Column {
         id: col
-        anchors.left: parent.left
-        anchors.right: parent.right
-        anchors.leftMargin: 4
-        anchors.rightMargin: 4
+        width: parent.width
         spacing: 14
 
-        // Header with toggle
-        Row {
-            width: parent.width
-            spacing: 10
-
-            MaterialIcon {
-                icon: "nightlight"
-                font.pixelSize: 20
-                color: NightLight.enabled ? Colors.warning : Colors.subtext
-                anchors.verticalCenter: parent.verticalCenter
-            }
-
-            Column {
-                anchors.verticalCenter: parent.verticalCenter
-                width: parent.width - 20 - 10 - toggle.width - 10
-                StyledText { text: "Night Light"; font.weight: Font.DemiBold; font.pixelSize: Config.fontSize + 1 }
-                StyledText { text: "Reduces blue light to ease eye strain"; font.pixelSize: Config.fontSize - 2; color: Colors.subtext }
-            }
-
-            Toggle {
-                id: toggle
-                anchors.verticalCenter: parent.verticalCenter
-                checked: NightLight.enabled
-                onToggled: v => NightLight.setEnabled(v)
-            }
+        StyledText {
+            text: "Comfort"
+            font.weight: Font.DemiBold
+            font.pixelSize: Config.fontSize - 1
+            color: Colors.subtext
         }
 
-        // Temperature preview gradient
-        Rectangle {
+        ToggleRow {
             width: parent.width
-            height: 6
-            radius: 3
-            opacity: NightLight.enabled ? 1 : 0.4
-            Behavior on opacity { NumberAnimation { duration: Config.animFast } }
+            title: "Night Light"
+            subtitle: "Shifts colors warmer in the evening to ease eye strain"
+            checked: NightLight.enabled
+            onToggled: v => NightLight.setEnabled(v)
+        }
 
-            gradient: Gradient {
-                orientation: Gradient.Horizontal
-                GradientStop { position: 0.0; color: "#ff8c2d" }
-                GradientStop { position: 0.5; color: "#ffc87a" }
-                GradientStop { position: 1.0; color: "#ffffff" }
-            }
+        ToggleRow {
+            width: parent.width
+            title: "Schedule from sunset to sunrise"
+            subtitle: "Uses the location set in Weather"
+            checked: NightLight.scheduled
+            enabled: NightLight.enabled
+            onToggled: v => NightLight.setScheduled(v)
         }
 
         // Temperature slider
         Column {
             width: parent.width
-            spacing: 6
+            spacing: 8
             opacity: NightLight.enabled ? 1 : 0.4
             Behavior on opacity { NumberAnimation { duration: Config.animFast } }
-
-            Row {
-                width: parent.width
-                StyledText { text: "Warmth"; font.weight: Font.Medium }
-                Item { width: parent.width - parent.children[0].implicitWidth - tempLabel.implicitWidth; height: 1 }
-                StyledText { id: tempLabel; text: NightLight.temperature + "K"; color: Colors.subtext; font.pixelSize: Config.fontSize - 1 }
-            }
 
             Slider {
                 width: parent.width
@@ -83,34 +55,29 @@ Item {
                 onMoved: v => NightLight.setTemperature(NightLight.tempMax - Math.round(v))
             }
 
-            Row {
+            Item {
                 width: parent.width
-                StyledText { text: "Warmer"; font.pixelSize: Config.fontSize - 3; color: Colors.subtext }
-                Item { width: parent.width - parent.children[0].implicitWidth - parent.children[2].implicitWidth; height: 1 }
-                StyledText { text: "Cooler"; font.pixelSize: Config.fontSize - 3; color: Colors.subtext }
-            }
-        }
+                height: warmerLabel.implicitHeight
 
-        // Separator
-        Rectangle { width: parent.width; height: 0.5; color: Colors.overlay; opacity: 0.3 }
-
-        // Schedule toggle
-        Row {
-            width: parent.width
-            opacity: NightLight.enabled ? 1 : 0.4
-
-            Column {
-                width: parent.width - schedToggle.width - 10
-                anchors.verticalCenter: parent.verticalCenter
-                StyledText { text: "Sunset to Sunrise"; font.weight: Font.Medium }
-                StyledText { text: "Uses the location set in Weather"; font.pixelSize: Config.fontSize - 2; color: Colors.subtext }
-            }
-
-            Toggle {
-                id: schedToggle
-                anchors.verticalCenter: parent.verticalCenter
-                checked: NightLight.scheduled
-                onToggled: v => NightLight.setScheduled(v)
+                StyledText {
+                    id: warmerLabel
+                    anchors.left: parent.left
+                    text: "Warmer"
+                    font.pixelSize: Config.fontSize - 3
+                    color: Colors.subtext
+                }
+                StyledText {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    text: NightLight.temperature + "K"
+                    font.pixelSize: Config.fontSize - 2
+                    color: Colors.subtext
+                }
+                StyledText {
+                    anchors.right: parent.right
+                    text: "Cooler"
+                    font.pixelSize: Config.fontSize - 3
+                    color: Colors.subtext
+                }
             }
         }
 

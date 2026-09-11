@@ -15,23 +15,29 @@ Item {
 
     signal toggled(bool checked)
 
-    implicitHeight: rowLayout.implicitHeight
+    implicitHeight: rowLayout.height
 
-    Row {
+    Item {
         id: rowLayout
         width: parent.width
-        spacing: 10
+        height: Math.max(labelCol.implicitHeight, toggle.height)
         opacity: root.enabled ? 1 : 0.4
 
+        readonly property int leadWidth: root.icon.length > 0 ? 28 : 0
+
         MaterialIcon {
+            visible: root.icon.length > 0
             icon: root.icon
             font.pixelSize: 18
             color: Colors.accent
+            anchors.left: parent.left
             anchors.verticalCenter: parent.verticalCenter
         }
 
         Column {
-            width: rowLayout.width - 18 - toggle.width - rowLayout.spacing * 2
+            id: labelCol
+            x: rowLayout.leadWidth
+            width: rowLayout.width - rowLayout.leadWidth - toggle.width - 10
             anchors.verticalCenter: parent.verticalCenter
             spacing: 2
 
@@ -53,6 +59,7 @@ Item {
 
         Toggle {
             id: toggle
+            anchors.right: parent.right
             anchors.verticalCenter: parent.verticalCenter
             checked: root.checked
             enabled: root.enabled

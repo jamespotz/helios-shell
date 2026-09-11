@@ -7,6 +7,14 @@ import "../../components"
 Item {
     id: root
 
+    readonly property var vrrModes: [
+        { value: -1, label: "Global" },
+        { value: 0, label: "Off" },
+        { value: 1, label: "On" },
+        { value: 2, label: "Fullscreen" },
+        { value: 3, label: "Video/game" }
+    ]
+
     implicitWidth: 340
     implicitHeight: col.implicitHeight
 
@@ -47,124 +55,195 @@ Item {
             color: Colors.subtext
         }
 
-        // Monitor cards
+        // Monitors — flat layout, no card container, so a single connected
+        // display reads as part of the panel instead of a boxed-off widget.
         Repeater {
             model: DisplaySettings.monitors
 
-            Rectangle {
-                id: monCard
+            Column {
+                id: monCol
                 required property var modelData
                 required property int index
 
                 width: col.width
-                height: monCol.implicitHeight + 20
-                radius: Colors.radiusLarge
-                color: Colors.surfaceHigh
-                opacity: monCard.modelData.disabled ? 0.5 : 1
+                spacing: 16
+                opacity: monCol.modelData.disabled ? 0.5 : 1
                 Behavior on opacity { NumberAnimation { duration: Config.animFast } }
 
-                Column {
-                    id: monCol
-                    anchors.fill: parent
-                    anchors.margins: 10
-                    spacing: 10
+                // Monitor name + status
+                Row {
+                    width: parent.width
+                    spacing: 8
 
-                    // Monitor name + status
-                    Row {
-                        width: parent.width
-                        spacing: 8
+                    Rectangle {
+                        width: 8; height: 8; radius: 4
+                        color: monCol.modelData.disabled ? Colors.overlay : Colors.success
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
 
-                        Rectangle {
-                            width: 8; height: 8; radius: 4
-                            color: monCard.modelData.disabled ? Colors.overlay : Colors.success
-                            anchors.verticalCenter: parent.verticalCenter
-                        }
+                    StyledText {
+                        text: monCol.modelData.name
+                        font.weight: Font.DemiBold
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
 
+                    StyledText {
+                        visible: monCol.modelData.description && monCol.modelData.description.length > 0
+                        text: monCol.modelData.description || ""
+                        font.pixelSize: Config.fontSize - 2
+                        color: Colors.subtext
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: Math.min(implicitWidth, 160)
+                        elide: Text.ElideRight
+                    }
+                }
+
+                // Resolution + refresh rate — prominent stat pairs
+                Row {
+                    spacing: 32
+
+                    Column {
+                        spacing: 2
+                        StyledText { text: "Resolution"; font.pixelSize: Config.fontSize - 2; color: Colors.subtext }
                         StyledText {
-                            text: monCard.modelData.name
+                            text: monCol.modelData.width + " × " + monCol.modelData.height
                             font.weight: Font.DemiBold
-                            anchors.verticalCenter: parent.verticalCenter
+                            font.pixelSize: Config.fontSize + 2
                         }
+                    }
 
+                    Column {
+                        spacing: 2
+                        StyledText { text: "Refresh rate"; font.pixelSize: Config.fontSize - 2; color: Colors.subtext }
                         StyledText {
-                            visible: monCard.modelData.description && monCard.modelData.description.length > 0
-                            text: monCard.modelData.description || ""
-                            font.pixelSize: Config.fontSize - 2
-                            color: Colors.subtext
-                            anchors.verticalCenter: parent.verticalCenter
-                            width: Math.min(implicitWidth, 140)
-                            elide: Text.ElideRight
+                            text: Math.round(monCol.modelData.refreshRate) + " Hz"
+                            font.weight: Font.DemiBold
+                            font.pixelSize: Config.fontSize + 2
                         }
                     }
+                }
 
-                    // Resolution + refresh
-                    Row {
-                        spacing: 16
+                // Mode picker — every modeline the monitor reports via
+                // hyprctl, queried lazily (only while expanded) since a
+                // monitor can report dozens of them.
+                Disclosure {
+                    id: modeDisclosure
+                    width: parent.width
+                    title: "Change Resolution"
+                    summary: monCol.modelData.width + "×" + monCol.modelData.height + "@" + Math.round(monCol.modelData.refreshRate) + "Hz"
+                    onOpenChanged: if (open) DisplaySettings.queryModes(monCol.modelData.name)
 
-                        Column {
-                            spacing: 2
-                            StyledText { text: "Resolution"; font.pixelSize: Config.fontSize - 2; color: Colors.subtext }
-                            StyledText {
-                                text: monCard.modelData.width + " × " + monCard.modelData.height
-                                font.weight: Font.Medium
-                            }
-                        }
-
-                        Column {
-                            spacing: 2
-                            StyledText { text: "Refresh"; font.pixelSize: Config.fontSize - 2; color: Colors.subtext }
-                            StyledText {
-                                text: Math.round(monCard.modelData.refreshRate) + " Hz"
-                                font.weight: Font.Medium
-                            }
-                        }
-
-                        Column {
-                            spacing: 2
-                            StyledText { text: "Scale"; font.pixelSize: Config.fontSize - 2; color: Colors.subtext }
-                            StyledText {
-                                text: monCard.modelData.scale + "×"
-                                font.weight: Font.Medium
-                            }
-                        }
+                    StyledText {
+                        visible: DisplaySettings.modesLoading
+                        text: "Loading modes…"
+                        color: Colors.subtext
+                        font.pixelSize: Config.fontSize - 2
                     }
 
-                    // Scale controls
+                    Item {
+                        width: parent.width
+                        height: 200
+                        visible: !DisplaySettings.modesLoading
+
+                        ListView {
+                            id: modeList
+                            anchors.fill: parent
+                            clip: true
+                            model: DisplaySettings.availableModes
+                            spacing: 2
+                            boundsBehavior: Flickable.StopAtBounds
+
+                            delegate: Rectangle {
+                                id: modeRow
+                                required property string modelData
+
+                                readonly property bool active: modeRow.modelData.toLowerCase() === (
+                                    monCol.modelData.width + "x" + monCol.modelData.height + "@" + monCol.modelData.refreshRate.toFixed(2) + "hz")
+
+                                width: modeList.width
+                                height: 32
+                                radius: 8
+                                color: active ? Colors.accent : (modeHover.hovered ? Colors.surfaceHigh : "transparent")
+
+                                Behavior on color { ColorAnimation { duration: Config.animFast } }
+
+                                HoverHandler { id: modeHover }
+
+                                StyledText {
+                                    anchors.left: parent.left
+                                    anchors.leftMargin: 10
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    text: modeRow.modelData
+                                    font.pixelSize: Config.fontSize - 1
+                                    color: modeRow.active ? Colors.accentText : Colors.text
+                                }
+
+                                MouseArea {
+                                    anchors.fill: parent
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: DisplaySettings.setResolutionMode(monCol.modelData.name, modeRow.modelData)
+                                }
+                            }
+                        }
+
+                        ScrollIndicator { target: modeList }
+                    }
+                }
+
+                // Scale
+                Column {
+                    width: parent.width
+                    spacing: 8
+
+                    StyledText { text: "Scale"; font.pixelSize: Config.fontSize - 2; color: Colors.subtext }
+
                     Row {
                         spacing: 6
-
-                        StyledText { text: "Scale:"; font.pixelSize: Config.fontSize - 1; anchors.verticalCenter: parent.verticalCenter }
 
                         Repeater {
                             model: [1.0, 1.25, 1.5, 1.75, 2.0]
 
                             Chip {
                                 required property var modelData
-                                active: Math.abs(monCard.modelData.scale - modelData) < 0.01
+                                active: Math.abs(monCol.modelData.scale - modelData) < 0.01
                                 text: modelData + "×"
-                                onClicked: DisplaySettings.setScale(monCard.modelData.name, modelData)
+                                onClicked: DisplaySettings.setScale(monCol.modelData.name, modelData)
                             }
                         }
                     }
+                }
 
-                    // VRR toggle
-                    Row {
+                Column {
+                    width: parent.width
+                    spacing: 8
+
+                    StyledText { text: "Adaptive Sync"; font.pixelSize: Config.fontSize - 2; color: Colors.subtext }
+
+                    Flow {
                         width: parent.width
+                        height: childrenRect.height
+                        spacing: 6
 
-                        StyledText {
-                            text: "Adaptive Sync (VRR)"
-                            font.pixelSize: Config.fontSize - 1
-                            anchors.verticalCenter: parent.verticalCenter
-                            width: parent.width - vrrToggle.width
-                        }
+                        Repeater {
+                            model: root.vrrModes
 
-                        Toggle {
-                            id: vrrToggle
-                            anchors.verticalCenter: parent.verticalCenter
-                            checked: monCard.modelData.vrr !== undefined && monCard.modelData.vrr > 0
-                            onToggled: v => DisplaySettings.setVrr(monCard.modelData.name, v ? 1 : 0)
+                            Chip {
+                                required property var modelData
+                                active: Number(monCol.modelData.vrrMode) === modelData.value
+                                text: modelData.label
+                                onClicked: DisplaySettings.setVrr(monCol.modelData.name, modelData.value)
+                            }
                         }
                     }
+                }
+
+                ToggleRow {
+                    width: parent.width
+                    title: "HDR"
+                    subtitle: "10-bit HDR PQ output. Experimental in Hyprland."
+                    checked: monCol.modelData.colorManagementPreset === "hdr"
+                        || monCol.modelData.colorManagementPreset === "hdredid"
+                    onToggled: enabled => DisplaySettings.setHdr(monCol.modelData.name, enabled)
                 }
             }
         }
