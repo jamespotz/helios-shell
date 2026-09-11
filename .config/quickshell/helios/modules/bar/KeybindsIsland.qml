@@ -11,6 +11,9 @@ Item {
     readonly property int listHeight: 380
 
     property var entries: []
+    readonly property bool searchFocused: searchField.inputActiveFocus
+
+    function focusSearch() { searchField.focusInput(); }
 
     readonly property var filtered: {
         const q = searchField.text.trim().toLowerCase();
@@ -35,7 +38,15 @@ Item {
 
     Component.onCompleted: {
         bindsProc.running = true;
-        searchField.focusInput();
+        focusSearchTimer.restart();
+    }
+
+    // Bar establishes its Hyprland keyboard grab shortly after loading.
+    // Focus after that handoff so the grab cannot leave focus on the panel.
+    Timer {
+        id: focusSearchTimer
+        interval: 120
+        onTriggered: root.focusSearch()
     }
 
     readonly property var modOrder: [

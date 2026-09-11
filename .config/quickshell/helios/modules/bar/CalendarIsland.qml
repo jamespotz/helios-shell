@@ -49,21 +49,6 @@ Item {
     readonly property var eventsByDate: root.calendar.eventsByDate
     readonly property var selectedDayEvents: root.eventsByDate[root.dateKey(root.selectedDate)] || []
 
-    // Presentation-only — the service only persists id/label/url/enabled,
-    // provider and dot color are derived here so subscribing doesn't need
-    // a picker for either.
-    function providerLabel(url) {
-        const u = String(url || "").toLowerCase();
-        if (u.includes("google.com")) return "Google Calendar";
-        if (u.includes("outlook.") || u.includes("office365")) return "Outlook Calendar";
-        return "Calendar feed";
-    }
-
-    function defaultLabel(url) {
-        const provider = root.providerLabel(url);
-        return provider === "Calendar feed" ? "New calendar" : provider;
-    }
-
     readonly property var dotPalette: [Colors.accent, Colors.success, Colors.tertiary, Colors.secondary, Colors.warning]
     function dotColor(id) {
         let hash = 0;
@@ -146,7 +131,7 @@ Item {
                         enabled: !root.calendar.refreshing && urlField.text.trim().length > 0
                         onClicked: {
                             const url = urlField.text.trim();
-                            Calendar.subscribe(root.defaultLabel(url), url);
+                            Calendar.subscribe(Calendar.defaultSubscriptionLabel(url), url);
                             urlField.text = "";
                         }
 
@@ -220,7 +205,7 @@ Item {
                                 StyledText {
                                     width: parent.width
                                     elide: Text.ElideRight
-                                    text: subRow.error ? subRow.error.message : root.providerLabel(subRow.modelData.url)
+                                    text: subRow.error ? subRow.error.message : Calendar.providerLabel(subRow.modelData.url)
                                     color: subRow.error ? Colors.warning : Colors.subtext
                                     font.pixelSize: Config.fontSize - 4
                                 }

@@ -17,6 +17,8 @@ ShellRoot {
             root.verify(Launcher._score({ title: "Firefox" }, "fox") === 2, "substring score");
             const result = Launcher._normalized("window", { address: "0x1", title: "Editor", appClass: "code" }, 4);
             root.verify(result.id === "window:0x1" && result.activation.address === "0x1", "normalized window");
+            const rejected = Launcher.activate({ activation: { kind: "unknown" } });
+            root.verify(!rejected.accepted && !rejected.close, "failed activation remains open");
             Launcher.search("/em smile");
             root.verify(Launcher.emojiMode, "emoji mode");
             console.warn("LAUNCHER_TEST_PASS");

@@ -53,8 +53,8 @@ Loader {
                     Image {
                         id: wallpaperImage
                         anchors.fill: parent
-                        visible: !WallpaperLibrary.isVideo && WallpaperLibrary.source.length > 0
-                        source: visible ? WallpaperLibrary.source : ""
+                        visible: !Wallpaper.isVideo && Wallpaper.source.length > 0
+                        source: visible ? Wallpaper.source : ""
                         fillMode: Image.PreserveAspectCrop
                         asynchronous: true
                         transformOrigin: Item.Center
@@ -70,7 +70,7 @@ Loader {
 
                 Rectangle {
                     anchors.fill: parent
-                    visible: !WallpaperLibrary.isVideo && WallpaperLibrary.source.length > 0
+                    visible: !Wallpaper.isVideo && Wallpaper.source.length > 0
                     color: Colors.background
                     opacity: 1 - Colors.panelOpacity
                 }

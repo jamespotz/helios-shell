@@ -20,12 +20,14 @@ Item {
     property point contextMenuPos: Qt.point(0, 0)
     readonly property var results: Launcher.results
     readonly property bool emojiMode: Launcher.emojiMode
+    readonly property bool searchFocused: searchField.inputActiveFocus
 
     function refresh() {
         Launcher.search(searchField.text);
         resultList.currentIndex = results.length > 0 ? Math.min(resultList.currentIndex, results.length - 1) : 0;
     }
     function refreshWindows() { Launcher.refreshWindows(); }
+    function focusSearch() { searchField.focusInput(); }
     function activateResult(result) { Launcher.activate(result); }
     function copyEmoji(entry) { Launcher.activate({ activation: { kind: "emoji", value: entry.emoji } }); }
     function runAction(action) { Launcher.runDesktopAction(action, root.contextMenuEntry ? root.contextMenuEntry.name : ""); }
@@ -34,8 +36,16 @@ Item {
         searchField.text = "";
         root.refresh();
         root.refreshWindows();
-        searchField.focusInput();
+        focusSearchTimer.restart();
         resultList.currentIndex = 0;
+    }
+
+    // Bar establishes its Hyprland keyboard grab shortly after loading.
+    // Focus after that handoff so the grab cannot leave focus on the panel.
+    Timer {
+        id: focusSearchTimer
+        interval: 120
+        onTriggered: root.focusSearch()
     }
 
     implicitWidth: contentCol.width
@@ -233,7 +243,7 @@ Item {
                                 root.contextMenuEntry = resultRow.entry;
                                 return;
                             }
-                            if (resultRow.kind === "emoji") { root.copyEmoji(resultRow.entry); IslandNavigation.close(); }
+                            if (resultRow.kind === "emoji") root.copyEmoji(resultRow.entry);
                             else root.activateResult(resultRow.modelData);
                         }
                     }
@@ -319,7 +329,6 @@ Item {
                         onClicked: {
                             root.runAction(modelData);
                             root.contextMenuEntry = null;
-                            IslandNavigation.close();
                         }
                     }
                 }

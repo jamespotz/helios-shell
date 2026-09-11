@@ -13,6 +13,7 @@ singleton Weather 1.0 Weather.qml
 singleton ExtraApps 1.0 ExtraApps.qml
 singleton WallpaperLibrary 1.0 WallpaperLibrary.qml
 singleton WallpaperPlayback 1.0 WallpaperPlayback.qml
+singleton Wallpaper 1.0 Wallpaper.qml
 singleton Themes 1.0 Themes.qml
 singleton Cava 1.0 Cava.qml
 singleton Clipboard 1.0 Clipboard.qml

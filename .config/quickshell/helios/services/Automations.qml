@@ -116,10 +116,12 @@ QtObject {
     }
 
     function _restoreMonitor(name, cfg) {
-        DisplaySettings.setResolution(name, cfg.width, cfg.height, cfg.refreshRate);
-        DisplaySettings.setScale(name, cfg.scale);
-        DisplaySettings.setTransform(name, cfg.transform);
-        DisplaySettings.setVrr(name, cfg.vrr);
+        DisplaySettings.applyMonitor(name, {
+            mode: cfg.width + "x" + cfg.height + "@" + Number(cfg.refreshRate).toFixed(2) + "Hz",
+            scale: cfg.scale,
+            transform: cfg.transform,
+            vrr: cfg.vrr
+        });
     }
 
     property FileView monitorConfigsFile: FileView {

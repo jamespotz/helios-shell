@@ -10,24 +10,25 @@ QtObject {
     property var results: []
     property var windows: []
     property var launchCounts: ({})
+    property string activationError: ""
     readonly property bool emojiMode: /^\/em(?:oji)?(?:\s+.*)?$/i.test(root.query.trim())
 
     readonly property var actions: [
-        root._action("dnd", "Toggle Do Not Disturb", "notifications", "dnd silence"),
-        root._action("nightlight", "Toggle Night Light", "eco", "color temperature blue light"),
-        root._action("idle", "Toggle Caffeine (keep awake)", "bolt", "idle inhibit sleep"),
-        root._action("lock", "Lock Screen", "lock", "session"),
+        root._action("dnd", "Toggle Do Not Disturb", "notifications", "dnd silence", () => { Bridge.toggleDnd(); return true; }),
+        root._action("nightlight", "Toggle Night Light", "eco", "color temperature blue light", () => { NightLight.toggle(); return true; }),
+        root._action("idle", "Toggle Caffeine (keep awake)", "bolt", "idle inhibit sleep", () => { IdleInhibit.toggleInhibit(); return true; }),
+        root._action("lock", "Lock Screen", "lock", "session", () => { Bridge.lock(); return true; }),
         root._destinationAction("powermenu", "Power Menu", "power_settings_new", "shutdown restart logout suspend"),
         root._destinationAction("keybinds", "Keybind Cheatsheet", "keyboard", "shortcuts binds"),
-        root._action("screenshot-full", "Screenshot — Fullscreen", "crop", "capture screen"),
-        root._action("screenshot-region", "Screenshot — Region", "crop", "capture screen slurp"),
-        root._action("screenshot-window", "Screenshot — Active Window", "crop", "capture screen"),
-        root._action("record", "Toggle Screen Recording", "movie", "record video gpu-screen-recorder")
+        root._action("screenshot-full", "Screenshot — Fullscreen", "crop", "capture screen", () => Screenshot.captureFullscreen()),
+        root._action("screenshot-region", "Screenshot — Region", "crop", "capture screen slurp", () => Screenshot.captureRegion()),
+        root._action("screenshot-window", "Screenshot — Active Window", "crop", "capture screen", () => Screenshot.captureWindow()),
+        root._action("record", "Toggle Screen Recording", "movie", "record video gpu-screen-recorder", () => ScreenRecorder.toggle(IslandNavigation.screen))
     ].concat(IslandNavigation.destinations.filter(destination => !["launcher", "powermenu", "keybinds"].includes(destination.id)).map(destination =>
         root._destinationAction(destination.id, "Open " + destination.label, "", destination.label.toLowerCase() + " settings")))
       .concat(FocusModes.presets.map(preset => root._action("focus:" + preset.id,
         (FocusModes.activeId === preset.id ? "Turn Off " : "Turn On ") + preset.name,
-        preset.icon || "center_focus_strong", "focus mode dnd caffeine")))
+        preset.icon || "center_focus_strong", "focus mode dnd caffeine", () => { FocusModes.toggle(preset); return true; })))
 
     readonly property var applications: {
         const seen = new Set();
@@ -39,11 +40,11 @@ QtObject {
             });
     }
 
-    function _action(id, title, icon, keywords) {
-        return { id: id, title: title, icon: icon, keywords: keywords, activation: { kind: "action", id: id } };
+    function _action(id, title, icon, keywords, execute) {
+        return { id: id, title: title, icon: icon, keywords: keywords, activation: { kind: "action", execute: execute } };
     }
     function _destinationAction(id, title, icon, keywords) {
-        return { id: "destination:" + id, title: title, icon: icon, keywords: keywords, activation: { kind: "destination", id: id } };
+        return root._action("destination:" + id, title, icon, keywords, () => IslandNavigation.select(id));
     }
     function _score(entry, needle) {
         const title = String(entry.title || "").toLowerCase();
@@ -100,8 +101,10 @@ QtObject {
 
     function refreshWindows() { windowsProcess.running = false; windowsProcess.running = true; }
     function activate(result) {
-        if (!result) return false;
+        if (!result || !result.activation) return { accepted: false, close: false };
+        root.activationError = "";
         const activation = result.activation;
+        let accepted = true;
         if (activation.kind === "window") {
             focusProcess.command = ["hyprctl", "dispatch", "focuswindow", "address:" + activation.address];
             focusProcess.running = false; focusProcess.running = true;
@@ -112,24 +115,11 @@ QtObject {
         } else if (activation.kind === "emoji") {
             emojiCopy.command = ["sh", "-c", "printf '%s' \"$1\" | wl-copy", "_", activation.value];
             emojiCopy.running = false; emojiCopy.running = true;
-        } else if (activation.kind === "destination") IslandNavigation.select(activation.id);
-        else root._runAction(activation.id);
-        IslandNavigation.close();
-        return true;
-    }
-    function _runAction(id) {
-        if (id === "dnd") Bridge.toggleDnd();
-        else if (id === "nightlight") NightLight.toggle();
-        else if (id === "idle") IdleInhibit.toggleInhibit();
-        else if (id === "lock") Bridge.lock();
-        else if (id === "screenshot-full") Screenshot.captureFullscreen();
-        else if (id === "screenshot-region") Screenshot.captureRegion();
-        else if (id === "screenshot-window") Screenshot.captureWindow();
-        else if (id === "record") ScreenRecorder.toggle(IslandNavigation.screen);
-        else if (id.startsWith("focus:")) {
-            const preset = FocusModes.presets.find(candidate => candidate.id === id.slice(6));
-            if (preset) FocusModes.toggle(preset);
-        }
+        } else if (activation.kind === "action") accepted = activation.execute() !== false;
+        else accepted = false;
+        if (accepted) IslandNavigation.close();
+        else root.activationError = "Action could not be completed";
+        return { accepted: accepted, close: accepted };
     }
     function runDesktopAction(action, appName) {
         if (appName) {
@@ -141,7 +131,10 @@ QtObject {
         else {
             const parsed = String(action.execString || "").replace(/%[fFuUdDnNickvm]/g, "").trim();
             if (parsed) Quickshell.execDetached(["sh", "-c", parsed]);
+            else return { accepted: false, close: false };
         }
+        IslandNavigation.close();
+        return { accepted: true, close: true };
     }
 
     property Process windowsProcess: Process {

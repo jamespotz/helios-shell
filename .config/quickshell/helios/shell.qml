@@ -27,13 +27,20 @@ ShellRoot {
         if (shellRoot.startupWallpaperRestored || !WallpaperLibrary.settingsReady)
             return;
         shellRoot.startupWallpaperRestored = true;
-        if (WallpaperLibrary.path)
-            WallpaperPlayback.apply(WallpaperLibrary.path, true);
+        Wallpaper.restore();
     }
 
     Connections {
         target: WallpaperLibrary
         function onSettingsLoaded() { shellRoot.restoreStartupWallpaper() }
+    }
+
+    Connections {
+        target: Calendar
+        function onMeetingFocusRequested(presetId) {
+            const preset = FocusModes.presets.find(candidate => candidate.id === presetId);
+            if (preset) FocusModes.apply(preset);
+        }
     }
 
     // Restore always-on state and start slow panel data loads while the shell
@@ -109,8 +116,8 @@ ShellRoot {
 
     IpcHandler {
         target: "wallpaper"
-        function set(path: string) { WallpaperLibrary.setPath(path) }
-        function folder(path: string) { WallpaperLibrary.setFolder(path) }
+        function set(path: string) { Wallpaper.select(path) }
+        function folder(path: string) { Wallpaper.setFolder(path) }
     }
 
     IpcHandler {

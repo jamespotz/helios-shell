@@ -18,10 +18,11 @@ QtObject {
     property var monitors: []
     property bool loading: false
 
-    // Populated on demand via queryModes() — the full list of modelines
-    // the currently-inspected monitor supports, for the resolution picker.
-    property var availableModes: []
-    property bool modesLoading: false
+    property var modeStates: ({})
+
+    function modeState(monitorName) {
+        return root.modeStates[monitorName] || { modes: [], loading: false };
+    }
 
     readonly property string _scriptPath: Quickshell.env("HOME") + "/.config/quickshell/helios/modules/bar/display-config.py"
 
@@ -32,7 +33,7 @@ QtObject {
     }
 
     function setResolutionMode(monitorName, mode) {
-        root._apply(monitorName, ["-m", mode]);
+        root.applyMonitor(monitorName, { mode: mode });
     }
 
     // Convenience wrapper for callers (Automations.qml's monitor-restore)
@@ -56,34 +57,65 @@ QtObject {
     }
 
     function setScale(monitorName, scale) {
-        root._apply(monitorName, ["-s", String(scale)]);
+        root.applyMonitor(monitorName, { scale: scale });
     }
 
     function setTransform(monitorName, transform) {
-        root._apply(monitorName, ["-t", String(transform)]);
+        root.applyMonitor(monitorName, { transform: transform });
     }
 
     function setVrr(monitorName, mode) {
-        root._apply(monitorName, ["-v", String(mode)]);
+        root.applyMonitor(monitorName, { vrr: mode });
     }
 
     function setHdr(monitorName, enabled) {
-        root._apply(monitorName, enabled
-            ? ["--cm", "hdr", "--bitdepth", "10"]
-            : ["--cm", "srgb"]);
+        root.applyMonitor(monitorName, enabled
+            ? { cm: "hdr", bitdepth: 10 }
+            : { cm: "srgb" });
     }
 
     // Fetches the target monitor's supported modelines into availableModes.
     function queryModes(monitorName) {
-        root.modesLoading = true;
+        const states = Object.assign({}, root.modeStates);
+        states[monitorName] = Object.assign({}, root.modeState(monitorName), { loading: true });
+        root.modeStates = states;
+        modesProc.monitorName = monitorName;
         modesProc.command = ["python3", "-u", root._scriptPath, "-o", monitorName, "-q", "--json"];
         modesProc.running = false;
         modesProc.running = true;
     }
 
-    function _apply(monitorName, flags) {
-        applyProc.command = ["python3", "-u", root._scriptPath, "-o", monitorName].concat(flags);
-        applyProc.running = false;
+    property var _pendingChanges: ({})
+
+    function applyMonitor(monitorName, changes) {
+        const pending = Object.assign({}, root._pendingChanges);
+        pending[monitorName] = Object.assign({}, pending[monitorName] || {}, changes || {});
+        root._pendingChanges = pending;
+        root._startNextApply();
+    }
+
+    function _flags(changes) {
+        const flags = [];
+        if (changes.mode !== undefined) flags.push("-m", String(changes.mode));
+        if (changes.position !== undefined) flags.push("-p", String(changes.position));
+        if (changes.scale !== undefined) flags.push("-s", String(changes.scale));
+        if (changes.transform !== undefined) flags.push("-t", String(changes.transform));
+        if (changes.vrr !== undefined) flags.push("-v", String(changes.vrr));
+        if (changes.cm !== undefined) flags.push("--cm", String(changes.cm));
+        if (changes.bitdepth !== undefined) flags.push("--bitdepth", String(changes.bitdepth));
+        return flags;
+    }
+
+    function _startNextApply() {
+        if (applyProc.running) return;
+        const names = Object.keys(root._pendingChanges);
+        if (names.length === 0) return;
+        const monitorName = names[0];
+        const changes = root._pendingChanges[monitorName];
+        const pending = Object.assign({}, root._pendingChanges);
+        delete pending[monitorName];
+        root._pendingChanges = pending;
+        applyProc.command = ["python3", "-u", root._scriptPath, "-o", monitorName].concat(root._flags(changes));
         applyProc.running = true;
     }
 
@@ -93,9 +125,11 @@ QtObject {
             if (exitCode !== 0) {
                 console.warn("[DisplaySettings] apply failed, exit", exitCode);
                 root.refresh();
+                root._startNextApply();
                 return;
             }
             applyRefreshTimer.restart();
+            root._startNextApply();
         }
     }
 
@@ -109,6 +143,7 @@ QtObject {
     property string _modesOutput: ""
 
     property Process modesProc: Process {
+        property string monitorName: ""
         stdout: SplitParser {
             splitMarker: ""
             onRead: data => root._modesOutput += data
@@ -116,16 +151,17 @@ QtObject {
         stderr: SplitParser { onRead: data => console.warn("[DisplaySettings] modes:", data) }
         onStarted: root._modesOutput = ""
         onExited: exitCode => {
-            root.modesLoading = false;
             if (exitCode !== 0) console.warn("[DisplaySettings] queryModes failed, exit", exitCode);
+            let modes = [];
             if (exitCode === 0 && root._modesOutput.length > 0) {
                 try {
                     const info = JSON.parse(root._modesOutput);
-                    root.availableModes = info.availableModes || [];
-                } catch (e) {
-                    root.availableModes = [];
-                }
+                    modes = info.availableModes || [];
+                } catch (e) {}
             }
+            const states = Object.assign({}, root.modeStates);
+            states[modesProc.monitorName] = { modes: modes, loading: false };
+            root.modeStates = states;
             root._modesOutput = "";
         }
     }

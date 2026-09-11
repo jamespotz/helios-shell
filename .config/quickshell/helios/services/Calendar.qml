@@ -20,6 +20,7 @@ QtObject {
 
     signal persistenceRequested(var subscriptions)
     signal refreshRequested()
+    signal meetingFocusRequested(string presetId)
 
     readonly property var state: ({
         ready: root.ready,
@@ -69,6 +70,18 @@ QtObject {
         root.persistenceRequested(root.subscriptions);
         root.refreshRequested();
         return true;
+    }
+
+    function providerLabel(url) {
+        const value = String(url || "").toLowerCase();
+        if (value.includes("google.com")) return "Google Calendar";
+        if (value.includes("outlook.") || value.includes("office365")) return "Outlook Calendar";
+        return "Calendar feed";
+    }
+
+    function defaultSubscriptionLabel(url) {
+        const provider = root.providerLabel(url);
+        return provider === "Calendar feed" ? "New calendar" : provider;
     }
 
     function _eventsByDate(list) {
@@ -133,10 +146,7 @@ QtObject {
             if (minutesUntil <= 5 && minutesUntil >= -1) {
                 root._alertedKeys = Object.assign({}, root._alertedKeys, { [key]: true });
                 root.upcomingAlert = event;
-                if (root.meetingFocusId) {
-                    const preset = FocusModes.presets.find(p => p.id === root.meetingFocusId);
-                    if (preset) FocusModes.apply(preset);
-                }
+                if (root.meetingFocusId) root.meetingFocusRequested(root.meetingFocusId);
                 break;
             }
         }

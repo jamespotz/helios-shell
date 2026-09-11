@@ -5,6 +5,7 @@ repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 playback="$repo_root/.config/quickshell/helios/services/WallpaperPlayback.qml"
 library="$repo_root/.config/quickshell/helios/services/WallpaperLibrary.qml"
 shell="$repo_root/.config/quickshell/helios/shell.qml"
+wallpaper="$repo_root/.config/quickshell/helios/services/Wallpaper.qml"
 
 if grep -q 'WallpaperPlayback.apply(root.path, true)' "$library"; then
     printf 'WALLPAPER_PLAYBACK_TEST_FAIL: opening library reapplies saved wallpaper\n' >&2
@@ -23,5 +24,7 @@ grep -q 'signal settingsLoaded()' "$library"
 grep -q 'onLoaded: {' "$library"
 grep -q 'root.settingsLoaded()' "$library"
 grep -q 'function onSettingsLoaded()' "$shell"
-grep -q 'WallpaperPlayback.apply(WallpaperLibrary.path, true)' "$shell"
+grep -q 'Wallpaper.restore()' "$shell"
+grep -q 'WallpaperPlayback.apply(WallpaperLibrary.path, false)' "$wallpaper"
+grep -q 'WallpaperPlayback.apply(WallpaperLibrary.path, true)' "$wallpaper"
 printf 'WALLPAPER_PLAYBACK_TEST_PASS\n'

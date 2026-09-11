@@ -15,8 +15,13 @@ ShellRoot {
         console.assert(IslandNavigation.show("screen-a", "calendar"), "known destination opens");
         console.assert(IslandNavigation.open && IslandNavigation.screen === "screen-a", "tracks target screen");
         console.assert(IslandNavigation.destinationId === "calendar", "tracks destination");
+        console.assert(IslandNavigation.panelOpenFor("screen-a"), "resolves screen ownership");
+        console.assert(IslandNavigation.modeFor("screen-a", false) === "calendar", "destination has highest priority");
+        console.assert(IslandNavigation.expandedFor("screen-a", false), "open destination is expanded");
         console.assert(IslandNavigation.toggle("screen-a", "calendar"), "same destination toggles closed");
         console.assert(!IslandNavigation.open, "toggle closes");
+        console.assert(IslandNavigation.modeFor("screen-a", false) === "idle", "idle is fallback state");
+        console.assert(IslandNavigation.modeFor("screen-a", true) === "peek", "hover selects peek state");
         console.assert(IslandNavigation.select("volume"), "select accepts known destination");
         console.assert(!IslandNavigation.select("missing"), "select rejects unknown destination");
         console.assert(IslandNavigation.destinationId === "volume", "rejection preserves destination");

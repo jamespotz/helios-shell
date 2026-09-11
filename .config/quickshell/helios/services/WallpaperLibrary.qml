@@ -60,8 +60,6 @@ QtObject {
         settingsAdapter.path = next;
         root.images = root._activeFirst(root.images, next);
         root._storeImages(root.images, true);
-        WallpaperPlayback.apply(next, false);
-        if (Themes.mode === "dynamic") Themes.applyDynamic();
         return true;
     }
 

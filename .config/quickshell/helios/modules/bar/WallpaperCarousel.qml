@@ -11,9 +11,18 @@ Column {
 
     readonly property int cardWidth: Math.floor((width - 24) / 4)
     readonly property int cardHeight: 72
+    readonly property bool carouselFocused: carousel.activeFocus
     spacing: 10
 
-    Component.onCompleted: carousel.forceActiveFocus(Qt.TabFocusReason)
+    Component.onCompleted: focusCarouselTimer.restart()
+
+    // Bar establishes its Hyprland keyboard grab shortly after loading.
+    // Focus after that handoff so arrow keys reach the carousel.
+    Timer {
+        id: focusCarouselTimer
+        interval: 120
+        onTriggered: carousel.forceActiveFocus(Qt.TabFocusReason)
+    }
 
     Timer {
         id: videoFocusRestore
@@ -103,7 +112,7 @@ Column {
                 if (index < 0 || index >= count) return;
                 const selectedPath = WallpaperLibrary.images[index];
                 browse(index);
-                WallpaperLibrary.setPath(selectedPath);
+                Wallpaper.select(selectedPath);
                 Qt.callLater(() => forceActiveFocus(Qt.TabFocusReason));
                 const extension = selectedPath.split(".").pop().toLowerCase();
                 if (["mp4", "webm", "mkv", "mov"].includes(extension)) videoFocusRestore.restart();

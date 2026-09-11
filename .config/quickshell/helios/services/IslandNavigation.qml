@@ -42,6 +42,30 @@ QtObject {
 
     signal rejected(string destinationId)
 
+    function panelOpenFor(screenName) {
+        return root.open && root.screen === screenName;
+    }
+
+    function modeFor(screenName, hovering) {
+        if (root.panelOpenFor(screenName)) return root.destinationId;
+        if (Notifications.state.popups.length > 0) return "notify";
+        if (Tasks.items.length > 0) return "task";
+        if (Calendar.upcomingAlert !== null) return "meeting";
+        if (Bluetooth.lowBatteryAlert !== null) return "battery";
+        return hovering ? "peek" : "idle";
+    }
+
+    function expandedFor(screenName, hovering) {
+        return root.modeFor(screenName, hovering) !== "idle";
+    }
+
+    function dismiss(screenName, mode) {
+        if (root.panelOpenFor(screenName)) root.close();
+        else if (mode === "notify") Notifications.dismissAll();
+        else if (mode === "meeting") Calendar.dismissAlert();
+        else if (mode === "battery") Bluetooth.dismissLowBattery();
+    }
+
     function _destination(id, label, file, maxHeight) {
         return {
             id: id,

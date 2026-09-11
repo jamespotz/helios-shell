@@ -111,6 +111,8 @@ ShellRoot {
     }
 
     Component.onCompleted: {
+        root.compare(Calendar.providerLabel("https://calendar.google.com/feed"), "Google Calendar");
+        root.compare(Calendar.defaultSubscriptionLabel("https://example.com/feed"), "New calendar");
         try {
             root.test_eventsByDateGroupsAndPreservesOrder();
             root.test_eventsByDateHandlesEmptyInput();

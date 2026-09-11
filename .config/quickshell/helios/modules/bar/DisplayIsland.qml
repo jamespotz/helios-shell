@@ -134,7 +134,7 @@ Item {
                     onOpenChanged: if (open) DisplaySettings.queryModes(monCol.modelData.name)
 
                     StyledText {
-                        visible: DisplaySettings.modesLoading
+                        visible: DisplaySettings.modeState(monCol.modelData.name).loading
                         text: "Loading modes…"
                         color: Colors.subtext
                         font.pixelSize: Config.fontSize - 2
@@ -143,13 +143,13 @@ Item {
                     Item {
                         width: parent.width
                         height: 200
-                        visible: !DisplaySettings.modesLoading
+                        visible: !DisplaySettings.modeState(monCol.modelData.name).loading
 
                         ListView {
                             id: modeList
                             anchors.fill: parent
                             clip: true
-                            model: DisplaySettings.availableModes
+                            model: DisplaySettings.modeState(monCol.modelData.name).modes
                             spacing: 2
                             boundsBehavior: Flickable.StopAtBounds
 

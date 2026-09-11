@@ -16,21 +16,14 @@ PanelWindow {
     required property var modelData
     screen: modelData
 
-    readonly property bool panelOpen: IslandNavigation.open && IslandNavigation.screen === modelData.name
-    readonly property bool notifyMode: !panelOpen && Notifications.state.popups.length > 0
-    readonly property bool taskMode: !panelOpen && !notifyMode && Tasks.items.length > 0
-    readonly property bool meetingMode: !panelOpen && !notifyMode && !taskMode && Calendar.upcomingAlert !== null
-    readonly property bool batteryMode: !panelOpen && !notifyMode && !taskMode && !meetingMode && Bluetooth.lowBatteryAlert !== null
+    readonly property bool panelOpen: IslandNavigation.panelOpenFor(modelData.name)
     property bool hovering: false
-    readonly property bool expanded: panelOpen || notifyMode || taskMode || meetingMode || batteryMode || hovering
-
-    readonly property string mode: panelOpen ? IslandNavigation.destinationId
-        : notifyMode ? "notify"
-        : taskMode ? "task"
-        : meetingMode ? "meeting"
-        : batteryMode ? "battery"
-        : hovering ? "peek"
-        : "idle"
+    readonly property string mode: IslandNavigation.modeFor(modelData.name, hovering)
+    readonly property bool expanded: IslandNavigation.expandedFor(modelData.name, hovering)
+    readonly property bool notifyMode: mode === "notify"
+    readonly property bool taskMode: mode === "task"
+    readonly property bool meetingMode: mode === "meeting"
+    readonly property bool batteryMode: mode === "battery"
 
     readonly property bool hasActiveMedia: {
         const players = Mpris.players ? Mpris.players.values : [];
@@ -193,11 +186,9 @@ PanelWindow {
         // real ancestor of every panel tab's content (visual > Rectangle >
         // Loader). A sibling of `visual` never sees keys typed into it.
         Keys.onEscapePressed: {
-            if (bar.panelOpen) IslandNavigation.close();
-            else if (bar.notifyMode) Notifications.dismissAll();
-            else if (bar.meetingMode) Calendar.dismissAlert();
-            else if (bar.batteryMode) Bluetooth.dismissLowBattery();
-            else bar.hovering = false;
+            IslandNavigation.dismiss(bar.modelData.name, bar.mode);
+            if (!bar.panelOpen && !bar.notifyMode && !bar.meetingMode && !bar.batteryMode)
+                bar.hovering = false;
         }
 
         // Falling all the way back to the tiny idle-bump size while

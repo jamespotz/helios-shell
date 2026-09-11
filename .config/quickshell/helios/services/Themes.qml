@@ -90,8 +90,8 @@ QtObject {
     // immediately so a burst of calls (rapid wallpaper switching, mashing
     // scheme chips) collapses into a single process.
     function applyDynamic() {
-        if (!WallpaperLibrary.path) { root.lastError = "Set a wallpaper first"; return; }
-        if (WallpaperLibrary.isVideo) { return; }
+        if (!Wallpaper.path) { root.lastError = "Set a wallpaper first"; return; }
+        if (Wallpaper.isVideo) { return; }
         root.lastError = "";
         root.generating = true;
         root.regenerateTimer.restart();
@@ -104,8 +104,8 @@ QtObject {
     }
 
     function runMatugen() {
-        if (!WallpaperLibrary.path) { root.generating = false; return; }
-        let img = WallpaperLibrary.path;
+        if (!Wallpaper.path) { root.generating = false; return; }
+        let img = Wallpaper.path;
         if (img.startsWith("~")) img = Quickshell.env("HOME") + img.slice(1);
         // -j/--dry-run returns both light and dark for every role in one
         // call regardless of -m, so a single run covers both variants —

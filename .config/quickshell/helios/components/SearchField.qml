@@ -12,6 +12,7 @@ Rectangle {
     property string placeholder: "Search…"
     property string icon: "search"
     property int inputPixelSize: Config.fontSize
+    readonly property bool inputActiveFocus: input.activeFocus
 
     signal accepted()
     signal escapePressed()
