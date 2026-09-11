@@ -10,6 +10,8 @@ import "../../components"
 Item {
     id: root
 
+    readonly property int listHeight: 380
+
     // Right-click context menu — freedesktop "Desktop Actions" for the app
     // under contextMenuEntry (e.g. Ghostty's "New Window"), positioned at
     // contextMenuPos in this item's own coordinate space. null entry
@@ -85,166 +87,172 @@ Item {
             }
         }
 
-        // Results list
-        ListView {
-            id: resultList
+        // Results list — fixed height like KeybindsIsland's listHeight, so
+        // opening the launcher or typing a query never resizes the island.
+        Item {
             width: parent.width
-            visible: results.length > 0
-            height: visible ? Math.min(400, results.length * 52) : 0
-            clip: true
-            model: results
-            spacing: 2
-            currentIndex: 0
-            boundsBehavior: Flickable.StopAtBounds
+            height: root.listHeight
 
-            delegate: Rectangle {
-                id: resultRow
-                required property var modelData
-                required property int index
+            ListView {
+                id: resultList
+                anchors.fill: parent
+                visible: results.length > 0
+                clip: true
+                model: results
+                spacing: 2
+                currentIndex: 0
+                boundsBehavior: Flickable.StopAtBounds
 
-                readonly property string kind: modelData.kind
-                readonly property var entry: modelData.entry
-                readonly property string title: modelData.title
-                readonly property string subtitle: kind === "action" ? "Action"
-                    : kind === "emoji" ? (entry.category || "") : modelData.subtitle
+                delegate: Rectangle {
+                    id: resultRow
+                    required property var modelData
+                    required property int index
 
-                width: resultList.width
-                height: 50
-                radius: 10
-                color: index === resultList.currentIndex ? Colors.accent
-                    : resultHover.hovered ? Colors.surfaceHigh : "transparent"
+                    readonly property string kind: modelData.kind
+                    readonly property var entry: modelData.entry
+                    readonly property string title: modelData.title
+                    readonly property string subtitle: kind === "action" ? "Action"
+                        : kind === "emoji" ? (entry.category || "") : modelData.subtitle
 
-                Behavior on color { ColorAnimation { duration: Config.animFast } }
+                    width: resultList.width
+                    height: 50
+                    radius: 10
+                    color: index === resultList.currentIndex ? Colors.accent
+                        : resultHover.hovered ? Colors.surfaceHigh : "transparent"
 
-                HoverHandler { id: resultHover }
+                    Behavior on color { ColorAnimation { duration: Config.animFast } }
 
-                Row {
-                    anchors.fill: parent
-                    anchors.leftMargin: 10
-                    anchors.rightMargin: 10
-                    spacing: 12
+                    HoverHandler { id: resultHover }
 
-                    // Icon — app icon image, emoji glyph, or a Material
-                    // icon for windows/actions.
-                    Rectangle {
-                        width: 36
-                        height: 36
-                        radius: 8
-                        color: index === resultList.currentIndex ? Qt.rgba(Colors.accentText.r, Colors.accentText.g, Colors.accentText.b, 0.15) : Colors.surfaceHigh
-                        anchors.verticalCenter: parent.verticalCenter
-                        clip: true
+                    Row {
+                        anchors.fill: parent
+                        anchors.leftMargin: 10
+                        anchors.rightMargin: 10
+                        spacing: 12
 
-                        Image {
-                            anchors.fill: parent
-                            anchors.margins: 3
-                            visible: resultRow.kind === "app"
-                            source: resultRow.kind === "app" ? Quickshell.iconPath(resultRow.entry.icon, true) : ""
-                            fillMode: Image.PreserveAspectFit
-                            asynchronous: true
-                        }
+                        // Icon — app icon image, emoji glyph, or a Material
+                        // icon for windows/actions.
+                        Rectangle {
+                            width: 36
+                            height: 36
+                            radius: 8
+                            color: index === resultList.currentIndex ? Qt.rgba(Colors.accentText.r, Colors.accentText.g, Colors.accentText.b, 0.15) : Colors.surfaceHigh
+                            anchors.verticalCenter: parent.verticalCenter
+                            clip: true
 
-                        StyledText {
-                            anchors.centerIn: parent
-                            visible: resultRow.kind === "emoji"
-                            text: resultRow.kind === "emoji" ? resultRow.entry.emoji : ""
-                            font.pixelSize: 19
-                        }
+                            Image {
+                                anchors.fill: parent
+                                anchors.margins: 3
+                                visible: resultRow.kind === "app"
+                                source: resultRow.kind === "app" ? Quickshell.iconPath(resultRow.entry.icon, true) : ""
+                                fillMode: Image.PreserveAspectFit
+                                asynchronous: true
+                            }
 
-                        MaterialIcon {
-                            anchors.centerIn: parent
-                            visible: resultRow.kind === "window" || resultRow.kind === "action"
-                            icon: resultRow.kind === "window" ? "desktop_windows" : resultRow.entry.icon
-                            font.pixelSize: 18
-                            color: index === resultList.currentIndex ? Colors.accentText : Colors.subtext
-                        }
-                    }
+                            StyledText {
+                                anchors.centerIn: parent
+                                visible: resultRow.kind === "emoji"
+                                text: resultRow.kind === "emoji" ? resultRow.entry.emoji : ""
+                                font.pixelSize: 19
+                            }
 
-                    // Name + description (apps: generic name; windows:
-                    // app class; actions: "Action"; emoji: category)
-                    Column {
-                        anchors.verticalCenter: parent.verticalCenter
-                        width: parent.width - 36 - 12 - 10 - termBadge.width - 10
-                        spacing: 1
-
-                        StyledText {
-                            text: resultRow.title
-                            font.weight: Font.Medium
-                            color: index === resultList.currentIndex ? Colors.accentText : Colors.text
-                            width: parent.width
-                            elide: Text.ElideRight
-                        }
-                        StyledText {
-                            visible: !!resultRow.subtitle
-                            text: resultRow.subtitle
-                            font.pixelSize: Config.fontSize - 2
-                            color: index === resultList.currentIndex ? Qt.rgba(Colors.accentText.r, Colors.accentText.g, Colors.accentText.b, 0.7) : Colors.subtext
-                            width: parent.width
-                            elide: Text.ElideRight
-                        }
-                    }
-
-                    // Terminal badge — shows when app needs terminal
-                    Rectangle {
-                        id: termBadge
-                        visible: resultRow.kind === "app" && resultRow.entry.runInTerminal === true
-                        width: visible ? termRow.implicitWidth + 10 : 0
-                        height: 20
-                        radius: 10
-                        color: index === resultList.currentIndex ? Qt.rgba(Colors.accentText.r, Colors.accentText.g, Colors.accentText.b, 0.2) : Colors.surfaceHigh
-                        anchors.verticalCenter: parent.verticalCenter
-
-                        Row {
-                            id: termRow
-                            anchors.centerIn: parent
-                            spacing: 3
                             MaterialIcon {
-                                icon: "terminal"
-                                font.pixelSize: 11
+                                anchors.centerIn: parent
+                                visible: resultRow.kind === "window" || resultRow.kind === "action"
+                                icon: resultRow.kind === "window" ? "desktop_windows" : resultRow.entry.icon
+                                font.pixelSize: 18
                                 color: index === resultList.currentIndex ? Colors.accentText : Colors.subtext
-                                anchors.verticalCenter: parent.verticalCenter
+                            }
+                        }
+
+                        // Name + description (apps: generic name; windows:
+                        // app class; actions: "Action"; emoji: category)
+                        Column {
+                            anchors.verticalCenter: parent.verticalCenter
+                            width: parent.width - 36 - 12 - 10 - termBadge.width - 10
+                            spacing: 1
+
+                            StyledText {
+                                text: resultRow.title
+                                font.weight: Font.Medium
+                                color: index === resultList.currentIndex ? Colors.accentText : Colors.text
+                                width: parent.width
+                                elide: Text.ElideRight
                             }
                             StyledText {
-                                text: "CLI"
-                                font.pixelSize: Config.fontSize - 3
-                                font.weight: Font.Medium
-                                color: index === resultList.currentIndex ? Colors.accentText : Colors.subtext
-                                anchors.verticalCenter: parent.verticalCenter
+                                visible: !!resultRow.subtitle
+                                text: resultRow.subtitle
+                                font.pixelSize: Config.fontSize - 2
+                                color: index === resultList.currentIndex ? Qt.rgba(Colors.accentText.r, Colors.accentText.g, Colors.accentText.b, 0.7) : Colors.subtext
+                                width: parent.width
+                                elide: Text.ElideRight
+                            }
+                        }
+
+                        // Terminal badge — shows when app needs terminal
+                        Rectangle {
+                            id: termBadge
+                            visible: resultRow.kind === "app" && resultRow.entry.runInTerminal === true
+                            width: visible ? termRow.implicitWidth + 10 : 0
+                            height: 20
+                            radius: 10
+                            color: index === resultList.currentIndex ? Qt.rgba(Colors.accentText.r, Colors.accentText.g, Colors.accentText.b, 0.2) : Colors.surfaceHigh
+                            anchors.verticalCenter: parent.verticalCenter
+
+                            Row {
+                                id: termRow
+                                anchors.centerIn: parent
+                                spacing: 3
+                                MaterialIcon {
+                                    icon: "terminal"
+                                    font.pixelSize: 11
+                                    color: index === resultList.currentIndex ? Colors.accentText : Colors.subtext
+                                    anchors.verticalCenter: parent.verticalCenter
+                                }
+                                StyledText {
+                                    text: "CLI"
+                                    font.pixelSize: Config.fontSize - 3
+                                    font.weight: Font.Medium
+                                    color: index === resultList.currentIndex ? Colors.accentText : Colors.subtext
+                                    anchors.verticalCenter: parent.verticalCenter
+                                }
                             }
                         }
                     }
-                }
 
-                MouseArea {
-                    id: resultMouseArea
-                    anchors.fill: parent
-                    acceptedButtons: Qt.LeftButton | Qt.RightButton
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: mouse => {
-                        if (mouse.button === Qt.RightButton) {
-                            if (resultRow.kind !== "app" || !resultRow.entry.actions || resultRow.entry.actions.length === 0) return;
-                            const pos = resultMouseArea.mapToItem(root, mouse.x, mouse.y);
-                            root.contextMenuPos = pos;
-                            root.contextMenuEntry = resultRow.entry;
-                            return;
+                    MouseArea {
+                        id: resultMouseArea
+                        anchors.fill: parent
+                        acceptedButtons: Qt.LeftButton | Qt.RightButton
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: mouse => {
+                            if (mouse.button === Qt.RightButton) {
+                                if (resultRow.kind !== "app" || !resultRow.entry.actions || resultRow.entry.actions.length === 0) return;
+                                const pos = resultMouseArea.mapToItem(root, mouse.x, mouse.y);
+                                root.contextMenuPos = pos;
+                                root.contextMenuEntry = resultRow.entry;
+                                return;
+                            }
+                            if (resultRow.kind === "emoji") { root.copyEmoji(resultRow.entry); IslandNavigation.close(); }
+                            else root.activateResult(resultRow.modelData);
                         }
-                        if (resultRow.kind === "emoji") { root.copyEmoji(resultRow.entry); IslandNavigation.close(); }
-                        else root.activateResult(resultRow.modelData);
                     }
                 }
             }
-        }
 
-        // Empty state
-        Item {
-            visible: results.length === 0 && searchField.text.length > 0
-            width: parent.width
-            height: 60
-
-            Column {
+            // Empty state
+            Item {
+                visible: results.length === 0 && searchField.text.length > 0
                 anchors.centerIn: parent
-                spacing: 4
-                MaterialIcon { icon: "search_off"; font.pixelSize: 24; color: Colors.overlay; anchors.horizontalCenter: parent.horizontalCenter }
-                StyledText { text: root.emojiMode ? "No matching emoji" : "No results"; color: Colors.subtext; anchors.horizontalCenter: parent.horizontalCenter }
+                width: parent.width
+                height: 60
+
+                Column {
+                    anchors.centerIn: parent
+                    spacing: 4
+                    MaterialIcon { icon: "search_off"; font.pixelSize: 24; color: Colors.overlay; anchors.horizontalCenter: parent.horizontalCenter }
+                    StyledText { text: root.emojiMode ? "No matching emoji" : "No results"; color: Colors.subtext; anchors.horizontalCenter: parent.horizontalCenter }
+                }
             }
         }
     }

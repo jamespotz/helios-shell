@@ -143,14 +143,45 @@ PanelWindow {
         }
     }
 
+    // visual's spring target while content.item is momentarily null on a
+    // fresh open (see hitArea below). Bindings only fire while content.item
+    // is valid or the island is idle — during the null-but-expanded gap
+    // neither applies, so this just holds its last real value instead of
+    // jumping to hitArea's islandMaxWidth/Height click-safety fallback,
+    // which was making the pill itself balloon to full size for a frame
+    // before settling to the real content size.
+    property int visualTargetWidth: Config.idleBumpWidth
+    property int visualTargetHeight: Config.idleBumpHeight
+
+    Binding on visualTargetWidth {
+        when: content.item !== null
+        value: Math.min(content.item ? content.item.implicitWidth + bar.padH * 2 : 0, Config.islandMaxWidth)
+    }
+    Binding on visualTargetHeight {
+        when: content.item !== null
+        value: Math.min(content.item ? content.item.implicitHeight + bar.padV * 2 : 0, Config.islandMaxHeight)
+    }
+    Binding on visualTargetWidth {
+        when: content.item === null && !bar.expanded
+        value: Config.idleBumpWidth
+    }
+    Binding on visualTargetHeight {
+        when: content.item === null && !bar.expanded
+        value: Config.idleBumpHeight
+    }
+
     // hitArea snaps to its target size *instantly* — no Behavior — and owns
-    // the mask + hover MouseArea. visual (below) animates to match it. If the
-    // hit-test region itself were mid-spring (and springs can overshoot past
-    // their target before settling), its edge would sweep back and forth
-    // across the cursor as it settled, each crossing toggling `hovering` and
-    // re-triggering the animation — a feedback loop that reads as the whole
-    // bar/icons flickering. Keeping the hit area stable from the first frame
-    // of a mode change avoids that entirely; only the paint layer animates.
+    // the mask + hover MouseArea. visual (below) tracks its own target
+    // (visualTargetWidth/Height above), which usually matches hitArea but
+    // deliberately diverges during the fresh-open content.item gap so the
+    // paint layer doesn't spring toward hitArea's islandMaxWidth/Height
+    // click-safety fallback. If the hit-test region itself were mid-spring
+    // (and springs can overshoot past their target before settling), its
+    // edge would sweep back and forth across the cursor as it settled, each
+    // crossing toggling `hovering` and re-triggering the animation — a
+    // feedback loop that reads as the whole bar/icons flickering. Keeping
+    // the hit area stable from the first frame of a mode change avoids that
+    // entirely; only the paint layer animates.
     Item {
         id: hitArea
         anchors.top: parent.top
@@ -217,8 +248,8 @@ PanelWindow {
             // instead of also pushing the top edge upward.
             anchors.top: parent.top
             anchors.horizontalCenter: parent.horizontalCenter
-            width: hitArea.width
-            height: hitArea.height
+            width: bar.visualTargetWidth
+            height: bar.visualTargetHeight
 
             // Both axes share identical spring params so they stay in
             // lockstep — mismatched width/height easing is what makes a
