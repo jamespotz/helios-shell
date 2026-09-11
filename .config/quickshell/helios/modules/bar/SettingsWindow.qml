@@ -117,6 +117,11 @@ PanelWindow {
         Keys.onEscapePressed: Bridge.closeSettings()
     }
 
+    SurfaceShadow {
+        anchors.fill: card
+        cornerRadius: card.radius
+    }
+
     Rectangle {
         id: card
         anchors.centerIn: parent

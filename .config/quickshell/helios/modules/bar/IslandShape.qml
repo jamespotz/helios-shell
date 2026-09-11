@@ -1,5 +1,6 @@
 import QtQuick
 import "../../services"
+import "../../components"
 
 // The island's background — Apple-style vibrancy material: a translucent
 // surface with subtle gradient depth and soft inner shadow. The pill floats
@@ -18,6 +19,11 @@ Item {
     // without ShaderEffect, but a generous radius relative to height
     // gets close. Stadium for small pills, capped for tall panels.
     readonly property real cornerRadius: Math.max(6, Math.min(height / 2, 18))
+
+    SurfaceShadow {
+        anchors.fill: parent
+        cornerRadius: root.cornerRadius
+    }
 
     LiquidGlassSurface {
         anchors.fill: parent
