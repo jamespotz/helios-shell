@@ -12,8 +12,19 @@ Item {
 
     property var entries: []
     readonly property bool searchFocused: searchField.inputActiveFocus
+    property int selectedIndex: filtered.length > 0 ? 0 : -1
 
     function focusSearch() { searchField.focusInput(); }
+
+    function moveSelection(delta) {
+        if (root.filtered.length === 0) return;
+        root.selectedIndex = Math.max(0, Math.min(root.selectedIndex + delta, root.filtered.length - 1));
+        const rowTop = root.selectedIndex * 44;
+        const rowBottom = rowTop + 40;
+        if (rowTop < flick.contentY) flick.contentY = rowTop;
+        else if (rowBottom > flick.contentY + flick.height)
+            flick.contentY = Math.min(rowBottom - flick.height, Math.max(0, flick.contentHeight - flick.height));
+    }
 
     readonly property var filtered: {
         const q = searchField.text.trim().toLowerCase();
@@ -21,6 +32,8 @@ Item {
         return entries.filter(b => (b.description || "").toLowerCase().includes(q)
             || root.comboLabel(b).toLowerCase().includes(q));
     }
+
+    onFilteredChanged: selectedIndex = filtered.length > 0 ? 0 : -1
 
     Process {
         id: bindsProc
@@ -130,6 +143,8 @@ Item {
             width: parent.width
             placeholder: "Filter shortcuts…"
             onEscapePressed: IslandNavigation.close()
+            onUpPressed: root.moveSelection(-1)
+            onDownPressed: root.moveSelection(1)
         }
 
         // Bind list
@@ -161,8 +176,9 @@ Item {
                         width: list.width
                         height: 40
                         radius: 10
-                        color: bindHover.hovered ? Colors.surfaceHigh : "transparent"
-                        opacity: bindHover.hovered ? 0.6 : 1
+                        color: index === root.selectedIndex ? Colors.accent
+                            : bindHover.hovered ? Colors.surfaceHigh : "transparent"
+                        opacity: index === root.selectedIndex ? 1 : bindHover.hovered ? 0.6 : 1
 
                         Behavior on color { ColorAnimation { duration: Config.animFast } }
 
@@ -217,7 +233,7 @@ Item {
                                 text: modelData.description
                                 elide: Text.ElideRight
                                 font.pixelSize: Config.fontSize - 1
-                                color: Colors.text
+                                color: index === root.selectedIndex ? Colors.accentText : Colors.text
                             }
                         }
                     }

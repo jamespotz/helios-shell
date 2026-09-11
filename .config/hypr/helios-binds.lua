@@ -16,15 +16,15 @@ local helios = "quickshell -c helios ipc call"
 -- Core -----------------------------------------------------------------
 
 hl.bind(mainMod .. " + SPACE", hl.dsp.exec_cmd(helios .. " launcher toggle"),
-  { description = "Toggle helios launcher" })
+  { description = "helios: Toggle launcher" })
 hl.bind(mainMod .. " + L", hl.dsp.exec_cmd(helios .. " lock lock"),
-  { description = "Lock screen (helios)" })
+  { description = "helios: Lock screen" })
 hl.bind(mainMod .. " + ESCAPE", hl.dsp.exec_cmd(helios .. " powermenu toggle"),
-  { description = "Toggle helios power menu" })
+  { description = "helios: Toggle power menu" })
 hl.bind(mainMod .. " + K", hl.dsp.exec_cmd(helios .. " keybinds toggle"),
-  { description = "Toggle Helios keybind cheatsheet" })
+  { description = "helios: Toggle keybind cheatsheet" })
 hl.bind(mainMod .. " + COMMA", hl.dsp.exec_cmd(helios .. " settings toggle \"\""),
-  { description = "Toggle Helios settings window" })
+  { description = "helios: Toggle settings window" })
 
 -- OSD / brightness -------------------------------------------------------
 
@@ -36,47 +36,47 @@ hl.bind(mainMod .. " + COMMA", hl.dsp.exec_cmd(helios .. " settings toggle \"\""
 -- helios OSD (it isn't watched passively), so these give a second way to adjust
 -- brightness that also shows the OSD, without touching the existing XF86 binds.
 hl.bind(mainMod .. " + ALT + Up", hl.dsp.exec_cmd(helios .. " osd brightnessUp"),
-  { repeating = true, description = "Raise brightness (helios OSD)" })
+  { repeating = true, description = "helios: Raise brightness with OSD" })
 hl.bind(mainMod .. " + ALT + Down", hl.dsp.exec_cmd(helios .. " osd brightnessDown"),
-  { repeating = true, description = "Lower brightness (helios OSD)" })
+  { repeating = true, description = "helios: Lower brightness with OSD" })
 
 -- Island tabs (SUPER + ALT + key opens/toggles that tab; same combo again closes it) --
 
 hl.bind(mainMod .. " + ALT + V", hl.dsp.exec_cmd(helios .. " island toggle clipboard"),
-  { description = "Toggle clipboard history island" })
+  { description = "helios: Toggle clipboard history island" })
 hl.bind(mainMod .. " + SHIFT + B", hl.dsp.exec_cmd(helios .. " island toggle bluetooth"),
-  { description = "Toggle bluetooth island" })
+  { description = "helios: Toggle bluetooth island" })
 hl.bind(mainMod .. " + ALT + N", hl.dsp.exec_cmd(helios .. " island toggle wifi"),
-  { description = "Toggle network (wifi) island" })
+  { description = "helios: Toggle network (wifi) island" })
 hl.bind(mainMod .. " + ALT + M", hl.dsp.exec_cmd(helios .. " island toggle media"),
-  { description = "Toggle media player island" })
+  { description = "helios: Toggle media player island" })
 hl.bind(mainMod .. " + ALT + W", hl.dsp.exec_cmd(helios .. " island toggle weather"),
-  { description = "Toggle weather island" })
+  { description = "helios: Toggle weather island" })
 hl.bind(mainMod .. " + ALT + P", hl.dsp.exec_cmd(helios .. " island toggle wallpaper"),
-  { description = "Toggle wallpaper picker island" })
+  { description = "helios: Toggle wallpaper picker island" })
 hl.bind(mainMod .. " + ALT + T", hl.dsp.exec_cmd(helios .. " island toggle theme"),
-  { description = "Toggle theme picker island" })
+  { description = "helios: Toggle theme picker island" })
 hl.bind(mainMod .. " + F", hl.dsp.exec_cmd(helios .. " island toggle recorder"),
-  { description = "Toggle screen recorder island" })
+  { description = "helios: Toggle screen recorder island" })
 hl.bind(mainMod .. " + ALT + ESCAPE", hl.dsp.exec_cmd(helios .. " island close"),
-  { description = "Close island panel, whatever tab is open" })
+  { description = "helios: Close island panel, whatever tab is open" })
 
 -- Instant actions (SUPER + SHIFT + key fires once, no panel involved) --
 
 hl.bind(mainMod .. " + SHIFT + T", hl.dsp.exec_cmd(helios .. " theme dynamic"),
-  { description = "Apply dynamic theme from current wallpaper" })
+  { description = "helios: Apply dynamic theme from current wallpaper" })
 hl.bind(mainMod .. " + SHIFT + V", hl.dsp.exec_cmd(helios .. " clipboard refresh"),
-  { description = "Refresh clipboard history" })
+  { description = "helios: Refresh clipboard history" })
 -- Own `clipboard toggle` ipc (vs. the `island toggle clipboard` bind above) so
 -- this keeps working even if the clipboard tab's island target ever changes.
 hl.bind(mainMod .. " + V", hl.dsp.exec_cmd(helios .. " clipboard toggle"),
-  { description = "Toggle clipboard history island" })
+  { description = "helios: Toggle clipboard history island" })
 
 -- Screen recorder: start/stop against whatever capture mode (Full Screen /
 -- Window-App / Custom Area) is currently selected in the recorder tab,
 -- without needing to open the island first.
 hl.bind(mainMod .. " + SHIFT + C", hl.dsp.exec_cmd(helios .. " recorder toggle"),
-  { description = "Start/stop screen recording" })
+  { description = "helios: Start/stop screen recording" })
 
 
 -- Reload / relaunch (SUPER + SHIFT + R) --------------------------------
@@ -109,50 +109,50 @@ hl.bind(mainMod .. " + SHIFT + U",
 
 -- Screenshot (SUPER + SHIFT + S for region, SUPER + Print for fullscreen, SUPER + ALT + S for window)
 hl.bind(mainMod .. " + SHIFT + S", hl.dsp.exec_cmd(helios .. " screenshot region"),
-  { description = "Screenshot region (helios)" })
+  { description = "helios: Screenshot region" })
 hl.bind(mainMod .. " + Print", hl.dsp.exec_cmd(helios .. " screenshot full"),
-  { description = "Screenshot fullscreen (helios)" })
+  { description = "helios: Screenshot fullscreen" })
 hl.bind(mainMod .. " + ALT + S", hl.dsp.exec_cmd(helios .. " screenshot window"),
-  { description = "Screenshot active window (helios)" })
+  { description = "helios: Screenshot active window" })
 hl.bind(mainMod .. " + ALT + O", hl.dsp.exec_cmd(helios .. " screenshot ocr"),
-  { description = "OCR screen region to clipboard (helios)" })
+  { description = "helios: OCR screen region to clipboard" })
 -- Own `screenshot toggle` ipc: opens the screenshot island tab itself,
 -- unlike the region/full/window/ocr binds above which fire a capture
 -- immediately without showing any panel.
 hl.bind(mainMod .. " + S", hl.dsp.exec_cmd(helios .. " screenshot toggle"),
-  { description = "Toggle screenshot island" })
+  { description = "helios: Toggle screenshot island" })
 
 -- Night light / Do Not Disturb / Caffeine toggles
 hl.bind(mainMod .. " + SHIFT + N", hl.dsp.exec_cmd(helios .. " nightlight toggle"),
-  { description = "Toggle night light (helios)" })
+  { description = "helios: Toggle night light" })
 hl.bind(mainMod .. " + SHIFT + D", hl.dsp.exec_cmd(helios .. " dnd toggle"),
-  { description = "Toggle Do Not Disturb (helios)" })
+  { description = "helios: Toggle Do Not Disturb" })
 hl.bind(mainMod .. " + SHIFT + F", hl.dsp.exec_cmd(helios .. " idle caffeine"),
-  { description = "Toggle caffeine mode (helios)" })
+  { description = "helios: Toggle caffeine mode" })
 
 -- New island tabs
 hl.bind(mainMod .. " + ALT + D", hl.dsp.exec_cmd(helios .. " island toggle display"),
-  { description = "Toggle display settings island" })
+  { description = "helios: Toggle display settings island" })
 hl.bind(mainMod .. " + ALT + H", hl.dsp.exec_cmd(helios .. " island toggle notifications"),
-  { description = "Toggle notification history island" })
+  { description = "helios: Toggle notification history island" })
 hl.bind(mainMod .. " + ALT + L", hl.dsp.exec_cmd(helios .. " island toggle nightlight"),
-  { description = "Toggle night light island" })
+  { description = "helios: Toggle night light island" })
 hl.bind(mainMod .. " + ALT + B", hl.dsp.exec_cmd(helios .. " island toggle idlelock"),
-  { description = "Toggle idle/lock settings island" })
+  { description = "helios: Toggle idle/lock settings island" })
 hl.bind(mainMod .. " + ALT + A", hl.dsp.exec_cmd(helios .. " island toggle volume"),
-  { description = "Toggle audio output/input island" })
+  { description = "helios: Toggle audio output/input island" })
 hl.bind(mainMod .. " + ALT + E", hl.dsp.exec_cmd(helios .. " island toggle power"),
-  { description = "Toggle power profile island" })
+  { description = "helios: Toggle power profile island" })
 hl.bind(mainMod .. " + ALT + C", hl.dsp.exec_cmd(helios .. " island toggle calendar"),
-  { description = "Toggle calendar island" })
+  { description = "helios: Toggle calendar island" })
 -- Own `automation toggle` ipc (see shell.qml) rather than `island toggle
 -- automation` directly, same reasoning as the systemmonitor bind below.
 hl.bind(mainMod .. " + ALT + U", hl.dsp.exec_cmd(helios .. " automation toggle"),
-  { description = "Toggle device automation rules island" })
+  { description = "helios: Toggle device automation rules island" })
 
 -- System monitor: own ipc target (see systemmonitor toggle in shell.qml),
 -- bound to the literal Ctrl+Alt+Delete chord rather than the mainMod
 -- convention above, since that's the muscle-memory shortcut for "show me
 -- what's using my system" on every other desktop.
 hl.bind("CTRL + ALT + DELETE", hl.dsp.exec_cmd(helios .. " systemmonitor toggle"),
-  { description = "Toggle system monitor island (Ctrl+Alt+Del)" })
+  { description = "helios: Toggle system monitor island (Ctrl+Alt+Del)" })
