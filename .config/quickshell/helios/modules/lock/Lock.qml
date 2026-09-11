@@ -38,39 +38,17 @@ Loader {
                 color: Colors.background
 
                 // Session-lock surfaces are opaque by design (the compositor
-                // won't show anything behind them), so "transparency" here
-                // means showing the real wallpaper through a dim tint rather
-                // than a flat color — same translucent-panel convention
-                // (Colors.panelOpacity) SettingsWindow's card uses.
-                // Slow Ken Burns drift — calm, ambient motion rather than
-                // decoration, matching the 60s-per-cycle pace the orbit
-                // views use elsewhere. Clipped so the zoom never reveals an
-                // edge, and skipped entirely under reduced motion.
-                Item {
+                // won't show anything behind them), so the shader fills the
+                // whole surface directly rather than sitting over a wallpaper.
+                // Same dim-tint convention (Colors.panelOpacity) the old
+                // wallpaper backdrop and SettingsWindow's card use, so the
+                // password field and clock stay readable over the glow.
+                FlowFieldBackground {
                     anchors.fill: parent
-                    clip: true
-
-                    Image {
-                        id: wallpaperImage
-                        anchors.fill: parent
-                        visible: !Wallpaper.isVideo && Wallpaper.source.length > 0
-                        source: visible ? Wallpaper.source : ""
-                        fillMode: Image.PreserveAspectCrop
-                        asynchronous: true
-                        transformOrigin: Item.Center
-
-                        SequentialAnimation on scale {
-                            running: wallpaperImage.visible && !Config.reducedMotion
-                            loops: Animation.Infinite
-                            NumberAnimation { from: 1.0; to: 1.06; duration: 60000; easing.type: Easing.InOutSine }
-                            NumberAnimation { from: 1.06; to: 1.0; duration: 60000; easing.type: Easing.InOutSine }
-                        }
-                    }
                 }
 
                 Rectangle {
                     anchors.fill: parent
-                    visible: !Wallpaper.isVideo && Wallpaper.source.length > 0
                     color: Colors.background
                     opacity: 1 - Colors.panelOpacity
                 }
