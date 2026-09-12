@@ -19,6 +19,13 @@ Item {
         anchors.rightMargin: 4
         spacing: 16
 
+        // Header
+        Row {
+            spacing: 8
+            MaterialIcon { icon: "settings_suggest"; font.pixelSize: 18; color: Colors.accent; anchors.verticalCenter: parent.verticalCenter }
+            StyledText { text: "Automations"; font.weight: Font.DemiBold; font.pixelSize: Config.fontSize + 2; anchors.verticalCenter: parent.verticalCenter }
+        }
+
         Row {
             width: parent.width
             spacing: 10

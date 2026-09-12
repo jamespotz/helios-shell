@@ -19,6 +19,13 @@ Item {
         width: parent.width
         spacing: 16
 
+        // Header
+        Row {
+            spacing: 8
+            MaterialIcon { icon: "wallpaper"; font.pixelSize: 18; color: Colors.accent; anchors.verticalCenter: parent.verticalCenter }
+            StyledText { text: "Wallpaper"; font.weight: Font.DemiBold; font.pixelSize: Config.fontSize + 2; anchors.verticalCenter: parent.verticalCenter }
+        }
+
         WallpaperCarousel {
             width: parent.width
         }

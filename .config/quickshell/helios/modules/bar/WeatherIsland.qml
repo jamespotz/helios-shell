@@ -101,6 +101,20 @@ Item {
             spacing: 10
             visible: Weather.available
 
+            // Header — kept small so it doesn't compete with the clock/hero
+            // row just below it.
+            Row {
+                spacing: 6
+                MaterialIcon { icon: "cloud"; font.pixelSize: 14; color: Colors.accent; anchors.verticalCenter: parent.verticalCenter }
+                StyledText {
+                    text: "Weather"
+                    font.weight: Font.DemiBold
+                    font.pixelSize: Config.fontSize - 1
+                    color: Colors.subtext
+                    anchors.verticalCenter: parent.verticalCenter
+                }
+            }
+
             // ═══════════════════════════════════════════════════════════
             // TOP ROW — clock (left) / hero conditions + stats (right)
             // ═══════════════════════════════════════════════════════════

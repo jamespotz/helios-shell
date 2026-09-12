@@ -137,6 +137,13 @@ Item {
         width: parent.width
         spacing: 20
 
+        // Header
+        Row {
+            spacing: 8
+            MaterialIcon { icon: "auto_awesome"; font.pixelSize: 18; color: Colors.accent; anchors.verticalCenter: parent.verticalCenter }
+            StyledText { text: "Helios"; font.weight: Font.DemiBold; font.pixelSize: Config.fontSize + 2; anchors.verticalCenter: parent.verticalCenter }
+        }
+
         // --- Idle bump ---------------------------------------------------
         Column {
             width: parent.width

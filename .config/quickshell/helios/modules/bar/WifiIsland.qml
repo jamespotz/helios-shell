@@ -233,30 +233,45 @@ Item {
 
         Item {
             width: parent.width
-            height: 24
+            height: 48
 
-            MaterialIcon {
+            Column {
                 anchors.left: parent.left
                 anchors.verticalCenter: parent.verticalCenter
-                icon: Networking.wifiEnabled ? "wifi" : "wifi_off"
-            }
+                spacing: 2
 
-            Row {
-                anchors.left: parent.left
-                anchors.leftMargin: 26
-                anchors.verticalCenter: parent.verticalCenter
-                spacing: 4
-
-                StyledText {
-                    anchors.verticalCenter: parent.verticalCenter
-                    text: !Networking.wifiHardwareEnabled ? "Disabled by hardware switch"
-                        : Networking.wifiEnabled ? "On" : "Off"
+                Row {
+                    spacing: 8
+                    MaterialIcon {
+                        icon: Networking.wifiEnabled ? "wifi" : "wifi_off"
+                        font.pixelSize: 18
+                        color: Colors.accent
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+                    StyledText {
+                        text: "Wi-Fi"
+                        font.weight: Font.DemiBold
+                        font.pixelSize: Config.fontSize + 2
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
                 }
-                LoadingSpinner {
-                    visible: root.wn.scanning
-                    active: root.wn.scanning
-                    font.pixelSize: 11
-                    anchors.verticalCenter: parent.verticalCenter
+
+                Row {
+                    spacing: 4
+
+                    StyledText {
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: !Networking.wifiHardwareEnabled ? "Disabled by hardware switch"
+                            : Networking.wifiEnabled ? "On" : "Off"
+                        opacity: 0.6
+                        font.pixelSize: Config.fontSize - 2
+                    }
+                    LoadingSpinner {
+                        visible: root.wn.scanning
+                        active: root.wn.scanning
+                        font.pixelSize: 11
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
                 }
             }
 

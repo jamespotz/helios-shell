@@ -68,7 +68,11 @@ Item {
         width: parent.width
         spacing: 10
 
-        StyledText { text: "Audio Mixer"; font.bold: true }
+        Row {
+            spacing: 8
+            MaterialIcon { icon: "graphic_eq"; font.pixelSize: 18; color: Colors.accent; anchors.verticalCenter: parent.verticalCenter }
+            StyledText { text: "Audio Mixer"; font.weight: Font.DemiBold; font.pixelSize: Config.fontSize + 2; anchors.verticalCenter: parent.verticalCenter }
+        }
 
         StyledText {
             visible: root.streams.length === 0

@@ -30,21 +30,13 @@ Item {
         width: Math.max(220, panelLoader.implicitWidth)
         spacing: 14
 
-        // ─── Header: current tab label + close. Tab switching is IPC-only
-        // now (`quickshell -c helios ipc call island toggle <tab>`) — no
-        // in-panel icon row.
+        // ─── Header: close only. Each island renders its own icon + name
+        // in its content (see DisplayIsland.qml). Tab switching is IPC-only
+        // now (`quickshell -c helios ipc call island toggle <tab>`).
         Item {
             id: tabs
             width: pane.width
             height: 28
-
-            StyledText {
-                anchors.left: parent.left
-                anchors.verticalCenter: parent.verticalCenter
-                text: IslandNavigation.current ? IslandNavigation.current.label : ""
-                opacity: 0.6
-                font.pixelSize: Config.fontSize - 1
-            }
 
             IconButton {
                 id: closeButton

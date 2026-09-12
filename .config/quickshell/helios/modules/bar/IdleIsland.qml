@@ -31,7 +31,7 @@ Item {
         Row {
             spacing: 8
             MaterialIcon { icon: "bedtime"; font.pixelSize: 18; color: Colors.accent; anchors.verticalCenter: parent.verticalCenter }
-            StyledText { text: "Lock screen"; font.weight: Font.DemiBold; font.pixelSize: Config.fontSize + 1; anchors.verticalCenter: parent.verticalCenter }
+            StyledText { text: "Idle & Lock"; font.weight: Font.DemiBold; font.pixelSize: Config.fontSize + 1; anchors.verticalCenter: parent.verticalCenter }
         }
 
         // Caffeine mode — temporary inhibit

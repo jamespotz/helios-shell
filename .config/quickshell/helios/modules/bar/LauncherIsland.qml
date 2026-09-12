@@ -56,6 +56,13 @@ Item {
         width: 480
         spacing: 12
 
+        // Header
+        Row {
+            spacing: 8
+            MaterialIcon { icon: "search"; font.pixelSize: 18; color: Colors.accent; anchors.verticalCenter: parent.verticalCenter }
+            StyledText { text: "Launcher"; font.weight: Font.DemiBold; font.pixelSize: Config.fontSize + 2; anchors.verticalCenter: parent.verticalCenter }
+        }
+
         // Search field — prominent, Apple-style — plus a trigger button
         // that pre-fills the "/em " prefix for anyone who won't remember
         // to type it themselves.

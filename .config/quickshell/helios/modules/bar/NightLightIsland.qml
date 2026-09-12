@@ -16,6 +16,13 @@ Item {
         width: parent.width
         spacing: 14
 
+        // Header
+        Row {
+            spacing: 8
+            MaterialIcon { icon: "nightlight"; font.pixelSize: 18; color: Colors.accent; anchors.verticalCenter: parent.verticalCenter }
+            StyledText { text: "Night Light"; font.weight: Font.DemiBold; font.pixelSize: Config.fontSize + 2; anchors.verticalCenter: parent.verticalCenter }
+        }
+
         StyledText {
             text: "Comfort"
             font.weight: Font.DemiBold

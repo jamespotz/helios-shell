@@ -32,6 +32,13 @@ Item {
         width: parent.width
         spacing: 16
 
+        // Header
+        Row {
+            spacing: 8
+            MaterialIcon { icon: "music_note"; font.pixelSize: 18; color: Colors.accent; anchors.verticalCenter: parent.verticalCenter }
+            StyledText { text: "Media"; font.weight: Font.DemiBold; font.pixelSize: Config.fontSize + 2; anchors.verticalCenter: parent.verticalCenter }
+        }
+
         // --- Now playing ---------------------------------------------------
         Item {
             width: parent.width

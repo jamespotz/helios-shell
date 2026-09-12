@@ -35,10 +35,15 @@ Item {
             width: parent.width
             spacing: 4
 
-            StyledText {
-                text: "Appearance"
-                font.pixelSize: Config.fontSize + 4
-                font.weight: Font.Bold
+            Row {
+                spacing: 8
+                MaterialIcon { icon: "palette"; font.pixelSize: 18; color: Colors.accent; anchors.verticalCenter: parent.verticalCenter }
+                StyledText {
+                    text: "Appearance"
+                    font.pixelSize: Config.fontSize + 4
+                    font.weight: Font.Bold
+                    anchors.verticalCenter: parent.verticalCenter
+                }
             }
 
             StyledText {

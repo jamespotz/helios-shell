@@ -30,6 +30,13 @@ Item {
         anchors.rightMargin: 4
         spacing: 10
 
+        // Header
+        Row {
+            spacing: 8
+            MaterialIcon { icon: "do_not_disturb_on"; font.pixelSize: 18; color: Colors.accent; anchors.verticalCenter: parent.verticalCenter }
+            StyledText { text: "Focus Modes"; font.weight: Font.DemiBold; font.pixelSize: Config.fontSize + 2; anchors.verticalCenter: parent.verticalCenter }
+        }
+
         // ─── Preset list ───────────────────────────────────────────────
         Repeater {
             model: FocusModes.presets

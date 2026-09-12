@@ -24,11 +24,19 @@ Item {
                 anchors.verticalCenter: parent.verticalCenter
                 spacing: 10
 
-                MaterialIcon { anchors.verticalCenter: parent.verticalCenter; icon: "content_paste" }
+                MaterialIcon { anchors.verticalCenter: parent.verticalCenter; icon: "content_paste"; color: Colors.accent }
 
                 StyledText {
                     anchors.verticalCenter: parent.verticalCenter
-                    text: Clipboard.items.length + " items"
+                    text: "Clipboard"
+                    font.weight: Font.DemiBold
+                }
+
+                StyledText {
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: "· " + Clipboard.items.length + " items"
+                    opacity: 0.6
+                    font.pixelSize: Config.fontSize - 2
                 }
             }
 

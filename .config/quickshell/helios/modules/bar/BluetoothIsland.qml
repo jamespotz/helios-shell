@@ -67,10 +67,15 @@ Item {
                 anchors.verticalCenter: parent.verticalCenter
                 spacing: 2
 
-                StyledText {
-                    text: "Bluetooth"
-                    font.weight: Font.DemiBold
-                    font.pixelSize: Config.fontSize + 2
+                Row {
+                    spacing: 8
+                    MaterialIcon { icon: "bluetooth"; font.pixelSize: 18; color: Colors.accent; anchors.verticalCenter: parent.verticalCenter }
+                    StyledText {
+                        text: "Bluetooth"
+                        font.weight: Font.DemiBold
+                        font.pixelSize: Config.fontSize + 2
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
                 }
                 Row {
                     spacing: 4

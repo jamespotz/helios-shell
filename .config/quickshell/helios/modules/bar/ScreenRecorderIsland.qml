@@ -31,6 +31,13 @@ Item {
         width: parent.width
         spacing: 14
 
+        // Header
+        Row {
+            spacing: 8
+            MaterialIcon { icon: "videocam"; font.pixelSize: 18; color: Colors.accent; anchors.verticalCenter: parent.verticalCenter }
+            StyledText { text: "Screen Recorder"; font.weight: Font.DemiBold; font.pixelSize: Config.fontSize + 2; anchors.verticalCenter: parent.verticalCenter }
+        }
+
         Row {
             spacing: 6
             anchors.horizontalCenter: parent.horizontalCenter

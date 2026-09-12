@@ -5,10 +5,10 @@ import "../../components"
 
 // Real month calendar + agenda, backed by services/Calendar.qml. The
 // today/selected/hover cell states below intentionally mirror
-// WeatherPanel.qml's forecast mini-grid (same visual language, per
+// WeatherIsland.qml's forecast mini-grid (same visual language, per
 // AGENTS.md's "reuse existing interaction patterns") — the grid math
 // itself is a small, deliberate duplication rather than a shared helper,
-// since WeatherPanel's version is entangled with forecast-day-selection
+// since WeatherIsland's version is entangled with forecast-day-selection
 // state that has nothing to do with a real calendar.
 Item {
     id: root
@@ -72,12 +72,18 @@ Item {
             width: parent.width
             height: 32
 
-            StyledText {
+            Row {
                 anchors.left: parent.left
                 anchors.verticalCenter: parent.verticalCenter
-                font.bold: true
-                font.pixelSize: Config.fontSize + 2
-                text: "Calendar"
+                spacing: 8
+
+                MaterialIcon { icon: "calendar_today"; font.pixelSize: 18; color: Colors.accent; anchors.verticalCenter: parent.verticalCenter }
+                StyledText {
+                    anchors.verticalCenter: parent.verticalCenter
+                    font.weight: Font.DemiBold
+                    font.pixelSize: Config.fontSize + 2
+                    text: "Calendar"
+                }
             }
             Row {
                 anchors.right: parent.right

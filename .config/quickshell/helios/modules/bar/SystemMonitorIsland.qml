@@ -48,7 +48,14 @@ Item {
             width: parent.width
             height: 28
 
-            MaterialIcon { icon: "memory"; anchors.left: parent.left; anchors.verticalCenter: parent.verticalCenter; opacity: 0.7 }
+            Row {
+                anchors.left: parent.left
+                anchors.verticalCenter: parent.verticalCenter
+                spacing: 8
+
+                MaterialIcon { icon: "memory"; font.pixelSize: 18; color: Colors.accent; anchors.verticalCenter: parent.verticalCenter }
+                StyledText { text: "System Monitor"; font.weight: Font.DemiBold; anchors.verticalCenter: parent.verticalCenter }
+            }
 
             Row {
                 anchors.centerIn: parent

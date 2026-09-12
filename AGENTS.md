@@ -79,6 +79,17 @@ Reuse existing:
 
 Do not introduce a new visual pattern when the shell already has one for the same problem.
 
+## Commands
+
+```sh
+quickshell -c helios          # run
+quickshell -c helios -d       # run detached
+./tests/run-<name>-test.sh    # run a single test (see tests/ for full list)
+./link.sh                     # symlink new/changed files into $TARGET (default $HOME)
+```
+
+The shell does **not** hot-reload on file save — reload manually (`Super+Shift+R`, or relaunch quickshell) to see changes.
+
 ## After Adding New Component
 
 Run `link.sh` to symlink new components.

@@ -24,6 +24,13 @@ Item {
         anchors.rightMargin: 4
         spacing: 14
 
+        // Header
+        Row {
+            spacing: 8
+            MaterialIcon { icon: "privacy_tip"; font.pixelSize: 18; color: Colors.accent; anchors.verticalCenter: parent.verticalCenter }
+            StyledText { text: "Privacy"; font.weight: Font.DemiBold; font.pixelSize: Config.fontSize + 2; anchors.verticalCenter: parent.verticalCenter }
+        }
+
         // ─── Microphone ────────────────────────────────────────────────
         Row {
             width: parent.width

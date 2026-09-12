@@ -30,24 +30,13 @@ Column {
         onTriggered: carousel.forceActiveFocus(Qt.TabFocusReason)
     }
 
-    Row {
-        width: parent.width
-
-        StyledText {
-            id: carouselTitle
-            font.weight: Font.DemiBold
-            text: "Wallpaper"
-        }
-
-        Item { width: parent.width - carouselTitle.implicitWidth - carouselCount.implicitWidth; height: 1 }
-
-        StyledText {
-            id: carouselCount
-            visible: WallpaperLibrary.images.length > 0
-            opacity: 0.6
-            font.pixelSize: Config.fontSize - 2
-            text: (carousel.currentIndex + 1) + " of " + WallpaperLibrary.images.length
-        }
+    StyledText {
+        id: carouselCount
+        anchors.right: parent.right
+        visible: WallpaperLibrary.images.length > 0
+        opacity: 0.6
+        font.pixelSize: Config.fontSize - 2
+        text: (carousel.currentIndex + 1) + " of " + WallpaperLibrary.images.length
     }
 
     Item {

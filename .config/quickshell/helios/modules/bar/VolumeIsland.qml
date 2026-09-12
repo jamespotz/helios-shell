@@ -63,6 +63,13 @@ Item {
         width: parent.width
         spacing: 14
 
+        // Header
+        Row {
+            spacing: 8
+            MaterialIcon { icon: "volume_up"; font.pixelSize: 18; color: Colors.accent; anchors.verticalCenter: parent.verticalCenter }
+            StyledText { text: "Volume"; font.weight: Font.DemiBold; font.pixelSize: Config.fontSize + 2; anchors.verticalCenter: parent.verticalCenter }
+        }
+
         // --- Output/Input segmented switch ----------------------------------
         SegmentedControl {
             width: parent.width
