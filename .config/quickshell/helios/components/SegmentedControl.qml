@@ -13,10 +13,23 @@ Rectangle {
     signal activated(var value)
 
     implicitHeight: 36
+    implicitWidth: _naturalTotal + 6
     radius: height / 2
     color: Colors.surfaceHigh
 
+    // Segments size to their own label first, so a long option like
+    // "Background" never clips. Leftover width splits evenly.
+    FontMetrics {
+        id: fontMetrics
+        font.family: Config.fontFamily
+        font.pixelSize: Config.fontSize
+        font.letterSpacing: -0.2
+    }
+    readonly property var _naturalWidths: root.model.map(m => fontMetrics.advanceWidth(m.label) + (m.icon ? 24 : 0) + 28)
+    readonly property real _naturalTotal: _naturalWidths.reduce((a, b) => a + b, 0)
+
     Row {
+        id: track
         anchors.fill: parent
         anchors.margins: 3
 
@@ -26,9 +39,10 @@ Rectangle {
             Rectangle {
                 id: segment
                 required property var modelData
+                required property int index
                 readonly property bool active: root.currentValue === segment.modelData.value
 
-                width: parent.width / root.model.length
+                width: root._naturalWidths[segment.index] + Math.max(0, track.width - root._naturalTotal) / root.model.length
                 height: parent.height
                 radius: height / 2
                 scale: Config.reducedMotion ? 1 : segmentMouse.pressed ? 0.94 : 1
