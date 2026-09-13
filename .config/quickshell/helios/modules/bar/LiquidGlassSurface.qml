@@ -42,16 +42,17 @@ Canvas {
                                         (right - left) / 2,
                                         (bottom - top) / 2));
 
+        // arcTo traces a true circular arc at each corner — at small radii
+        // that's indistinguishable from the previous quadraticCurveTo
+        // approximation, but at r == width/2 (a satellite badge, meant to
+        // read as a perfect circle) the Bezier version visibly flattened
+        // into more of a squircle.
         context.beginPath();
         context.moveTo(left + r, top);
-        context.lineTo(right - r, top);
-        context.quadraticCurveTo(right, top, right, top + r);
-        context.lineTo(right, bottom - r);
-        context.quadraticCurveTo(right, bottom, right - r, bottom);
-        context.lineTo(left + r, bottom);
-        context.quadraticCurveTo(left, bottom, left, bottom - r);
-        context.lineTo(left, top + r);
-        context.quadraticCurveTo(left, top, left + r, top);
+        context.arcTo(right, top, right, bottom, r);
+        context.arcTo(right, bottom, left, bottom, r);
+        context.arcTo(left, bottom, left, top, r);
+        context.arcTo(left, top, right, top, r);
         context.closePath();
     }
 

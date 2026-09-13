@@ -28,6 +28,7 @@ QtObject {
         root._destination("power", "Power", "PowerIsland.qml"),
         root._destination("powermenu", "Power", "PowerMenuIsland.qml"),
         root._destination("keybinds", "Keybinds", "KeybindsIsland.qml"),
+        root._destination("maintenance", "Maintenance", "MaintenanceIsland.qml", 0, "maintenance"),
         root._destination("launcher", "Launcher", "LauncherIsland.qml")
     ]
 
@@ -43,7 +44,18 @@ QtObject {
     signal rejected(string destinationId)
 
     function panelOpenFor(screenName) {
-        return root.open && root.screen === screenName;
+        const dest = root.resolve(root._destinationId);
+        return root.open && root.screen === screenName && !(dest && dest.satelliteId);
+    }
+
+    // True when the currently-open destination renders inside a satellite
+    // badge (see Bar.qml's IslandSatellite) rather than the main island —
+    // panelOpenFor above deliberately excludes those, so the main island's
+    // mode/expanded state stays untouched while a satellite-hosted panel is
+    // open.
+    function satelliteOpenFor(screenName, satelliteId) {
+        const dest = root.resolve(root._destinationId);
+        return root.open && root.screen === screenName && !!dest && dest.satelliteId === satelliteId;
     }
 
     function modeFor(screenName, hovering) {
@@ -66,13 +78,14 @@ QtObject {
         else if (mode === "battery") Bluetooth.dismissLowBattery();
     }
 
-    function _destination(id, label, file, maxHeight) {
+    function _destination(id, label, file, maxHeight, satelliteId) {
         return {
             id: id,
             label: label,
             source: Qt.resolvedUrl("../modules/bar/" + file),
             maxHeight: maxHeight || 0,
-            available: true
+            available: true,
+            satelliteId: satelliteId || ""
         };
     }
 

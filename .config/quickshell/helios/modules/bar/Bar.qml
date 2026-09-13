@@ -33,6 +33,12 @@ PanelWindow {
     readonly property int padH: mode === "idle" ? 0 : 18
     readonly property int padV: mode === "idle" ? 0 : 10
 
+    // Recording/maintenance badge diameter — deliberately its own token
+    // rather than reusing Config.idleBumpHeight, which is a user-tunable
+    // setting for the idle pill and only happened to double as the
+    // satellite size before.
+    readonly property int satelliteSize: 32
+
     // The one seam for "something is temporarily covering the island, so
     // its close/collapse triggers should hold off" — right now that's just
     // the custom tray menu, but a future reason to suppress adds one clause
@@ -76,7 +82,10 @@ PanelWindow {
     // click-through so it doesn't eat input outside the visible pill.
     implicitWidth: Config.islandMaxWidth
     implicitHeight: Config.islandMaxHeight
-    mask: Region { item: hitArea }
+    mask: Region {
+        item: hitArea
+        Region { item: rightSatellite }
+    }
 
     Timer {
         id: hoverCollapseTimer
@@ -226,9 +235,22 @@ PanelWindow {
         HoverHandler {
             id: hoverTracker
             onHoveredChanged: {
-                if (hoverTracker.hovered) { hoverCollapseTimer.stop(); bar.hovering = true; }
-                else hoverCollapseTimer.restart();
+                if (hoverTracker.hovered) { hoverCollapseTimer.stop(); hoverExpandTimer.restart(); }
+                else { hoverExpandTimer.stop(); hoverCollapseTimer.restart(); }
             }
+        }
+
+        // rightSatellite sits immediately beside hitArea with only a few px
+        // gap — the cursor grazes across hitArea's edge on the way to
+        // clicking it, and without a debounce that graze alone was enough
+        // to flip `hovering` and pop the whole island open into peek mode
+        // for a frame before the satellite's own click landed. A short
+        // dwell means only a hover that actually lingers on the island
+        // counts as intent to peek.
+        Timer {
+            id: hoverExpandTimer
+            interval: 80
+            onTriggered: bar.hovering = true
         }
 
         Item {
@@ -305,100 +327,52 @@ PanelWindow {
     // Recording status lives here, outside the content Loader, so it stays
     // visible across every mode (idle, peek, notify, panel) instead of
     // disappearing whenever the island's content switches.
-    Item {
-        id: recordingSatellite
-        // hitArea.top is fixed (anchors.top: parent.top, never animated),
-        // but hitArea grows *downward* when the island expands — anchoring
-        // to hitArea.verticalCenter (the previous approach) rode that
-        // growth and dragged this satellite down with it. Anchoring to the
-        // fixed top instead, at the same height as the idle pill, keeps it
-        // planted regardless of mode.
-        anchors.top: hitArea.top
-        anchors.right: hitArea.left
-        anchors.rightMargin: gap
+    IslandSatellite {
+        id: leftSatellite
+        anchorItem: hitArea
+        onRight: false
+        badgeSize: bar.satelliteSize
+        active: ScreenRecorder.recording
+        badge: Component { RecordingDot {} }
+    }
 
-        readonly property real restGap: 6
-        property real gap: 0
-        opacity: ScreenRecorder.recording ? 1 : 0
-        visible: opacity > 0.01
-        // Fixed to the idle bump's own height, not hitArea's — hitArea
-        // grows to whatever mode is active (peek, panel, notify), and this
-        // satellite should stay pill-sized instead of expanding with it.
-        width: Config.idleBumpHeight
-        height: Config.idleBumpHeight
+    // Same satellite treatment as leftSatellite, mirrored to the right of
+    // the island — package updates, reboot-required, firmware, and failed
+    // systemd units all collapse into one quiet badge instead of four.
+    // Clicking it expands the badge itself into the maintenance panel
+    // (IslandNavigation treats "maintenance" as satellite-hosted, so this
+    // never drives the main island's own mode/expanded state).
+    IslandSatellite {
+        id: rightSatellite
+        anchorItem: hitArea
+        onRight: true
+        badgeSize: bar.satelliteSize
+        shadowEnabled: false
+        interactive: true
+        active: Maintenance.hasAlert
+        expanded: IslandNavigation.satelliteOpenFor(bar.screen.name, "maintenance")
+        onClicked: IslandNavigation.toggle(bar.screen.name, "maintenance")
 
-        transform: Scale {
-            id: liquidScale
-            origin.x: recordingSatellite.width / 2
-            origin.y: recordingSatellite.height / 2
-            xScale: 1.0
-            yScale: 1.0
-        }
-
-        Behavior on opacity {
-            NumberAnimation { duration: 180; easing.type: Easing.OutCubic }
-        }
-
-        // Quickshell can start (or reload) with ScreenRecorder.recording
-        // already true — no onRecordingChanged fires for a value that was
-        // already set before this Item existed, so without this the
-        // satellite would sit at gap: 0, xScale: 1, yScale: 1 (flush
-        // against the island, not yet "pulled out") until the next
-        // start/stop cycle. This puts it straight at rest instead.
-        Component.onCompleted: {
-            if (ScreenRecorder.recording) recordingSatellite.gap = recordingSatellite.restGap;
-        }
-
-        Connections {
-            target: ScreenRecorder
-            function onRecordingChanged() {
-                // Stopping any in-flight tween first avoids it fighting a
-                // freshly-started one — without this, a quick stop/start
-                // (or start/stop) in close succession could leave the
-                // animation mid-glitch, animating from a stale in-progress
-                // value instead of the clean starting point set below.
-                liquidSlideIn.stop();
-
-                if (ScreenRecorder.recording) {
-                    // Jump to the stretched starting shape instantly, while
-                    // still invisible (opacity is still fading in), then
-                    // let a single elastic tween carry both the pull-away
-                    // and the round-out back to normal. One continuous
-                    // curve per property, not several stitched together —
-                    // chained NumberAnimations each start/stop at zero
-                    // velocity, so every join reads as a visible kink
-                    // instead of one fluid motion.
-                    recordingSatellite.gap = 0;
-                    liquidScale.xScale = 1.32;
-                    liquidScale.yScale = 0.76;
-                    liquidSlideIn.start();
-                } else {
-                    recordingSatellite.gap = 0;
-                    liquidScale.xScale = 1.0;
-                    liquidScale.yScale = 1.0;
-                }
+        badge: Component {
+            MaterialIcon {
+                // Text's implicit box follows the font's line-height metrics
+                // (ascent + descent), which for this icon font leaves unused
+                // space below the glyph — centering that box in the parent
+                // visibly pushed the glyph above center. Pinning width/height
+                // to the glyph's own em-square instead makes the centered box
+                // match what's actually drawn.
+                width: font.pixelSize
+                height: font.pixelSize
+                font.pixelSize: 16
+                icon: Maintenance.rebootRequired || Maintenance.failedUnits.length > 0 ? "error" : "download"
+                color: Maintenance.rebootRequired || Maintenance.failedUnits.length > 0 ? Colors.danger : Colors.accent
             }
         }
 
-        // Pulls out to its resting gap while the stretched departure shape
-        // rounds back to normal, both on one elastic curve so the whole
-        // move reads as a single liquid pull rather than a rigid icon
-        // sliding on rails. A gentler amplitude/period than a typical
-        // "bouncy" elastic — reads as surface tension settling, not a
-        // rubber-ball bounce.
-        ParallelAnimation {
-            id: liquidSlideIn
-            NumberAnimation { target: recordingSatellite; property: "gap"; to: recordingSatellite.restGap; duration: 720; easing.type: Easing.OutElastic; easing.amplitude: 0.25; easing.period: 0.45 }
-            NumberAnimation { target: liquidScale; property: "xScale"; to: 1.0; duration: 720; easing.type: Easing.OutElastic; easing.amplitude: 0.25; easing.period: 0.45 }
-            NumberAnimation { target: liquidScale; property: "yScale"; to: 1.0; duration: 720; easing.type: Easing.OutElastic; easing.amplitude: 0.25; easing.period: 0.45 }
-        }
-
-        IslandShape {
-            anchors.fill: parent
-            fillColor: Colors.surface
-        }
-
-        RecordingDot { anchors.centerIn: parent }
+        // Reuses the very same panel chrome (close button + scrolling) the
+        // main island uses for every other destination — see panelComp
+        // below — instead of a second copy of that wrapper.
+        expandedContent: panelComp
     }
 
     Component { id: idleComp; IdleBump { mediaPlaying: bar.hasActiveMedia; targetScreen: bar.screen } }
