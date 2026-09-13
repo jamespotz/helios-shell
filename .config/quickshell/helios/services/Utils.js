@@ -9,3 +9,7 @@ function screenForMonitor(screens, monitor) {
     }
     return null;
 }
+
+function focusedScreen(screens, monitor) {
+    return screenForMonitor(screens, monitor) || screens[0];
+}

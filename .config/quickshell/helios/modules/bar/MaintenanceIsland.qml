@@ -38,9 +38,10 @@ Item {
                 font.pixelSize: Config.fontSize + 2
                 anchors.verticalCenter: parent.verticalCenter
             }
-            Item { width: parent.width - 200; height: 1 }
-            Chip {
-                text: Maintenance.checking ? "Checking…" : "Refresh"
+            Item { width: parent.width - parent.children[0].width - parent.children[1].width - 16 - refreshBtn.width; height: 1 }
+            IconButton {
+                id: refreshBtn
+                icon: "refresh"
                 enabled: !Maintenance.checking
                 anchors.verticalCenter: parent.verticalCenter
                 onClicked: Maintenance.refresh()
@@ -122,7 +123,9 @@ Item {
         }
 
         StyledText {
-            text: Maintenance.lastCheckedAt ? "Checked " + root.timeAgo(Maintenance.lastCheckedAt) : ""
+            text: Maintenance.checking
+                ? "Checking…"
+                : (Maintenance.lastCheckedAt ? "Checked " + root.timeAgo(Maintenance.lastCheckedAt) : "")
             font.pixelSize: Config.fontSize - 3
             color: Colors.subtext
         }

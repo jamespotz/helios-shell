@@ -10,7 +10,6 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 import Quickshell.Hyprland
-import Quickshell.Services.Pipewire
 import Quickshell.Services.UPower
 import "./services"
 import "./services/Utils.js" as Utils
@@ -84,11 +83,11 @@ ShellRoot {
     IpcHandler {
         target: "launcher"
         function toggle() {
-            const screen = Utils.screenForMonitor(Quickshell.screens, Hyprland.focusedMonitor) || Quickshell.screens[0];
+            const screen = Utils.focusedScreen(Quickshell.screens, Hyprland.focusedMonitor);
             IslandNavigation.toggle(screen.name, "launcher");
         }
         function open() {
-            const screen = Utils.screenForMonitor(Quickshell.screens, Hyprland.focusedMonitor) || Quickshell.screens[0];
+            const screen = Utils.focusedScreen(Quickshell.screens, Hyprland.focusedMonitor);
             IslandNavigation.show(screen.name, "launcher");
         }
         function close() { IslandNavigation.close() }
@@ -97,7 +96,7 @@ ShellRoot {
     IpcHandler {
         target: "island"
         function toggle(tab: string) {
-            const screen = Utils.screenForMonitor(Quickshell.screens, Hyprland.focusedMonitor) || Quickshell.screens[0];
+            const screen = Utils.focusedScreen(Quickshell.screens, Hyprland.focusedMonitor);
             IslandNavigation.toggle(screen.name, tab && tab.length > 0 ? tab : "volume");
         }
         function close() { IslandNavigation.close() }
@@ -129,7 +128,7 @@ ShellRoot {
     IpcHandler {
         target: "keybinds"
         function toggle() {
-            const screen = Utils.screenForMonitor(Quickshell.screens, Hyprland.focusedMonitor) || Quickshell.screens[0];
+            const screen = Utils.focusedScreen(Quickshell.screens, Hyprland.focusedMonitor);
             IslandNavigation.toggle(screen.name, "keybinds");
         }
         function close() { IslandNavigation.close() }
@@ -138,7 +137,7 @@ ShellRoot {
     IpcHandler {
         target: "powermenu"
         function toggle() {
-            const screen = Utils.screenForMonitor(Quickshell.screens, Hyprland.focusedMonitor) || Quickshell.screens[0];
+            const screen = Utils.focusedScreen(Quickshell.screens, Hyprland.focusedMonitor);
             IslandNavigation.toggle(screen.name, "powermenu");
         }
         function close() { IslandNavigation.close() }
@@ -152,11 +151,11 @@ ShellRoot {
     IpcHandler {
         target: "settings"
         function toggle(page: string) {
-            const screen = Utils.screenForMonitor(Quickshell.screens, Hyprland.focusedMonitor) || Quickshell.screens[0];
+            const screen = Utils.focusedScreen(Quickshell.screens, Hyprland.focusedMonitor);
             Bridge.toggleSettings(screen.name, page && page.length > 0 ? page : undefined);
         }
         function open(page: string) {
-            const screen = Utils.screenForMonitor(Quickshell.screens, Hyprland.focusedMonitor) || Quickshell.screens[0];
+            const screen = Utils.focusedScreen(Quickshell.screens, Hyprland.focusedMonitor);
             Bridge.openSettings(screen.name, page && page.length > 0 ? page : undefined);
         }
         function close() { Bridge.closeSettings() }
@@ -171,7 +170,7 @@ ShellRoot {
         function list(): string { return Clipboard.items.map(i => i.preview).join("\n") }
         function refresh() { Clipboard.refresh() }
         function toggle() {
-            const screen = Utils.screenForMonitor(Quickshell.screens, Hyprland.focusedMonitor) || Quickshell.screens[0];
+            const screen = Utils.focusedScreen(Quickshell.screens, Hyprland.focusedMonitor);
             IslandNavigation.toggle(screen.name, "clipboard");
         }
     }
@@ -182,7 +181,7 @@ ShellRoot {
         // focused — same "focused" convention as the `island` handler —
         // so a hotkey works regardless of which screen's island it opens.
         function toggle() {
-            const screen = Utils.screenForMonitor(Quickshell.screens, Hyprland.focusedMonitor) || Quickshell.screens[0];
+            const screen = Utils.focusedScreen(Quickshell.screens, Hyprland.focusedMonitor);
             ScreenRecorder.toggle(screen.name);
         }
         function stop() { ScreenRecorder.stop() }
@@ -196,7 +195,7 @@ ShellRoot {
         function window() { Screenshot.captureWindow() }
         function ocr() { Screenshot.captureOcrRegion() }
         function toggle() {
-            const screen = Utils.screenForMonitor(Quickshell.screens, Hyprland.focusedMonitor) || Quickshell.screens[0];
+            const screen = Utils.focusedScreen(Quickshell.screens, Hyprland.focusedMonitor);
             IslandNavigation.toggle(screen.name, "screenshot");
         }
     }
@@ -233,37 +232,16 @@ ShellRoot {
         }
     }
 
-    // Same sink/source filtering VolumeIsland.qml uses (excludes clock-driver/
-    // MIDI-bridge nodes PipeWire also reports as neither sink nor stream).
-    readonly property var audioSinks: Pipewire.nodes ? Pipewire.nodes.values.filter(n => n.isSink && !n.isStream && (n.type & PwNodeType.AudioSink) === PwNodeType.AudioSink) : []
-    readonly property var audioSources: Pipewire.nodes ? Pipewire.nodes.values.filter(n => !n.isSink && !n.isStream && (n.type & PwNodeType.AudioSource) === PwNodeType.AudioSource) : []
-    PwObjectTracker { objects: shellRoot.audioSinks.concat(shellRoot.audioSources) }
-
-    function findAudioNode(nodes, match) {
-        const needle = match.toLowerCase();
-        return nodes.find(n => n.name === match)
-            || nodes.find(n => String(n.description || "").toLowerCase().includes(needle) || String(n.nickname || "").toLowerCase().includes(needle));
-    }
-
     IpcHandler {
         target: "audio"
-        // Matches against node.name first (stable pipewire id), falling
-        // back to a case-insensitive substring match on description/
-        // nickname — e.g. `audio setOutput "USB Headset"`.
         function outputs(): string {
-            return shellRoot.audioSinks.map(n => n.name + "\t" + (n.description || n.nickname || n.name)).join("\n");
+            return Audio.sinks.map(n => n.name + "\t" + (n.description || n.nickname || n.name)).join("\n");
         }
         function inputs(): string {
-            return shellRoot.audioSources.map(n => n.name + "\t" + (n.description || n.nickname || n.name)).join("\n");
+            return Audio.sources.map(n => n.name + "\t" + (n.description || n.nickname || n.name)).join("\n");
         }
-        function setOutput(match: string) {
-            const node = shellRoot.findAudioNode(shellRoot.audioSinks, match);
-            if (node) Pipewire.preferredDefaultAudioSink = node;
-        }
-        function setInput(match: string) {
-            const node = shellRoot.findAudioNode(shellRoot.audioSources, match);
-            if (node) Pipewire.preferredDefaultAudioSource = node;
-        }
+        function setOutput(match: string) { Audio.setOutput(match) }
+        function setInput(match: string) { Audio.setInput(match) }
     }
 
     IpcHandler {
@@ -279,7 +257,7 @@ ShellRoot {
         // even if the system monitor tab's island target ever changes —
         // same convention as `clipboard toggle`/`recorder toggle` above.
         function toggle() {
-            const screen = Utils.screenForMonitor(Quickshell.screens, Hyprland.focusedMonitor) || Quickshell.screens[0];
+            const screen = Utils.focusedScreen(Quickshell.screens, Hyprland.focusedMonitor);
             IslandNavigation.toggle(screen.name, "system");
         }
     }
@@ -290,7 +268,7 @@ ShellRoot {
         // even if the automation tab's island target ever changes — same
         // convention as `clipboard toggle`/`recorder toggle` above.
         function toggle() {
-            const screen = Utils.screenForMonitor(Quickshell.screens, Hyprland.focusedMonitor) || Quickshell.screens[0];
+            const screen = Utils.focusedScreen(Quickshell.screens, Hyprland.focusedMonitor);
             IslandNavigation.toggle(screen.name, "automation");
         }
     }

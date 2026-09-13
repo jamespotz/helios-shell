@@ -1,4 +1,5 @@
 module services
+singleton Audio 1.0 Audio.qml
 singleton Colors 1.0 Colors.qml
 singleton Bluetooth 1.0 Bluetooth.qml
 BluetoothDeviceCore 1.0 BluetoothDeviceCore.qml
@@ -15,6 +16,22 @@ singleton WallpaperLibrary 1.0 WallpaperLibrary.qml
 singleton WallpaperPlayback 1.0 WallpaperPlayback.qml
 singleton Wallpaper 1.0 Wallpaper.qml
 singleton Themes 1.0 Themes.qml
+singleton ThemeHyprland 1.0 ThemeHyprland.qml
+singleton ThemeGhostty 1.0 ThemeGhostty.qml
+singleton ThemeKitty 1.0 ThemeKitty.qml
+singleton ThemeBtop 1.0 ThemeBtop.qml
+singleton ThemeNvim 1.0 ThemeNvim.qml
+singleton ThemeZed 1.0 ThemeZed.qml
+singleton ThemeBat 1.0 ThemeBat.qml
+singleton ThemeFirefox 1.0 ThemeFirefox.qml
+singleton ThemeYazi 1.0 ThemeYazi.qml
+singleton ThemeAlacritty 1.0 ThemeAlacritty.qml
+singleton ThemeWezterm 1.0 ThemeWezterm.qml
+singleton ThemeTmux 1.0 ThemeTmux.qml
+singleton ThemeVscode 1.0 ThemeVscode.qml
+singleton ThemeKiro 1.0 ThemeKiro.qml
+singleton ThemeRofi 1.0 ThemeRofi.qml
+singleton ThemeWofi 1.0 ThemeWofi.qml
 singleton Cava 1.0 Cava.qml
 singleton Clipboard 1.0 Clipboard.qml
 singleton WifiNetworks 1.0 WifiNetworks.qml

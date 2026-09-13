@@ -58,12 +58,19 @@ QtObject {
         return root.open && root.screen === screenName && !!dest && dest.satelliteId === satelliteId;
     }
 
+    // Alert priority, highest first: the first entry whose active() is true
+    // wins. dismiss is omitted where dismissing that mode isn't supported.
+    readonly property var _alerts: [
+        { mode: "notify", active: () => Notifications.state.popups.length > 0, dismiss: () => Notifications.dismissAll() },
+        { mode: "task", active: () => Tasks.items.length > 0 },
+        { mode: "meeting", active: () => Calendar.upcomingAlert !== null, dismiss: () => Calendar.dismissAlert() },
+        { mode: "battery", active: () => Bluetooth.lowBatteryAlert !== null, dismiss: () => Bluetooth.dismissLowBattery() }
+    ]
+
     function modeFor(screenName, hovering) {
         if (root.panelOpenFor(screenName)) return root.destinationId;
-        if (Notifications.state.popups.length > 0) return "notify";
-        if (Tasks.items.length > 0) return "task";
-        if (Calendar.upcomingAlert !== null) return "meeting";
-        if (Bluetooth.lowBatteryAlert !== null) return "battery";
+        const alert = root._alerts.find(a => a.active());
+        if (alert) return alert.mode;
         return hovering ? "peek" : "idle";
     }
 
@@ -72,10 +79,9 @@ QtObject {
     }
 
     function dismiss(screenName, mode) {
-        if (root.panelOpenFor(screenName)) root.close();
-        else if (mode === "notify") Notifications.dismissAll();
-        else if (mode === "meeting") Calendar.dismissAlert();
-        else if (mode === "battery") Bluetooth.dismissLowBattery();
+        if (root.panelOpenFor(screenName)) { root.close(); return; }
+        const alert = root._alerts.find(a => a.mode === mode);
+        if (alert && alert.dismiss) alert.dismiss();
     }
 
     function _destination(id, label, file, maxHeight, satelliteId) {
