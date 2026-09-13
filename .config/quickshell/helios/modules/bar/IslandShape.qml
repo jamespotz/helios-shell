@@ -14,10 +14,13 @@ Item {
     // Colors.background there) — the compact pill blending toward pure
     // black sells the "floating notch" illusion.
     property color fillColor: Colors.surface
-    // Off for small satellites that sit a few px from another island — the
-    // two soft-shadow blurs overlap in that narrow gap and read as a solid
-    // bridge connecting them, which isn't what either shape actually shows.
     property bool shadowEnabled: true
+    // Satellites sit a few px from the island — its default blur (14) and
+    // this shape's own reach far enough into that gap to merge into a solid
+    // bridge. Satellites pass a smaller blur/spread so the shadow stays
+    // legible without touching the island's.
+    property real shadowGlowRadius: 14
+    property real shadowSpread: 0.08
 
     // Apple's continuous corner (squircle) can't be done in pure QML
     // without ShaderEffect, but a generous radius relative to height
@@ -28,6 +31,8 @@ Item {
         anchors.fill: parent
         cornerRadius: root.cornerRadius
         visible: root.shadowEnabled
+        glowRadius: root.shadowGlowRadius
+        spread: root.shadowSpread
     }
 
     LiquidGlassSurface {

@@ -28,6 +28,11 @@ Item {
 
     property color fillColor: Colors.surface
     property bool shadowEnabled: true
+    // Small enough that the blur doesn't reach past restGap into the
+    // island's own shadow — keeps a visible shadow without the two merging
+    // into a bridge across the gap.
+    property real shadowGlowRadius: 5
+    property real shadowSpread: 0
 
     property Component badge
     property Component expandedContent
@@ -111,6 +116,8 @@ Item {
         anchors.fill: parent
         fillColor: root.fillColor
         shadowEnabled: root.shadowEnabled
+        shadowGlowRadius: root.shadowGlowRadius
+        shadowSpread: root.shadowSpread
     }
 
     // Clips both loaders to the badge's own rounded shape — needed now that

@@ -13,9 +13,9 @@ Rectangle {
     id: root
 
     visible: ScreenRecorder.recording
-    width: 7
-    height: 7
-    radius: 3.5
+    width: 6
+    height: 6
+    radius: 3
     color: Colors.danger
     transformOrigin: Item.Center
 

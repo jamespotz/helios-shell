@@ -347,7 +347,6 @@ PanelWindow {
         anchorItem: hitArea
         onRight: true
         badgeSize: bar.satelliteSize
-        shadowEnabled: false
         interactive: true
         active: Maintenance.hasAlert
         expanded: IslandNavigation.satelliteOpenFor(bar.screen.name, "maintenance")
