@@ -1,5 +1,15 @@
 # AGENTS.md
 
+Terminology (Island, Island destination, Launcher, etc.) is defined in `CONTEXT.md` — use those terms, not ad hoc synonyms.
+
+## Layout
+
+`.config/quickshell/helios/`:
+- `components/` — reusable UI (buttons, fields, panels)
+- `services/` — business logic / QML singletons (Audio, Bluetooth, Calendar, etc.)
+- `modules/` — feature surfaces (`bar/`, `lock/`, `osd/`, `polkit/`)
+- `data/` — static JSON (emoji, themes)
+
 ## Project Philosophy
 
 This is a **QML desktop shell** inspired by Apple's design principles: clarity, restraint, consistency, direct manipulation, meaningful motion, and attention to detail.
