@@ -13,3 +13,19 @@ function screenForMonitor(screens, monitor) {
 function focusedScreen(screens, monitor) {
     return screenForMonitor(screens, monitor) || screens[0];
 }
+
+function formatPercent(value) {
+    return value.toFixed(1) + "%";
+}
+
+function formatGB(valueMb) {
+    return (valueMb / 1024).toFixed(1) + " GB";
+}
+
+function formatValueGB(valueGb) {
+    return valueGb.toFixed(1) + " GB";
+}
+
+function formatGHz(valueMhz) {
+    return ((valueMhz || 0) / 1000).toFixed(2) + " GHz";
+}

@@ -1,6 +1,7 @@
 import QtQuick
 import Quickshell
 import "../../services"
+import "../../services/Utils.js" as Utils
 import "../../components"
 
 Item {
@@ -50,8 +51,8 @@ Item {
                 StyledText { text: "Process Explorer"; font.bold: true; font.pixelSize: Config.fontSize + 5 }
                 StyledText {
                     text: SystemStats.state.processes.length + " processes  ·  "
-                        + SystemStats.state.cpu.usage_percent.toFixed(1) + "% CPU  ·  "
-                        + SystemStats.state.memory.used_gb.toFixed(1) + " GB in use"
+                        + Utils.formatPercent(SystemStats.state.cpu.usage_percent) + " CPU  ·  "
+                        + Utils.formatValueGB(SystemStats.state.memory.used_gb) + " in use"
                     color: Colors.subtext; font.pixelSize: Config.fontSize - 2
                 }
             }
@@ -236,7 +237,7 @@ Item {
             }
             StyledText {
                 anchors.right: parent.right; anchors.verticalCenter: parent.verticalCenter
-                text: row.processData.cpu_percent.toFixed(1) + "%"
+                text: Utils.formatPercent(row.processData.cpu_percent)
                 font.family: Config.monoFontFamily; font.pixelSize: Config.fontSize - 3
             }
         }

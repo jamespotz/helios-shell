@@ -1,5 +1,6 @@
 import QtQuick
 import "../../services"
+import "../../services/Utils.js" as Utils
 import "../../components"
 
 // Live system resource monitor — CPU/memory/GPU quick stats, per-core grid,
@@ -116,14 +117,14 @@ Item {
 
                     StyledText { text: "CPU"; opacity: 0.6; font.pixelSize: Config.fontSize - 3 }
                     StyledText {
-                        text: root.stats.cpu.usage_percent.toFixed(1) + "%"
+                        text: Utils.formatPercent(root.stats.cpu.usage_percent)
                         color: root.levelColor(root.stats.cpu.usage_percent, 60, 85)
                         font.bold: true
                         font.pixelSize: Config.fontSize + 6
                         font.family: Config.monoFontFamily
                     }
                     StyledText {
-                        text: ((root.stats.cpu.frequency_mhz || 0) / 1000).toFixed(2) + " GHz"
+                        text: Utils.formatGHz(root.stats.cpu.frequency_mhz)
                         opacity: 0.5
                         font.pixelSize: Config.fontSize - 4
                         elide: Text.ElideRight
@@ -147,7 +148,7 @@ Item {
 
                     StyledText { text: "Memory"; opacity: 0.6; font.pixelSize: Config.fontSize - 3 }
                     StyledText {
-                        text: root.stats.memory.usage_percent.toFixed(1) + "%"
+                        text: Utils.formatPercent(root.stats.memory.usage_percent)
                         color: root.levelColor(root.stats.memory.usage_percent, 75, 90)
                         font.bold: true
                         font.pixelSize: Config.fontSize + 6
@@ -178,7 +179,7 @@ Item {
 
                     StyledText { text: "GPU"; opacity: 0.6; font.pixelSize: Config.fontSize - 3 }
                     StyledText {
-                        text: root.stats.gpu ? root.stats.gpu.usage_percent.toFixed(1) + "%" : "—"
+                        text: root.stats.gpu ? Utils.formatPercent(root.stats.gpu.usage_percent) : "—"
                         color: root.stats.gpu ? root.levelColor(root.stats.gpu.usage_percent, 75, 90) : Colors.subtext
                         font.bold: true
                         font.pixelSize: Config.fontSize + 6
@@ -242,7 +243,7 @@ Item {
                 }
                 StyledText {
                     anchors.right: parent.right
-                    text: root.stats.cpu.usage_percent.toFixed(1) + "% avg · " + ((root.stats.cpu.frequency_mhz || 0) / 1000).toFixed(2) + " GHz"
+                    text: Utils.formatPercent(root.stats.cpu.usage_percent) + " avg · " + Utils.formatGHz(root.stats.cpu.frequency_mhz)
                     opacity: 0.5
                     font.pixelSize: Config.fontSize - 3
                     font.family: Config.monoFontFamily
@@ -314,7 +315,7 @@ Item {
                 StyledText { anchors.left: parent.left; text: "Memory"; font.bold: true; font.pixelSize: Config.fontSize - 1 }
                 StyledText {
                     anchors.right: parent.right
-                    text: root.stats.memory.used_gb.toFixed(1) + " GB / " + root.stats.memory.total_gb.toFixed(1) + " GB"
+                    text: Utils.formatValueGB(root.stats.memory.used_gb) + " / " + Utils.formatValueGB(root.stats.memory.total_gb)
                     opacity: 0.5
                     font.pixelSize: Config.fontSize - 3
                     font.family: Config.monoFontFamily
@@ -340,10 +341,10 @@ Item {
             Item {
                 width: parent.width
                 height: 14
-                StyledText { anchors.left: parent.left; text: "Used · " + root.stats.memory.used_gb.toFixed(1) + " GB"; opacity: 0.6; font.pixelSize: Config.fontSize - 3 }
+                StyledText { anchors.left: parent.left; text: "Used · " + Utils.formatValueGB(root.stats.memory.used_gb); opacity: 0.6; font.pixelSize: Config.fontSize - 3 }
                 StyledText {
                     anchors.right: parent.right
-                    text: "Free · " + (root.stats.memory.total_gb - root.stats.memory.used_gb).toFixed(1) + " GB"
+                    text: "Free · " + Utils.formatValueGB(root.stats.memory.total_gb - root.stats.memory.used_gb)
                     opacity: 0.5
                     font.pixelSize: Config.fontSize - 3
                 }
@@ -369,7 +370,7 @@ Item {
                     StyledText { anchors.left: parent.left; text: "Utilization"; opacity: 0.6; font.pixelSize: Config.fontSize - 3 }
                     StyledText {
                         anchors.right: parent.right
-                        text: root.stats.gpu ? root.stats.gpu.usage_percent.toFixed(1) + "%" : ""
+                        text: root.stats.gpu ? Utils.formatPercent(root.stats.gpu.usage_percent) : ""
                         opacity: 0.5
                         font.pixelSize: Config.fontSize - 3
                         font.family: Config.monoFontFamily
@@ -475,7 +476,7 @@ Item {
                             anchors.verticalCenter: parent.verticalCenter
                             spacing: 1
                             StyledText { text: "Read"; opacity: 0.6; font.pixelSize: Config.fontSize - 3 }
-                            StyledText { text: (root.stats.disk.read_mb / 1024).toFixed(1) + " GB"; font.bold: true; font.family: Config.monoFontFamily }
+                            StyledText { text: Utils.formatGB(root.stats.disk.read_mb); font.bold: true; font.family: Config.monoFontFamily }
                         }
                     }
                 }
@@ -499,7 +500,7 @@ Item {
                             anchors.verticalCenter: parent.verticalCenter
                             spacing: 1
                             StyledText { text: "Write"; opacity: 0.6; font.pixelSize: Config.fontSize - 3 }
-                            StyledText { text: (root.stats.disk.write_mb / 1024).toFixed(1) + " GB"; font.bold: true; font.family: Config.monoFontFamily }
+                            StyledText { text: Utils.formatGB(root.stats.disk.write_mb); font.bold: true; font.family: Config.monoFontFamily }
                         }
                     }
                 }
@@ -530,7 +531,7 @@ Item {
                             anchors.verticalCenter: parent.verticalCenter
                             spacing: 1
                             StyledText { text: "Sent"; opacity: 0.6; font.pixelSize: Config.fontSize - 3 }
-                            StyledText { text: (root.stats.network.sent_mb / 1024).toFixed(1) + " GB"; font.bold: true; font.family: Config.monoFontFamily }
+                            StyledText { text: Utils.formatGB(root.stats.network.sent_mb); font.bold: true; font.family: Config.monoFontFamily }
                         }
                     }
                 }
@@ -554,7 +555,7 @@ Item {
                             anchors.verticalCenter: parent.verticalCenter
                             spacing: 1
                             StyledText { text: "Received"; opacity: 0.6; font.pixelSize: Config.fontSize - 3 }
-                            StyledText { text: (root.stats.network.received_mb / 1024).toFixed(1) + " GB"; font.bold: true; font.family: Config.monoFontFamily }
+                            StyledText { text: Utils.formatGB(root.stats.network.received_mb); font.bold: true; font.family: Config.monoFontFamily }
                         }
                     }
                 }
@@ -652,7 +653,7 @@ Item {
                                 anchors.verticalCenter: parent.verticalCenter
                                 width: 55
                                 horizontalAlignment: Text.AlignRight
-                                text: modelData.cpu_percent.toFixed(1) + "%"
+                                text: Utils.formatPercent(modelData.cpu_percent)
                                 color: root.levelColor(modelData.cpu_percent, 50, 80)
                                 font.family: Config.monoFontFamily
                                 font.pixelSize: Config.fontSize - 2
@@ -661,7 +662,7 @@ Item {
                                 anchors.verticalCenter: parent.verticalCenter
                                 width: 55
                                 horizontalAlignment: Text.AlignRight
-                                text: modelData.memory_percent.toFixed(1) + "%"
+                                text: Utils.formatPercent(modelData.memory_percent)
                                 opacity: 0.5
                                 font.pixelSize: Config.fontSize - 3
                                 font.family: Config.monoFontFamily
