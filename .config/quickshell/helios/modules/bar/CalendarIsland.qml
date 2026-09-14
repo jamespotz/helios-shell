@@ -94,10 +94,6 @@ Item {
                     icon: "add"
                     onClicked: root.manageOpen = !root.manageOpen
                 }
-                IconButton {
-                    icon: "filter_list"
-                    onClicked: root.manageOpen = !root.manageOpen
-                }
             }
         }
 
