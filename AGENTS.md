@@ -134,6 +134,7 @@ After making a change:
 2. Reload or relaunch Quickshell when the change affects runtime QML.
 3. Verify the affected interaction or UI state directly.
 4. Check for QML/runtime errors introduced by the change.
+5. Instead of running a new instance of Quickshell kill all Quickshell instance before relaunching and always use the `./.config/hypr/helios-reload.sh`.
 
 Do not claim a change works solely because the code looks correct.
 

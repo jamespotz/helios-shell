@@ -17,14 +17,17 @@ PanelWindow {
     WlrLayershell.namespace: "helios:osd"
     WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
 
+    readonly property int shadowPadding: 24
+
     anchors { bottom: true }
-    margins.bottom: 60
-    implicitWidth: 260
-    implicitHeight: 56
+    margins.bottom: 60 - shadowPadding
+    implicitWidth: 260 + shadowPadding * 2
+    implicitHeight: 56 + shadowPadding * 2
     color: "transparent"
     exclusiveZone: 0
-    visible: hideTimer.running
+    visible: shown
 
+    property bool shown: false
     property string kind: "volume"
     property real level: 0
     property bool muted: false
@@ -38,6 +41,7 @@ PanelWindow {
         kind = newKind;
         level = Math.max(0, Math.min(1, newLevel));
         muted = !!isMuted;
+        shown = true;
         hideTimer.restart();
     }
 
@@ -46,6 +50,7 @@ PanelWindow {
     function showMessage(newKind, text) {
         kind = newKind;
         message = text;
+        shown = true;
         hideTimer.restart();
     }
 
@@ -62,7 +67,11 @@ PanelWindow {
 
     // Bluetooth toasts carry a device name to read, so give them a bit
     // longer on screen than the volume/brightness level bars.
-    Timer { id: hideTimer; interval: osd.kind === "bluetooth" ? 2500 : 1500 }
+    Timer {
+        id: hideTimer
+        interval: osd.kind === "bluetooth" ? 2500 : 1500
+        onTriggered: osd.shown = false
+    }
 
     Process {
         id: brightnessGet
@@ -101,6 +110,7 @@ PanelWindow {
 
     PanelBackground {
         anchors.fill: parent
+        anchors.margins: osd.shadowPadding
 
         Row {
             anchors.fill: parent

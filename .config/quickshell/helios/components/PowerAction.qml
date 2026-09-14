@@ -21,6 +21,8 @@ Item {
             root.armRequested();
     }
 
+    property string keyHint: ""
+
     implicitWidth: 84
     implicitHeight: 84
     scale: Config.reducedMotion ? 1 : actionMouse.pressed ? 0.96 : 1
@@ -51,6 +53,17 @@ Item {
             text: root.armed ? "Confirm?" : root.label
             color: root.dangerActive ? Colors.accentText : root.armed ? Colors.accentText : Colors.subtext
         }
+    }
+
+    StyledText {
+        anchors.top: parent.top
+        anchors.right: parent.right
+        anchors.margins: 6
+        visible: root.keyHint !== "" && !root.armed
+        text: root.keyHint
+        font.pixelSize: Config.fontSize - 3
+        color: Colors.subtext
+        opacity: 0.6
     }
 
     // Focus ring — keyboard-navigation feedback
