@@ -8,17 +8,22 @@ import "../services"
 QtObject {
     id: root
 
-    function buildZedTheme(p) {
+    // transparent variants keep every color but alpha the surface/background
+    // family (dank-zed-theme.json's "B6" convention) and drop the opaque
+    // window background so the compositor's blur shows through.
+    function buildZedStyle(p, transparent) {
         const isDark = Themes.isDark(p.background);
         const alpha = (hex, aa) => hex + aa;
+        const bg = (hex) => transparent ? alpha(hex, "B6") : hex;
         const syn = (color, style, weight) => ({ color: color, font_style: style || null, font_weight: weight || null });
 
         const style = {
             accents: [p.accent, p.success, p.warning],
-            "background.appearance": isDark ? "dark" : "light",
+            "background.appearance": transparent ? "blurred" : "opaque",
             border: p.overlay, "border.variant": p.overlay, "border.focused": p.accent,
             "border.selected": p.accent, "border.transparent": "#00000000", "border.disabled": p.overlay,
-            "elevated_surface.background": p.surfaceHigh, "surface.background": p.surface, background: p.background,
+            "elevated_surface.background": bg(p.surfaceHigh), "surface.background": bg(p.surface),
+            background: transparent ? null : p.background,
             "element.background": p.surface, "element.hover": p.surfaceHigh, "element.active": p.surfaceHigh,
             "element.selected": p.surfaceHigh, "element.disabled": p.surface,
             "drop_target.background": alpha(p.accent, "22"),
@@ -29,22 +34,22 @@ QtObject {
             "text.disabled": p.subtext, "text.accent": p.accent,
             icon: p.text, "icon.muted": p.subtext, "icon.disabled": p.subtext,
             "icon.placeholder": p.subtext, "icon.accent": p.accent,
-            "status_bar.background": p.surface, "title_bar.background": p.surface,
-            "title_bar.inactive_background": p.surface, "toolbar.background": p.background,
-            "tab_bar.background": p.surface, "tab.inactive_background": p.surface, "tab.active_background": p.background,
+            "status_bar.background": bg(p.surface), "title_bar.background": bg(p.surface),
+            "title_bar.inactive_background": bg(p.surface), "toolbar.background": bg(p.background),
+            "tab_bar.background": bg(p.surface), "tab.inactive_background": bg(p.surface), "tab.active_background": bg(p.background),
             "search.match_background": alpha(p.accent, "55"),
-            "panel.background": p.surface, "panel.focused_border": p.accent, "pane.focused_border": p.accent,
+            "panel.background": bg(p.surface), "panel.focused_border": p.accent, "pane.focused_border": p.accent,
             "scrollbar.thumb.background": alpha(p.overlay, "80"), "scrollbar.thumb.hover_background": p.overlay,
             "scrollbar.thumb.border": "#00000000", "scrollbar.track.background": "#00000000", "scrollbar.track.border": "#00000000",
-            "editor.foreground": p.text, "editor.background": p.background, "editor.gutter.background": p.background,
-            "editor.subheader.background": p.surface, "editor.indent_guide": alpha(p.overlay, "40"),
+            "editor.foreground": p.text, "editor.background": bg(p.background), "editor.gutter.background": bg(p.background),
+            "editor.subheader.background": bg(p.surface), "editor.indent_guide": alpha(p.overlay, "40"),
             "editor.indent_guide_active": p.overlay, "editor.active_line.background": alpha(p.surface, "80"),
             "editor.highlighted_line.background": alpha(p.surfaceHigh, "80"), "editor.line_number": p.subtext,
             "editor.active_line_number": p.text, "editor.invisible": p.overlay,
             "editor.wrap_guide": alpha(p.overlay, "30"), "editor.active_wrap_guide": alpha(p.overlay, "60"),
             "editor.document_highlight.read_background": alpha(p.accent, "22"),
             "editor.document_highlight.write_background": alpha(p.accent, "33"),
-            "terminal.background": p.background, "terminal.foreground": p.text,
+            "terminal.background": bg(p.background), "terminal.foreground": p.text,
             "terminal.bright_foreground": p.text, "terminal.dim_foreground": p.subtext,
             "terminal.ansi.black": p.surfaceHigh, "terminal.ansi.bright_black": p.overlay, "terminal.ansi.dim_black": p.surface,
             "terminal.ansi.red": p.danger, "terminal.ansi.bright_red": p.danger, "terminal.ansi.dim_red": p.danger,
@@ -87,11 +92,20 @@ QtObject {
             style[key + ".border"] = alpha(c, "55");
         }
 
+        return style;
+    }
+
+    function buildZedTheme(p) {
+        const isDark = Themes.isDark(p.background);
+        const appearance = isDark ? "dark" : "light";
         return {
             "$schema": "https://zed.dev/schema/themes/v0.2.0.json",
             name: "Helios",
             author: "helios",
-            themes: [{ name: "Helios", appearance: isDark ? "dark" : "light", style: style }]
+            themes: [
+                { name: "Helios", appearance: appearance, style: root.buildZedStyle(p, false) },
+                { name: "Helios Transparent", appearance: appearance, style: root.buildZedStyle(p, true) }
+            ]
         };
     }
 
