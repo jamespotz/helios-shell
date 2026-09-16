@@ -326,6 +326,12 @@ PanelWindow {
             Loader {
                 id: pageLoader
                 width: contentFlick.width
+                // Unloads on close instead of just hiding — a PanelWindow's
+                // tree survives `visible: false`, so without this any
+                // unapplied draft edit (font family, island width, satellite
+                // spring...) would still be sitting there next time the
+                // window opens instead of resyncing to the real Config value.
+                active: settingsWindow.visible
                 sourceComponent: settingsWindow.selectedPage === "wallpaper" ? wallpaperPage
                     : settingsWindow.selectedPage === "displays" ? displaysPage
                     : settingsWindow.selectedPage === "sound" ? soundPage

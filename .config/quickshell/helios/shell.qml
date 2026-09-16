@@ -101,10 +101,11 @@ ShellRoot {
         }
         function close() { IslandNavigation.close() }
         function liquidGlass(enabled: bool) { Bridge.liquidGlassEnabled = enabled }
-        function appearance(width: int, height: int, gap: int, fontSize: int) {
-            Config.setIslandAppearance(width, height, gap, fontSize);
+        function appearance(width: int, height: int, gap: int, widgetSpacing: int) {
+            Config.setIslandAppearance(width, height, gap, widgetSpacing);
         }
         function resetAppearance() { Config.resetIslandAppearance() }
+        function font(family: string, size: int) { Config.setFont(family, size) }
     }
 
     IpcHandler {

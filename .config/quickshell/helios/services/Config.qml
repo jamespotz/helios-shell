@@ -8,10 +8,22 @@ QtObject {
 
     // Apple uses SF Pro — on Linux, Inter is the closest match with its
     // tight metrics, open apertures, and tabular figures. JetBrains Mono
-    // for monospace (geometric, clear at small sizes like SF Mono).
-    readonly property string fontFamily: "Inter"
+    // for monospace (geometric, clear at small sizes like SF Mono). Body
+    // font is user-tunable from Settings' "Fonts" card; icon/mono fonts
+    // stay fixed since Material Symbols relies on ligatures.
+    readonly property string fontFamily: settingsAdapter.fontFamily
     readonly property string monoFontFamily: "JetBrains Mono"
     readonly property string iconFontFamily: "Material Symbols Rounded"
+
+    function setFont(family, size) {
+        settingsAdapter.fontFamily = family;
+        settingsAdapter.fontSize = size;
+        root.settingsFile.writeAdapter();
+    }
+
+    function resetFont() {
+        root.setFont("Inter", 13);
+    }
 
     readonly property string terminal: "ghostty"
     readonly property string pamService: "system-auth"
@@ -32,6 +44,14 @@ QtObject {
     readonly property int idleBumpWidth: settingsAdapter.idleBumpWidth
     readonly property int idleBumpHeight: settingsAdapter.idleBumpHeight
     readonly property int islandTopGap: settingsAdapter.islandTopGap
+    // Spacing between widgets in the collapsed idle bump — user-tunable
+    // from IslandSettings' "Idle" section.
+    readonly property int idleWidgetSpacing: settingsAdapter.idleWidgetSpacing
+    // Padding around the expanded/peek island's content — user-tunable
+    // from IslandSettings' "Expanded" section. Idle mode still forces 0
+    // (see Bar.qml), only expanded/peek content uses these.
+    readonly property int islandContentPadH: settingsAdapter.islandContentPadH
+    readonly property int islandContentPadV: settingsAdapter.islandContentPadV
 
     // exclusiveZone: how much top space Hyprland reserves for *every* window
     // below, so a maximized window's title bar never sits flush against the
@@ -76,27 +96,82 @@ QtObject {
     // "Behavior" section.
     readonly property int hoverCollapseDelay: settingsAdapter.hoverCollapseDelay
 
-    function setIslandBehavior(delay, stiffness, damping) {
+    // Idle and expanded share one IslandShape instance (it morphs between
+    // sizes rather than swapping shapes), so its shadow is one shared knob
+    // rather than per-mode — user-tunable from IslandSettings' "Behavior"
+    // section. Satellites use their own separate shadow values below.
+    readonly property real islandShadowGlowRadius: settingsAdapter.islandShadowGlowRadius
+    readonly property real islandShadowSpread: settingsAdapter.islandShadowSpread
+
+    function setIslandBehavior(delay, stiffness, damping, shadowGlowRadius, shadowSpread) {
         settingsAdapter.hoverCollapseDelay = delay;
         settingsAdapter.islandSpringStiffness = stiffness;
         settingsAdapter.islandSpringDamping = damping;
+        settingsAdapter.islandShadowGlowRadius = shadowGlowRadius;
+        settingsAdapter.islandShadowSpread = shadowSpread;
         root.settingsFile.writeAdapter();
     }
 
     function resetIslandBehavior() {
-        root.setIslandBehavior(260, 4.0, 1.0);
+        root.setIslandBehavior(260, 4.0, 1.0, 14, 0.08);
     }
 
-    function setIslandAppearance(width, height, gap, size) {
+    function setIslandAppearance(width, height, gap, widgetSpacing) {
         settingsAdapter.idleBumpWidth = width;
         settingsAdapter.idleBumpHeight = height;
         settingsAdapter.islandTopGap = gap;
-        settingsAdapter.fontSize = size;
+        settingsAdapter.idleWidgetSpacing = widgetSpacing;
         root.settingsFile.writeAdapter();
     }
 
     function resetIslandAppearance() {
-        root.setIslandAppearance(140, 32, 10, 13);
+        root.setIslandAppearance(140, 32, 10, 8);
+    }
+
+    function setExpandedAppearance(padH, padV) {
+        settingsAdapter.islandContentPadH = padH;
+        settingsAdapter.islandContentPadV = padV;
+        root.settingsFile.writeAdapter();
+    }
+
+    function resetExpandedAppearance() {
+        root.setExpandedAppearance(18, 10);
+    }
+
+    // Satellite badges (recording/maintenance) — visually and motion-wise
+    // independent from the main island; user-tunable from IslandSettings'
+    // "Satellite" section.
+    readonly property int satelliteBadgeSize: settingsAdapter.satelliteBadgeSize
+    readonly property int satelliteRestGap: settingsAdapter.satelliteRestGap
+    readonly property int satellitePadH: settingsAdapter.satellitePadH
+    readonly property int satellitePadV: settingsAdapter.satellitePadV
+    readonly property real satelliteShadowGlowRadius: settingsAdapter.satelliteShadowGlowRadius
+    readonly property real satelliteShadowSpread: settingsAdapter.satelliteShadowSpread
+    readonly property real satelliteSpringStiffness: settingsAdapter.satelliteSpringStiffness
+    readonly property real satelliteSpringDamping: settingsAdapter.satelliteSpringDamping
+
+    function setSatelliteAppearance(badgeSize, restGap, padH, padV, shadowGlowRadius, shadowSpread) {
+        settingsAdapter.satelliteBadgeSize = badgeSize;
+        settingsAdapter.satelliteRestGap = restGap;
+        settingsAdapter.satellitePadH = padH;
+        settingsAdapter.satellitePadV = padV;
+        settingsAdapter.satelliteShadowGlowRadius = shadowGlowRadius;
+        settingsAdapter.satelliteShadowSpread = shadowSpread;
+        root.settingsFile.writeAdapter();
+    }
+
+    function resetSatelliteAppearance() {
+        root.setSatelliteAppearance(32, 6, 10, 10, 5, 0);
+    }
+
+    function setSatelliteBehavior(stiffness, damping) {
+        settingsAdapter.satelliteSpringStiffness = stiffness;
+        settingsAdapter.satelliteSpringDamping = damping;
+        root.settingsFile.writeAdapter();
+    }
+
+    function resetSatelliteBehavior() {
+        root.setSatelliteBehavior(4.0, 1.0);
     }
 
     // Which widgets the expanded/peek island shows — user-tunable from the
@@ -164,10 +239,14 @@ QtObject {
 
         JsonAdapter {
             id: settingsAdapter
+            property string fontFamily: "Inter"
             property int fontSize: 13
             property int idleBumpWidth: 140
             property int idleBumpHeight: 32
             property int islandTopGap: 10
+            property int idleWidgetSpacing: 8
+            property int islandContentPadH: 18
+            property int islandContentPadV: 10
 
             property bool showWorkspaces: true
             property bool showActiveWindow: true
@@ -196,6 +275,17 @@ QtObject {
             property int hoverCollapseDelay: 260
             property real islandSpringStiffness: 4.0
             property real islandSpringDamping: 1.0
+            property real islandShadowGlowRadius: 14
+            property real islandShadowSpread: 0.08
+
+            property int satelliteBadgeSize: 32
+            property int satelliteRestGap: 6
+            property int satellitePadH: 10
+            property int satellitePadV: 10
+            property real satelliteShadowGlowRadius: 5
+            property real satelliteShadowSpread: 0
+            property real satelliteSpringStiffness: 4.0
+            property real satelliteSpringDamping: 1.0
         }
     }
 }

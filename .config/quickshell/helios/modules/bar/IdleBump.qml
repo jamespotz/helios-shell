@@ -32,7 +32,7 @@ Item {
     Row {
         id: row
         anchors.centerIn: parent
-        spacing: 8
+        spacing: Config.idleWidgetSpacing
 
         Workspaces {
             visible: Config.showIdleWorkspaces

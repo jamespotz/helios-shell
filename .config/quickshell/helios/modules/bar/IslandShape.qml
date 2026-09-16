@@ -15,12 +15,14 @@ Item {
     // black sells the "floating notch" illusion.
     property color fillColor: Colors.surface
     property bool shadowEnabled: true
-    // Satellites sit a few px from the island — its default blur (14) and
-    // this shape's own reach far enough into that gap to merge into a solid
-    // bridge. Satellites pass a smaller blur/spread so the shadow stays
-    // legible without touching the island's.
-    property real shadowGlowRadius: 14
-    property real shadowSpread: 0.08
+    // Satellites sit a few px from the island — its default blur and this
+    // shape's own reach far enough into that gap to merge into a solid
+    // bridge. Satellites pass their own smaller blur/spread (see
+    // Config.satelliteShadowGlowRadius/Spread) so the shadow stays legible
+    // without touching the island's. Defaults are user-tunable from
+    // IslandSettings' "Behavior" section.
+    property real shadowGlowRadius: Config.islandShadowGlowRadius
+    property real shadowSpread: Config.islandShadowSpread
 
     // Apple's continuous corner (squircle) can't be done in pure QML
     // without ShaderEffect, but a generous radius relative to height

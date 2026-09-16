@@ -30,14 +30,10 @@ PanelWindow {
         return players.some(p => p.isPlaying);
     }
 
-    readonly property int padH: mode === "idle" ? 0 : 18
-    readonly property int padV: mode === "idle" ? 0 : 10
-
-    // Recording/maintenance badge diameter — deliberately its own token
-    // rather than reusing Config.idleBumpHeight, which is a user-tunable
-    // setting for the idle pill and only happened to double as the
-    // satellite size before.
-    readonly property int satelliteSize: 32
+    // User-tunable from IslandSettings' "Expanded" section — idle mode
+    // still forces 0 regardless of the configured value.
+    readonly property int padH: mode === "idle" ? 0 : Config.islandContentPadH
+    readonly property int padV: mode === "idle" ? 0 : Config.islandContentPadV
 
     // The one seam for "something is temporarily covering the island, so
     // its close/collapse triggers should hold off" — right now that's just
@@ -331,7 +327,6 @@ PanelWindow {
         id: leftSatellite
         anchorItem: hitArea
         onRight: false
-        badgeSize: bar.satelliteSize
         active: ScreenRecorder.recording
         badge: Component { RecordingDot {} }
     }
@@ -346,7 +341,6 @@ PanelWindow {
         id: rightSatellite
         anchorItem: hitArea
         onRight: true
-        badgeSize: bar.satelliteSize
         interactive: true
         active: Maintenance.hasAlert
         expanded: IslandNavigation.satelliteOpenFor(bar.screen.name, "maintenance")

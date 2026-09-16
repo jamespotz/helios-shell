@@ -16,23 +16,24 @@ Item {
     // satellite along in the same instant jump. x below springs instead.
     required property Item anchorItem
     property bool onRight: false
-    property real restGap: 6
+    property real restGap: Config.satelliteRestGap
 
     property bool active: false
     property bool expanded: false
     property bool interactive: false
 
-    property int badgeSize: 32
-    property int padH: 10
-    property int padV: 10
+    property int badgeSize: Config.satelliteBadgeSize
+    property int padH: Config.satellitePadH
+    property int padV: Config.satellitePadV
 
     property color fillColor: Colors.surface
     property bool shadowEnabled: true
     // Small enough that the blur doesn't reach past restGap into the
     // island's own shadow — keeps a visible shadow without the two merging
-    // into a bridge across the gap.
-    property real shadowGlowRadius: 5
-    property real shadowSpread: 0
+    // into a bridge across the gap. User-tunable from IslandSettings'
+    // "Satellite" section.
+    property real shadowGlowRadius: Config.satelliteShadowGlowRadius
+    property real shadowSpread: Config.satelliteShadowSpread
 
     property Component badge
     property Component expandedContent
@@ -50,7 +51,7 @@ Item {
     anchors.top: anchorItem.top
     x: root.onRight ? anchorItem.x + anchorItem.width + gap : anchorItem.x - width - gap
     Behavior on x {
-        SpringAnimation { spring: Config.islandSpringStiffness; damping: Config.islandSpringDamping }
+        SpringAnimation { spring: Config.satelliteSpringStiffness; damping: Config.satelliteSpringDamping }
     }
 
     readonly property int _expandedWidth: expandedLoader.item ? expandedLoader.item.implicitWidth + root.padH * 2 : root.badgeSize
@@ -59,10 +60,10 @@ Item {
     width: root.expanded ? Math.min(root._expandedWidth, Config.islandMaxWidth) : root.badgeSize
     height: root.expanded ? Math.min(root._expandedHeight, Config.islandMaxHeight) : root.badgeSize
     Behavior on width {
-        SpringAnimation { spring: Config.islandSpringStiffness; damping: Config.islandSpringDamping }
+        SpringAnimation { spring: Config.satelliteSpringStiffness; damping: Config.satelliteSpringDamping }
     }
     Behavior on height {
-        SpringAnimation { spring: Config.islandSpringStiffness; damping: Config.islandSpringDamping }
+        SpringAnimation { spring: Config.satelliteSpringStiffness; damping: Config.satelliteSpringDamping }
     }
 
     opacity: root.active || root.expanded ? 1 : 0
