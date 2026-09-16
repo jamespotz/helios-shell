@@ -128,7 +128,14 @@ Item {
         MouseArea {
             anchors.fill: parent
             cursorShape: Qt.PointingHandCursor
-            onClicked: btn.clicked()
+            onClicked: {
+                // Force any focused LabeledNumberField to commit its pending
+                // edit (TextInput.editingFinished fires on focus loss) before
+                // reading draft values — otherwise a value typed but not
+                // Enter/Tab-confirmed gets silently dropped.
+                btn.forceActiveFocus();
+                btn.clicked();
+            }
         }
     }
 

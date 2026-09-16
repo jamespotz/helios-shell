@@ -41,6 +41,12 @@ Item {
 
     property real gap: 0
 
+    // Same escape-to-close as the main island's hitArea (Bar.qml) — focus
+    // has to sit here, the shallowest ancestor of expandedContent, so keys
+    // typed into a nested field (e.g. a SearchField) still bubble up to it.
+    focus: root.expanded
+    Keys.onEscapePressed: IslandNavigation.close()
+
     anchors.top: anchorItem.top
     x: root.onRight ? anchorItem.x + anchorItem.width + gap : anchorItem.x - width - gap
     Behavior on x {
