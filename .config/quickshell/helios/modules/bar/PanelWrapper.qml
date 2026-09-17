@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Layouts
 import "../../services"
 import "../../components"
 
@@ -9,6 +10,7 @@ Item {
     id: root
 
     readonly property int maxContentHeight: Config.islandMaxHeight - 120
+    readonly property int marginSize: 5
 
     // A tab's implicitHeight has to stay bound to its TRUE full content
     // height (see e.g. IslandSettings.qml's `implicitHeight: col.implicitHeight`)
@@ -18,44 +20,24 @@ Item {
     // for. To make a specific tab render shorter (and scrollable) without
     // touching its real content height, cap its effective viewport height
     // here instead, per tab.
-    readonly property int _effectiveMaxHeight: IslandNavigation.current && IslandNavigation.current.maxHeight > 0
-        ? IslandNavigation.current.maxHeight : root.maxContentHeight
+    readonly property int _effectiveMaxHeight: IslandNavigation.current && IslandNavigation.current.maxHeight > 0 ? IslandNavigation.current.maxHeight : root.maxContentHeight
 
     implicitWidth: pane.width
-    implicitHeight: tabs.height + pane.spacing + Math.min(panelLoader.implicitHeight, root._effectiveMaxHeight)
+    implicitHeight: pane.spacing + root.marginSize + Math.min(panelLoader.implicitHeight, root._effectiveMaxHeight)
 
-    Column {
+    ColumnLayout {
         id: pane
         // Floor is a defensive minimum, well below any real tab's implicitWidth.
-        width: Math.max(220, panelLoader.implicitWidth)
+        width: Math.max(230, panelLoader.implicitWidth)
         spacing: 14
 
-        // ─── Header: close only. Each island renders its own icon + name
-        // in its content (see DisplayIsland.qml). Tab switching is IPC-only
-        // now (`quickshell -c helios ipc call island toggle <tab>`).
-        Item {
-            id: tabs
-            width: pane.width
-            height: 28
-
-            IconButton {
-                id: closeButton
-                anchors.right: parent.right
-                anchors.verticalCenter: parent.verticalCenter
-                width: 28
-                height: 28
-                icon: "close"
-                iconSize: 14
-                iconColor: Colors.subtext
-                onClicked: IslandNavigation.close()
-            }
-        }
-
         // ─── Scrollable content area ─────────────────────────────────────
-        Item {
+        Rectangle {
             id: scrollWrap
-            width: pane.width
-            height: Math.min(panelLoader.implicitHeight, root._effectiveMaxHeight)
+            color: "transparent"
+            Layout.fillWidth: true
+            Layout.preferredHeight: Math.min(panelLoader.implicitHeight, root._effectiveMaxHeight)
+            Layout.margins: root.marginSize
 
             Flickable {
                 id: flick
@@ -70,11 +52,24 @@ Item {
                     id: panelLoader
                     width: flick.width
                     source: IslandNavigation.current ? IslandNavigation.current.source : ""
+                    opacity: 0
+                    onLoaded: panelFadeIn.restart()
+
+                    NumberAnimation {
+                        id: panelFadeIn
+                        target: panelLoader
+                        property: "opacity"
+                        from: 0
+                        to: 1
+                        duration: 550
+                        easing.type: Easing.BezierSpline
+                    }
                 }
             }
 
-            ScrollIndicator { target: flick }
+            ScrollIndicator {
+                target: flick
+            }
         }
     }
-
 }

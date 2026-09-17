@@ -53,9 +53,7 @@ PanelWindow {
     // IPC-opened panel content needs immediate keyboard focus for search
     // fields and shortcuts. Passive cards must never steal keyboard input
     // from the active application when they appear.
-    WlrLayershell.keyboardFocus: bar.panelOpen ? WlrKeyboardFocus.Exclusive
-        : bar.expanded ? WlrKeyboardFocus.OnDemand
-        : WlrKeyboardFocus.None
+    WlrLayershell.keyboardFocus: bar.panelOpen ? WlrKeyboardFocus.Exclusive : bar.expanded || IslandNavigation.satelliteOpenFor(bar.modelData.name, "maintenance") ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
 
     anchors.top: true
     // A small gap from the true screen edge so the pill's top-corner
@@ -80,7 +78,9 @@ PanelWindow {
     implicitHeight: Config.islandMaxHeight
     mask: Region {
         item: hitArea
-        Region { item: rightSatellite }
+        Region {
+            item: rightSatellite
+        }
     }
 
     Timer {
@@ -93,7 +93,10 @@ PanelWindow {
         // while the menu is still visible; a genuine hover return still
         // cancels this timer normally (see hoverTracker.onHoveredChanged).
         onTriggered: {
-            if (bar.suppressCollapse) { hoverCollapseTimer.restart(); return; }
+            if (bar.suppressCollapse) {
+                hoverCollapseTimer.restart();
+                return;
+            }
             bar.hovering = false;
         }
     }
@@ -113,8 +116,12 @@ PanelWindow {
     }
 
     onPanelOpenChanged: {
-        if (panelOpen) focusGrabDelay.restart();
-        else { focusGrabDelay.stop(); focusGrab.active = false; }
+        if (panelOpen)
+            focusGrabDelay.restart();
+        else {
+            focusGrabDelay.stop();
+            focusGrab.active = false;
+        }
     }
 
     HyprlandFocusGrab {
@@ -122,8 +129,10 @@ PanelWindow {
         windows: [bar]
         active: false
         onCleared: {
-            if (bar.suppressCollapse) return;
-            if (bar.panelOpen) IslandNavigation.close();
+            if (bar.suppressCollapse)
+                return;
+            if (bar.panelOpen)
+                IslandNavigation.close();
         }
     }
 
@@ -217,10 +226,8 @@ PanelWindow {
         // would get hard-cut by the surface edge itself: square, no
         // rounding, past the mask entirely. Clamping keeps overflow inside
         // the visual's own rounded-corner clip below instead.
-        width: content.item ? Math.min(content.item.implicitWidth + bar.padH * 2, Config.islandMaxWidth)
-            : bar.expanded ? Config.islandMaxWidth : Config.idleBumpWidth
-        height: content.item ? Math.min(content.item.implicitHeight + bar.padV * 2, Config.islandMaxHeight)
-            : bar.expanded ? Config.islandMaxHeight : Config.idleBumpHeight
+        width: content.item ? Math.min(content.item.implicitWidth + bar.padH * 2, Config.islandMaxWidth) : bar.expanded ? Config.islandMaxWidth : Config.idleBumpWidth
+        height: content.item ? Math.min(content.item.implicitHeight + bar.padV * 2, Config.islandMaxHeight) : bar.expanded ? Config.islandMaxHeight : Config.idleBumpHeight
 
         // A plain MouseArea here would lose hover the instant the cursor moves
         // onto a nested IconButton's own MouseArea (overlapping MouseAreas
@@ -231,8 +238,13 @@ PanelWindow {
         HoverHandler {
             id: hoverTracker
             onHoveredChanged: {
-                if (hoverTracker.hovered) { hoverCollapseTimer.stop(); hoverExpandTimer.restart(); }
-                else { hoverExpandTimer.stop(); hoverCollapseTimer.restart(); }
+                if (hoverTracker.hovered) {
+                    hoverCollapseTimer.stop();
+                    hoverExpandTimer.restart();
+                } else {
+                    hoverExpandTimer.stop();
+                    hoverCollapseTimer.restart();
+                }
             }
         }
 
@@ -264,10 +276,16 @@ PanelWindow {
             // lockstep — mismatched width/height easing is what makes a
             // morph read as sloppy.
             Behavior on width {
-                SpringAnimation { spring: Config.islandSpringStiffness; damping: Config.islandSpringDamping }
+                SpringAnimation {
+                    spring: Config.islandSpringStiffness
+                    damping: Config.islandSpringDamping
+                }
             }
             Behavior on height {
-                SpringAnimation { spring: Config.islandSpringStiffness; damping: Config.islandSpringDamping }
+                SpringAnimation {
+                    spring: Config.islandSpringStiffness
+                    damping: Config.islandSpringDamping
+                }
             }
 
             IslandShape {
@@ -297,13 +315,7 @@ PanelWindow {
                     anchors.topMargin: bar.padV
                     anchors.horizontalCenter: parent.horizontalCenter
                     opacity: 0
-                    sourceComponent: bar.panelOpen ? panelComp
-                        : bar.notifyMode ? notifyComp
-                        : bar.taskMode ? taskComp
-                        : bar.meetingMode ? meetingComp
-                        : bar.batteryMode ? batteryComp
-                        : bar.hovering ? peekComp
-                        : idleComp
+                    sourceComponent: bar.panelOpen ? panelComp : bar.notifyMode ? notifyComp : bar.taskMode ? taskComp : bar.meetingMode ? meetingComp : bar.batteryMode ? batteryComp : bar.hovering ? peekComp : idleComp
                     onLoaded: contentFadeIn.restart()
 
                     NumberAnimation {
@@ -328,7 +340,9 @@ PanelWindow {
         anchorItem: hitArea
         onRight: false
         active: ScreenRecorder.recording
-        badge: Component { RecordingDot {} }
+        badge: Component {
+            RecordingDot {}
+        }
     }
 
     // Same satellite treatment as leftSatellite, mirrored to the right of
@@ -368,11 +382,37 @@ PanelWindow {
         expandedContent: panelComp
     }
 
-    Component { id: idleComp; IdleBump { mediaPlaying: bar.hasActiveMedia; targetScreen: bar.screen } }
-    Component { id: peekComp; PeekContent { targetScreen: bar.screen } }
-    Component { id: notifyComp; NotifyCard {} }
-    Component { id: taskComp; TaskCard {} }
-    Component { id: meetingComp; MeetingCard {} }
-    Component { id: batteryComp; BatteryAlertCard {} }
-    Component { id: panelComp; PanelWrapper {} }
+    Component {
+        id: idleComp
+        IdleBump {
+            mediaPlaying: bar.hasActiveMedia
+            targetScreen: bar.screen
+        }
+    }
+    Component {
+        id: peekComp
+        PeekContent {
+            targetScreen: bar.screen
+        }
+    }
+    Component {
+        id: notifyComp
+        NotifyCard {}
+    }
+    Component {
+        id: taskComp
+        TaskCard {}
+    }
+    Component {
+        id: meetingComp
+        MeetingCard {}
+    }
+    Component {
+        id: batteryComp
+        BatteryAlertCard {}
+    }
+    Component {
+        id: panelComp
+        PanelWrapper {}
+    }
 }
