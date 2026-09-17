@@ -54,3 +54,4 @@ singleton CameraActivity 1.0 CameraActivity.qml
 singleton Automations 1.0 Automations.qml
 singleton DefaultApps 1.0 DefaultApps.qml
 singleton Maintenance 1.0 Maintenance.qml
+singleton HyprlandConfig 1.0 HyprlandConfig.qml

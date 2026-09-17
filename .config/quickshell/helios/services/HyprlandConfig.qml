@@ -76,7 +76,7 @@ QtObject {
             return out + pad + "}";
         }
 
-        return "hl.config({\n    " + topKey + " = " + renderTable(tree[topKey] || {}, 1).replace(/^\{\n/, "{\n") + ",\n})\n";
+        return "hl.config({\n    " + topKey + " = " + renderTable(tree[topKey] || {}, 1) + ",\n})\n";
     }
 
     function readLiveOptions(paths, onComplete) {
