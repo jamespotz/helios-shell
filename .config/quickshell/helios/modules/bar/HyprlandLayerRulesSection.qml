@@ -82,8 +82,8 @@ Item {
     }
 
     function save() {
-        HyprlandConfig.saveSection("layer_rules", root.buildLua());
         HyprlandConfig.setSectionField("layer_rules", "__state", root.state);
+        HyprlandConfig.saveSection("layer_rules", root.buildLua());
     }
 
     Component.onCompleted: {
@@ -127,7 +127,7 @@ Item {
                     Repeater {
                         model: root.propDefs
                         Loader {
-                            required property var modelData: null
+                            required property var modelData
                             property var propDef: modelData
                             width: col.width - 10
                             sourceComponent: propDef.type === "bool" ? boolPropField : numPropField
@@ -185,8 +185,7 @@ Item {
             width: parent.width
             implicitHeight: errText.implicitHeight + 20
             radius: Colors.radiusSmall
-            color: Colors.danger
-            opacity: 0.15
+            color: Qt.rgba(Colors.danger.r, Colors.danger.g, Colors.danger.b, 0.15)
             StyledText {
                 id: errText
                 anchors.centerIn: parent

@@ -19,7 +19,7 @@ Item {
     readonly property var leafNames: ["windowsIn", "windowsOut", "windowsMove", "workspaces",
         "specialWorkspace", "fade", "fadeDim", "border", "layersIn", "layersOut", "fadeLayers"]
 
-    property var state: ({})
+    property var state: root.defaultState()
     property string editingCurve: ""
 
     implicitWidth: parent ? parent.width : 0
@@ -59,25 +59,28 @@ Item {
     function buildLua() {
         let body = "hl.config({\n    animations = {\n        enabled = " + root.state.enabled + ",\n    },\n})\n\n";
         for (const curve of root.state.curves)
-            body += "hl.curve(\"" + curve.name + "\", { type = \"bezier\", points = { { "
+            body += "hl.curve(" + HyprlandConfig.luaValue(curve.name) + ", { type = \"bezier\", points = { { "
                 + curve.points[0][0] + ", " + curve.points[0][1] + " }, { "
                 + curve.points[1][0] + ", " + curve.points[1][1] + " } } })\n";
         body += "\n";
         for (const leaf of root.leafNames) {
             const l = root.state.leaves[leaf];
-            body += "hl.animation({ leaf = \"" + leaf + "\", enabled = " + l.enabled
-                + ", speed = " + l.speed + ", bezier = \"" + l.bezier + "\""
-                + (l.style ? ", style = \"" + l.style.replace(/"/g, "\\\"") + "\"" : "") + " })\n";
+            body += "hl.animation({ leaf = " + HyprlandConfig.luaValue(leaf) + ", enabled = " + l.enabled
+                + ", speed = " + l.speed + ", bezier = " + HyprlandConfig.luaValue(l.bezier)
+                + (l.style ? ", style = " + HyprlandConfig.luaValue(l.style) : "") + " })\n";
         }
         return body;
     }
 
     function save() {
-        HyprlandConfig.saveSection("animations", root.buildLua());
         // Animations has list-shaped state that doesn't fit the flat
         // path->value convention other sections use — persist the whole
         // object directly instead of per-path setSectionField calls.
+        // setSectionField must run before saveSection: saveSection triggers
+        // the actual disk write of the draft, so writing state after it
+        // would persist a stale (pre-save) draft.
         HyprlandConfig.setSectionField("animations", "__state", root.state);
+        HyprlandConfig.saveSection("animations", root.buildLua());
     }
 
     Component.onCompleted: {
@@ -94,6 +97,14 @@ Item {
             title: "Enable animations"
             checked: root.state.enabled
             onToggled: v => root.state = Object.assign({}, root.state, { enabled: v })
+        }
+
+        StyledText {
+            text: "Saving replaces your entire animation configuration — review the curves and leaf settings below before saving for the first time."
+            color: Colors.subtext
+            font.pixelSize: Config.fontSize - 2
+            wrapMode: Text.WordWrap
+            width: parent.width
         }
 
         Column {
@@ -188,8 +199,7 @@ Item {
             width: parent.width
             implicitHeight: errText.implicitHeight + 20
             radius: Colors.radiusSmall
-            color: Colors.danger
-            opacity: 0.15
+            color: Qt.rgba(Colors.danger.r, Colors.danger.g, Colors.danger.b, 0.15)
             StyledText {
                 id: errText
                 anchors.centerIn: parent

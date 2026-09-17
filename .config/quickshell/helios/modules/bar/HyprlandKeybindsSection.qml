@@ -67,17 +67,17 @@ Item {
     function buildLua() {
         let body = "";
         for (const b of root.state.binds) {
-            if (!b.combo) continue;
-            body += "hl.bind(\"" + b.combo.replace(/"/g, "\\\"") + "\", " + root.dispatcherCall(b)
-                + ", { description = \"" + b.description.replace(/"/g, "\\\"") + "\""
+            if (!b.combo || (b.dispatcher === "raw" && !b.raw)) continue;
+            body += "hl.bind(" + HyprlandConfig.luaValue(b.combo) + ", " + root.dispatcherCall(b)
+                + ", { description = " + HyprlandConfig.luaValue(b.description)
                 + (b.locked ? ", locked = true" : "") + " })\n";
         }
         return body;
     }
 
     function save() {
-        HyprlandConfig.saveSection("binds", root.buildLua());
         HyprlandConfig.setSectionField("binds", "__state", root.state);
+        HyprlandConfig.saveSection("binds", root.buildLua());
     }
 
     Component.onCompleted: {
@@ -284,8 +284,7 @@ Item {
             width: parent.width
             implicitHeight: errText.implicitHeight + 20
             radius: Colors.radiusSmall
-            color: Colors.danger
-            opacity: 0.15
+            color: Qt.rgba(Colors.danger.r, Colors.danger.g, Colors.danger.b, 0.15)
             StyledText {
                 id: errText
                 anchors.centerIn: parent

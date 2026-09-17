@@ -118,8 +118,7 @@ Item {
             width: parent.width
             implicitHeight: errText.implicitHeight + 20
             radius: Colors.radiusSmall
-            color: Colors.danger
-            opacity: 0.15
+            color: Qt.rgba(Colors.danger.r, Colors.danger.g, Colors.danger.b, 0.15)
             StyledText {
                 id: errText
                 anchors.centerIn: parent

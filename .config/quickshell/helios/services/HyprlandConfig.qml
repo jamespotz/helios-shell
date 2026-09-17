@@ -9,9 +9,6 @@ import Quickshell.Io
 QtObject {
     id: root
 
-    readonly property var sectionNames: ["general", "decoration", "animations",
-        "input", "group", "misc", "xwayland", "cursor", "render", "debug", "ecosystem"]
-
     function sectionState(name) {
         return draftAdapter.sections[name] || {};
     }
@@ -100,6 +97,7 @@ QtObject {
                     : "bool" in parsed ? parsed.bool
                     : "str" in parsed ? parsed.str
                     : "vec2" in parsed ? parsed.vec2
+                    : "css" in parsed ? (parseInt(String(parsed.css).trim().split(/\s+/)[0], 10) || 0)
                     : null;
             } catch (e) {
                 result[path] = null;
