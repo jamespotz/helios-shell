@@ -62,7 +62,10 @@ PanelWindow {
         { id: "automation", label: "Automation", icon: "settings_suggest", group: "System",
           keywords: ["device rules", "headphones", "trigger", "action", "connect"] },
         { id: "defaultapps", label: "Default Apps", icon: "apps", group: "System",
-          keywords: ["browser", "file manager", "text editor", "xdg-mime", "association"] }
+          keywords: ["browser", "file manager", "text editor", "xdg-mime", "association"] },
+        { id: "hyprland", label: "Hyprland", icon: "settings_applications", group: "System",
+          keywords: ["gaps", "border", "animation", "bezier", "keybind", "window rule",
+          "layer rule", "blur", "rounding"] }
     ]
 
     property string searchText: ""
@@ -347,6 +350,7 @@ PanelWindow {
                     : settingsWindow.selectedPage === "automation" ? automationPage
                     : settingsWindow.selectedPage === "defaultapps" ? defaultAppsPage
                     : settingsWindow.selectedPage === "helios" ? heliosPage
+                    : settingsWindow.selectedPage === "hyprland" ? hyprlandPage
                     : appearancePage
 
                 opacity: 0
@@ -414,4 +418,5 @@ PanelWindow {
     Component { id: automationPage; AutomationIsland {} }
     Component { id: defaultAppsPage; DefaultAppsIsland {} }
     Component { id: heliosPage; IslandSettings {} }
+    Component { id: hyprlandPage; HyprlandSettings {} }
 }
