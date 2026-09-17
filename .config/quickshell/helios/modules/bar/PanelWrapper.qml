@@ -10,7 +10,7 @@ Item {
     id: root
 
     readonly property int maxContentHeight: Config.islandMaxHeight - 120
-    readonly property int marginSize: 5
+    readonly property int marginSize: 8
 
     // A tab's implicitHeight has to stay bound to its TRUE full content
     // height (see e.g. IslandSettings.qml's `implicitHeight: col.implicitHeight`)
@@ -28,7 +28,7 @@ Item {
     ColumnLayout {
         id: pane
         // Floor is a defensive minimum, well below any real tab's implicitWidth.
-        width: Math.max(230, panelLoader.implicitWidth)
+        width: Math.max(220, panelLoader.implicitWidth) + (marginSize * 2)
         spacing: 14
 
         // ─── Scrollable content area ─────────────────────────────────────
