@@ -36,11 +36,15 @@ Column {
         }
 
         Rectangle {
+            id: closedRow
             width: parent.width - 90
             height: 32
             radius: height / 2
             color: Colors.surface
             anchors.verticalCenter: parent.verticalCenter
+            activeFocusOnTab: true
+            Keys.onReturnPressed: root.open = !root.open
+            Keys.onSpacePressed: root.open = !root.open
 
             Row {
                 anchors.left: parent.left
@@ -65,6 +69,16 @@ Column {
                 anchors.fill: parent
                 cursorShape: Qt.PointingHandCursor
                 onClicked: root.open = !root.open
+            }
+
+            // Focus ring — keyboard-navigation feedback
+            Rectangle {
+                anchors.fill: parent
+                radius: parent.radius
+                color: "transparent"
+                border.width: 2
+                border.color: Colors.accent
+                visible: closedRow.activeFocus
             }
         }
     }
@@ -102,6 +116,26 @@ Column {
                         root.activated(optionDelegate.modelData.value);
                         root.open = false;
                     }
+                }
+
+                // Focus ring — keyboard-navigation feedback
+                Rectangle {
+                    anchors.fill: parent
+                    radius: parent.radius
+                    color: "transparent"
+                    border.width: 2
+                    border.color: Colors.accent
+                    visible: optionDelegate.activeFocus
+                }
+
+                activeFocusOnTab: true
+                Keys.onReturnPressed: {
+                    root.activated(optionDelegate.modelData.value);
+                    root.open = false;
+                }
+                Keys.onSpacePressed: {
+                    root.activated(optionDelegate.modelData.value);
+                    root.open = false;
                 }
             }
         }
