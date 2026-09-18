@@ -17,6 +17,7 @@ import "./modules/bar"
 import "./modules/osd"
 import "./modules/lock"
 import "./modules/polkit"
+import "./modules/annotate"
 
 ShellRoot {
     id: shellRoot
@@ -65,6 +66,7 @@ ShellRoot {
     TrayMenu {}
     PolkitAgent {}
     SettingsWindow {}
+    AnnotateOverlay { id: annotateOverlay }
 
     // Lets the (experimental) Liquid Glass surface read real desktop pixels
     // through Hyprland's compositor blur instead of faking translucency.
@@ -198,6 +200,19 @@ ShellRoot {
         function toggle() {
             const screen = Utils.focusedScreen(Quickshell.screens, Hyprland.focusedMonitor);
             IslandNavigation.toggle(screen.name, "screenshot");
+        }
+    }
+
+    IpcHandler {
+        target: "annotate"
+        function toggle() { AnnotateState.toggle() }
+    }
+
+    IpcHandler {
+        target: "colorpicker"
+        function toggle() {
+            const screen = Utils.focusedScreen(Quickshell.screens, Hyprland.focusedMonitor);
+            IslandNavigation.toggle(screen.name, "colorpicker");
         }
     }
 

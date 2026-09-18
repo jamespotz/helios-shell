@@ -35,11 +35,8 @@ PanelWindow {
     readonly property int padH: mode === "idle" ? 0 : Config.islandContentPadH
     readonly property int padV: mode === "idle" ? 0 : Config.islandContentPadV
 
-    // The one seam for "something is temporarily covering the island, so
-    // its close/collapse triggers should hold off" — right now that's just
-    // the custom tray menu, but a future reason to suppress adds one clause
-    // here instead of a new copy of the check at another call site.
-    readonly property bool suppressCollapse: Bridge.trayMenuOpen
+    readonly property bool suppressFocusDismiss: Bridge.trayMenuOpen
+        || !IslandNavigation.dismissesOnFocusLoss(bar.modelData.name)
 
     // Top, not Overlay: the bar is a persistent panel, and popups (launcher,
     // OSD, power menu, keybind cheatsheet) need to render strictly above it.
@@ -48,12 +45,17 @@ PanelWindow {
     // compositor-dependent, and putting both on Overlay let this
     // always-mapped bar win that tie and cover popups' dim backdrops
     // instead of being covered by them.
-    WlrLayershell.layer: WlrLayer.Top
+    //
+    // Annotate mode moves the bar above the drawing surface. The overlay uses
+    // Top, so this Overlay-layer toolbar receives its own pointer events.
+    WlrLayershell.layer: bar.mode === "annotate" ? WlrLayer.Overlay : WlrLayer.Top
     WlrLayershell.namespace: "helios:bar"
     // IPC-opened panel content needs immediate keyboard focus for search
     // fields and shortcuts. Passive cards must never steal keyboard input
     // from the active application when they appear.
-    WlrLayershell.keyboardFocus: bar.panelOpen ? WlrKeyboardFocus.Exclusive : bar.expanded || IslandNavigation.satelliteOpenFor(bar.modelData.name, "maintenance") ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
+    WlrLayershell.keyboardFocus: bar.panelOpen ? WlrKeyboardFocus.Exclusive
+        : bar.expanded || IslandNavigation.satelliteOpenFor(bar.modelData.name, "maintenance") ? WlrKeyboardFocus.OnDemand
+        : WlrKeyboardFocus.None
 
     anchors.top: true
     // A small gap from the true screen edge so the pill's top-corner
@@ -81,6 +83,9 @@ PanelWindow {
         Region {
             item: rightSatellite
         }
+        Region {
+            item: leftSatellite
+        }
     }
 
     Timer {
@@ -93,7 +98,7 @@ PanelWindow {
         // while the menu is still visible; a genuine hover return still
         // cancels this timer normally (see hoverTracker.onHoveredChanged).
         onTriggered: {
-            if (bar.suppressCollapse) {
+            if (Bridge.trayMenuOpen) {
                 hoverCollapseTimer.restart();
                 return;
             }
@@ -116,7 +121,7 @@ PanelWindow {
     }
 
     onPanelOpenChanged: {
-        if (panelOpen)
+        if (panelOpen && !suppressFocusDismiss)
             focusGrabDelay.restart();
         else {
             focusGrabDelay.stop();
@@ -129,24 +134,18 @@ PanelWindow {
         windows: [bar]
         active: false
         onCleared: {
-            if (bar.suppressCollapse)
+            if (bar.suppressFocusDismiss)
                 return;
             if (bar.panelOpen)
                 IslandNavigation.close();
         }
     }
 
-    // Re-arm the focus grab when the tray menu closes — the grab was
-    // already lost the instant the overlay stole focus, so if the island
-    // is still open after the menu closes, we need to re-establish it so
-    // a genuine outside click afterward still dismisses the island.
-    Connections {
-        target: Bridge
-        function onTrayMenuOpenChanged() {
-            if (!bar.suppressCollapse && bar.panelOpen) {
-                focusGrab.active = false;
-                focusGrabDelay.restart();
-            }
+    onSuppressFocusDismissChanged: {
+        focusGrabDelay.stop();
+        focusGrab.active = false;
+        if (!suppressFocusDismiss && panelOpen) {
+            focusGrabDelay.restart();
         }
     }
 
@@ -334,7 +333,11 @@ PanelWindow {
 
     // Recording status lives here, outside the content Loader, so it stays
     // visible across every mode (idle, peek, notify, panel) instead of
-    // disappearing whenever the island's content switches.
+    // disappearing whenever the island's content switches. Annotate and
+    // color picker used to be satellite-hosted here too, but now route
+    // through the main island like every other destination (see
+    // IslandNavigation's "annotate"/"colorpicker" entries and bar.mode's
+    // Overlay-layer bump above) — this badge is recording-only again.
     IslandSatellite {
         id: leftSatellite
         anchorItem: hitArea
@@ -378,8 +381,16 @@ PanelWindow {
 
         // Reuses the very same panel chrome (close button + scrolling) the
         // main island uses for every other destination — see panelComp
-        // below — instead of a second copy of that wrapper.
-        expandedContent: panelComp
+        // below — instead of a second copy of that wrapper. Pinned to
+        // "maintenance" specifically (see maintenancePanelComp) rather than
+        // sharing panelComp's IslandNavigation.current-tracking default:
+        // this satellite's Loader is pre-warmed eagerly (see IslandSatellite's
+        // expandedLoader), so left unpinned it would instantiate whatever
+        // the main island currently has open instead of "maintenance" —
+        // a second, hidden copy of that destination's panel (with its own
+        // side effects: Processes, canvas bindings, etc.) every time the
+        // main island's destination changed.
+        expandedContent: maintenancePanelComp
     }
 
     Component {
@@ -414,5 +425,9 @@ PanelWindow {
     Component {
         id: panelComp
         PanelWrapper {}
+    }
+    Component {
+        id: maintenancePanelComp
+        PanelWrapper { destinationId: "maintenance" }
     }
 }

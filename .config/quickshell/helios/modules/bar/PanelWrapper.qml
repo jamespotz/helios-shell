@@ -9,6 +9,16 @@ import "../../components"
 Item {
     id: root
 
+    // Empty (the default) follows whatever the main island currently has
+    // open — right for the main island's own panelComp. A satellite reusing
+    // this wrapper to pre-warm one fixed destination (e.g. "maintenance")
+    // needs to pin it here instead: IslandNavigation.current is a single
+    // global value, so left at the default it would follow the main
+    // island's destination too and instantiate the wrong panel (and its
+    // side effects — Processes, canvas bindings, etc.) behind the badge.
+    property string destinationId: ""
+    readonly property var destination: root.destinationId ? IslandNavigation.resolve(root.destinationId) : IslandNavigation.current
+
     readonly property int maxContentHeight: Config.islandMaxHeight - 120
     readonly property int marginSize: 8
 
@@ -20,7 +30,7 @@ Item {
     // for. To make a specific tab render shorter (and scrollable) without
     // touching its real content height, cap its effective viewport height
     // here instead, per tab.
-    readonly property int _effectiveMaxHeight: IslandNavigation.current && IslandNavigation.current.maxHeight > 0 ? IslandNavigation.current.maxHeight : root.maxContentHeight
+    readonly property int _effectiveMaxHeight: root.destination && root.destination.maxHeight > 0 ? root.destination.maxHeight : root.maxContentHeight
 
     implicitWidth: pane.width
     implicitHeight: pane.spacing + root.marginSize + Math.min(panelLoader.implicitHeight, root._effectiveMaxHeight)
@@ -51,7 +61,7 @@ Item {
                 Loader {
                     id: panelLoader
                     width: flick.width
-                    source: IslandNavigation.current ? IslandNavigation.current.source : ""
+                    source: root.destination ? root.destination.source : ""
                     opacity: 0
                     onLoaded: panelFadeIn.restart()
 

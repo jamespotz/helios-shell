@@ -149,3 +149,5 @@ Before creating a new component, confirm that an existing component cannot reaso
 When choosing between otherwise valid solutions, prefer the one that is:
 
 **clearer, simpler, quieter, more consistent, more accessible, more performant, and easier to maintain.**
+
+When reporting information to me, be extremely concise and sacrifice grammar for the sake of concision.

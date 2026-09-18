@@ -102,6 +102,10 @@ Row {
         }
     }
 
+    BandwidthIndicator {
+        anchors.verticalCenter: parent.verticalCenter
+    }
+
     IconButton {
         icon: {
             switch (Networking.connectivity) {

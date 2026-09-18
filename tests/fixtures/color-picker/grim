@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+
+if [[ "$1" != "-g" || "$2" != "10,20 1x1" ]]; then
+    exit 2
+fi
+
+printf 'P6\n1 1\n255\n\345H\115'

@@ -35,6 +35,7 @@ singleton ThemeWofi 1.0 ThemeWofi.qml
 singleton Cava 1.0 Cava.qml
 singleton Clipboard 1.0 Clipboard.qml
 singleton WifiNetworks 1.0 WifiNetworks.qml
+singleton NetInfo 1.0 NetInfo.qml
 singleton ScreenRecorder 1.0 ScreenRecorder.qml
 singleton MicActivity 1.0 MicActivity.qml
 singleton Screenshot 1.0 Screenshot.qml
@@ -54,3 +55,5 @@ singleton CameraActivity 1.0 CameraActivity.qml
 singleton Automations 1.0 Automations.qml
 singleton DefaultApps 1.0 DefaultApps.qml
 singleton Maintenance 1.0 Maintenance.qml
+singleton ColorPickerHistory 1.0 ColorPickerHistory.qml
+singleton AnnotateState 1.0 AnnotateState.qml

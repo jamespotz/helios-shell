@@ -29,3 +29,9 @@ function formatValueGB(valueGb) {
 function formatGHz(valueMhz) {
     return ((valueMhz || 0) / 1000).toFixed(2) + " GHz";
 }
+
+function formatBytesPerSec(bytesPerSec) {
+    if (bytesPerSec < 1024) return bytesPerSec.toFixed(0) + " B/s";
+    if (bytesPerSec < 1024 * 1024) return (bytesPerSec / 1024).toFixed(0) + " K/s";
+    return (bytesPerSec / (1024 * 1024)).toFixed(1) + " M/s";
+}

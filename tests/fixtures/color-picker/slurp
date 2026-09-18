@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+
+if [[ " $* " == *" -f "* ]]; then
+    printf '10,20\n'
+else
+    printf '10,20 1x1\n'
+fi

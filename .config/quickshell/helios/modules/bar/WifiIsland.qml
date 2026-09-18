@@ -10,6 +10,7 @@ Item {
     id: root
 
     readonly property var wn: WifiNetworks
+    readonly property var net: NetInfo
     readonly property var displayNetworks: {
         const result = root.wn.networks.slice();
         for (const name of root.wn.knownNames) {
@@ -51,6 +52,8 @@ Item {
     // a blocking call.
     Component.onCompleted: {
         if (Networking.wifiEnabled && !wn.scanning) wn.scan();
+        root.net.refreshEthernet();
+        root.net.refreshVpn();
     }
 
     implicitWidth: 320
@@ -282,6 +285,63 @@ Item {
                 checked: Networking.wifiEnabled
                 enabled: Networking.wifiHardwareEnabled
                 onToggled: v => Networking.wifiEnabled = v
+            }
+        }
+
+        // ─── Ethernet ────────────────────────────────────────────────
+        Row {
+            spacing: 8
+
+            MaterialIcon {
+                icon: root.net.ethernetConnected ? "settings_ethernet" : "cable"
+                font.pixelSize: 16
+                opacity: root.net.ethernetConnected ? 1 : 0.5
+                color: root.net.ethernetConnected ? Colors.accent : Colors.text
+                anchors.verticalCenter: parent.verticalCenter
+            }
+            StyledText {
+                text: root.net.ethernetConnected ? "Ethernet connected" : "Ethernet not connected"
+                font.pixelSize: Config.fontSize - 1
+                opacity: 0.7
+                anchors.verticalCenter: parent.verticalCenter
+            }
+        }
+
+        // ─── VPN ─────────────────────────────────────────────────────
+        Disclosure {
+            width: parent.width
+            title: "VPN"
+            visible: root.net.vpnConnections.length > 0
+            summary: root.net.vpnConnections.some(c => c.active) ? "Connected" : ""
+
+            Column {
+                width: parent.width
+                spacing: 8
+
+                Repeater {
+                    model: root.net.vpnConnections
+
+                    Row {
+                        required property var modelData
+                        width: parent.width
+                        spacing: 8
+
+                        StyledText {
+                            width: parent.width - vpnToggle.width - 8
+                            text: modelData.name
+                            elide: Text.ElideRight
+                            font.pixelSize: Config.fontSize - 1
+                            anchors.verticalCenter: parent.verticalCenter
+                        }
+
+                        Toggle {
+                            id: vpnToggle
+                            anchors.verticalCenter: parent.verticalCenter
+                            checked: modelData.active
+                            onToggled: v => v ? root.net.vpnUp(modelData.name) : root.net.vpnDown(modelData.name)
+                        }
+                    }
+                }
             }
         }
 

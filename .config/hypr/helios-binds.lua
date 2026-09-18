@@ -122,6 +122,15 @@ hl.bind(mainMod .. " + ALT + O", hl.dsp.exec_cmd(helios .. " screenshot ocr"),
 hl.bind(mainMod .. " + S", hl.dsp.exec_cmd(helios .. " screenshot toggle"),
   { description = "helios: Toggle screenshot island" })
 
+-- Live screen annotation overlay (freehand pen over the desktop)
+hl.bind(mainMod .. " + SHIFT + A", hl.dsp.exec_cmd(helios .. " annotate toggle"),
+  { description = "helios: Toggle screen annotation" })
+
+-- Standalone color picker (left satellite) — separate from the annotation
+-- toolbar's own picker, see colorpicker toggle in shell.qml.
+hl.bind(mainMod .. " + SHIFT + P", hl.dsp.exec_cmd(helios .. " colorpicker toggle"),
+  { description = "helios: Toggle color picker" })
+
 -- Night light / Do Not Disturb / Caffeine toggles
 hl.bind(mainMod .. " + SHIFT + N", hl.dsp.exec_cmd(helios .. " nightlight toggle"),
   { description = "helios: Toggle night light" })

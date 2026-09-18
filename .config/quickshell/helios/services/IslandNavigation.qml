@@ -4,33 +4,7 @@ import QtQuick
 QtObject {
     id: root
 
-    readonly property var destinations: [
-        root._destination("volume", "Volume", "VolumeIsland.qml"),
-        root._destination("mixer", "Audio Mixer", "AudioMixerIsland.qml"),
-        root._destination("bluetooth", "Bluetooth", "BluetoothIsland.qml"),
-        root._destination("wifi", "Wi-Fi", "WifiIsland.qml"),
-        root._destination("focus", "Focus Modes", "FocusIsland.qml"),
-        root._destination("privacy", "Privacy", "PrivacyIsland.qml"),
-        root._destination("automation", "Automations", "AutomationIsland.qml"),
-        root._destination("media", "Media", "MediaIsland.qml"),
-        root._destination("clipboard", "Clipboard", "ClipboardIsland.qml"),
-        root._destination("recorder", "Screen Recorder", "ScreenRecorderIsland.qml"),
-        root._destination("screenshot", "Screenshot", "ScreenshotIsland.qml"),
-        root._destination("weather", "Weather", "WeatherIsland.qml"),
-        root._destination("calendar", "Calendar", "CalendarIsland.qml"),
-        root._destination("system", "System Monitor", "SystemMonitorIsland.qml"),
-        root._destination("notifications", "Notifications", "NotificationHistoryIsland.qml"),
-        root._destination("nightlight", "Night Light", "NightLightIsland.qml"),
-        root._destination("display", "Displays", "DisplayIsland.qml"),
-        root._destination("idlelock", "Idle & Lock", "IdleIsland.qml"),
-        root._destination("wallpaper", "Wallpaper", "WallpaperSettings.qml"),
-        root._destination("theme", "Theme", "ThemeSettings.qml"),
-        root._destination("power", "Power", "PowerIsland.qml"),
-        root._destination("powermenu", "Power", "PowerMenuIsland.qml"),
-        root._destination("keybinds", "Keybinds", "KeybindsIsland.qml"),
-        root._destination("maintenance", "Maintenance", "MaintenanceIsland.qml", 0, "maintenance"),
-        root._destination("launcher", "Launcher", "LauncherIsland.qml")
-    ]
+    readonly property var destinations: [root._destination("volume", "Volume", "VolumeIsland.qml"), root._destination("mixer", "Audio Mixer", "AudioMixerIsland.qml"), root._destination("bluetooth", "Bluetooth", "BluetoothIsland.qml"), root._destination("wifi", "Wi-Fi", "WifiIsland.qml"), root._destination("focus", "Focus Modes", "FocusIsland.qml"), root._destination("privacy", "Privacy", "PrivacyIsland.qml"), root._destination("automation", "Automations", "AutomationIsland.qml"), root._destination("media", "Media", "MediaIsland.qml"), root._destination("clipboard", "Clipboard", "ClipboardIsland.qml"), root._destination("recorder", "Screen Recorder", "ScreenRecorderIsland.qml"), root._destination("screenshot", "Screenshot", "ScreenshotIsland.qml"), root._destination("weather", "Weather", "WeatherIsland.qml"), root._destination("calendar", "Calendar", "CalendarIsland.qml"), root._destination("system", "System Monitor", "SystemMonitorIsland.qml"), root._destination("notifications", "Notifications", "NotificationHistoryIsland.qml"), root._destination("nightlight", "Night Light", "NightLightIsland.qml"), root._destination("display", "Displays", "DisplayIsland.qml"), root._destination("idlelock", "Idle & Lock", "IdleIsland.qml"), root._destination("wallpaper", "Wallpaper", "WallpaperSettings.qml"), root._destination("theme", "Theme", "ThemeSettings.qml"), root._destination("power", "Power", "PowerIsland.qml"), root._destination("powermenu", "Power", "PowerMenuIsland.qml"), root._destination("keybinds", "Keybinds", "KeybindsIsland.qml"), root._destination("maintenance", "Maintenance", "MaintenanceIsland.qml", 0, "maintenance"), root._destination("annotate", "Annotate", "AnnotateToolbarIsland.qml", 0, "", true), root._destination("colorpicker", "Color Picker", "ColorPickerIsland.qml", 0, "", true), root._destination("launcher", "Launcher", "LauncherIsland.qml")]
 
     property bool _open: false
     property string _screen: ""
@@ -61,16 +35,33 @@ QtObject {
     // Alert priority, highest first: the first entry whose active() is true
     // wins. dismiss is omitted where dismissing that mode isn't supported.
     readonly property var _alerts: [
-        { mode: "notify", active: () => Notifications.state.popups.length > 0, dismiss: () => Notifications.dismissAll() },
-        { mode: "task", active: () => Tasks.items.length > 0 },
-        { mode: "meeting", active: () => Calendar.upcomingAlert !== null, dismiss: () => Calendar.dismissAlert() },
-        { mode: "battery", active: () => Bluetooth.lowBatteryAlert !== null, dismiss: () => Bluetooth.dismissLowBattery() }
+        {
+            mode: "notify",
+            active: () => Notifications.state.popups.length > 0,
+            dismiss: () => Notifications.dismissAll()
+        },
+        {
+            mode: "task",
+            active: () => Tasks.items.length > 0
+        },
+        {
+            mode: "meeting",
+            active: () => Calendar.upcomingAlert !== null,
+            dismiss: () => Calendar.dismissAlert()
+        },
+        {
+            mode: "battery",
+            active: () => Bluetooth.lowBatteryAlert !== null,
+            dismiss: () => Bluetooth.dismissLowBattery()
+        }
     ]
 
     function modeFor(screenName, hovering) {
-        if (root.panelOpenFor(screenName)) return root.destinationId;
+        if (root.panelOpenFor(screenName))
+            return root.destinationId;
         const alert = root._alerts.find(a => a.active());
-        if (alert) return alert.mode;
+        if (alert)
+            return alert.mode;
         return hovering ? "peek" : "idle";
     }
 
@@ -78,20 +69,30 @@ QtObject {
         return root.modeFor(screenName, hovering) !== "idle";
     }
 
-    function dismiss(screenName, mode) {
-        if (root.panelOpenFor(screenName)) { root.close(); return; }
-        const alert = root._alerts.find(a => a.mode === mode);
-        if (alert && alert.dismiss) alert.dismiss();
+    function dismissesOnFocusLoss(screenName) {
+        const destination = root.current;
+        return !root.panelOpenFor(screenName) || !destination || !destination.retainOnFocusLoss;
     }
 
-    function _destination(id, label, file, maxHeight, satelliteId) {
+    function dismiss(screenName, mode) {
+        if (root.panelOpenFor(screenName)) {
+            root.close();
+            return;
+        }
+        const alert = root._alerts.find(a => a.mode === mode);
+        if (alert && alert.dismiss)
+            alert.dismiss();
+    }
+
+    function _destination(id, label, file, maxHeight, satelliteId, retainOnFocusLoss) {
         return {
             id: id,
             label: label,
             source: Qt.resolvedUrl("../modules/bar/" + file),
             maxHeight: maxHeight || 0,
             available: true,
-            satelliteId: satelliteId || ""
+            satelliteId: satelliteId || "",
+            retainOnFocusLoss: retainOnFocusLoss || false
         };
     }
 
@@ -129,5 +130,7 @@ QtObject {
         return true;
     }
 
-    function close() { root._open = false; }
+    function close() {
+        root._open = false;
+    }
 }

@@ -9,24 +9,40 @@ Item {
     id: root
 
     readonly property var modes: [
-        { key: Screenshot.modeFullscreen, icon: "desktop_windows", label: "Full Screen" },
-        { key: Screenshot.modeRegion, icon: "crop", label: "Region" },
-        { key: Screenshot.modeWindow, icon: "web_asset", label: "Window" }
+        {
+            key: Screenshot.modeFullscreen,
+            icon: "desktop_windows",
+            label: "Full Screen"
+        },
+        {
+            key: Screenshot.modeRegion,
+            icon: "crop",
+            label: "Region"
+        },
+        {
+            key: Screenshot.modeWindow,
+            icon: "web_asset",
+            label: "Window"
+        }
     ]
 
     property bool manualNewCapture: false
-    readonly property bool hasResult: !root.manualNewCapture && Screenshot.lastPath.length > 0
-        && !Screenshot.capturing && Screenshot.lastError.length === 0
+    readonly property bool hasResult: !root.manualNewCapture && Screenshot.lastPath.length > 0 && !Screenshot.capturing && Screenshot.lastError.length === 0
     readonly property string optionsSummary: {
         let parts = [];
-        if (Screenshot.ocrEnabled) parts.push("OCR");
-        if (Screenshot.copyToClipboardEnabled) parts.push("Clipboard");
+        if (Screenshot.ocrEnabled)
+            parts.push("OCR");
+        if (Screenshot.copyToClipboardEnabled)
+            parts.push("Clipboard");
         return parts.join(" · ");
     }
 
     Connections {
         target: Screenshot
-        function onCapturingChanged() { if (Screenshot.capturing) root.manualNewCapture = false; }
+        function onCapturingChanged() {
+            if (Screenshot.capturing)
+                root.manualNewCapture = false;
+        }
     }
 
     // Re-check that the last capture still exists on disk each time this
@@ -53,8 +69,18 @@ Item {
         // Header
         Row {
             spacing: 8
-            MaterialIcon { icon: "photo_camera"; font.pixelSize: 18; color: Colors.accent; anchors.verticalCenter: parent.verticalCenter }
-            StyledText { text: "Screenshot"; font.weight: Font.DemiBold; font.pixelSize: Config.fontSize + 2; anchors.verticalCenter: parent.verticalCenter }
+            MaterialIcon {
+                icon: "photo_camera"
+                font.pixelSize: 18
+                color: Colors.accent
+                anchors.verticalCenter: parent.verticalCenter
+            }
+            StyledText {
+                text: "Screenshot"
+                font.weight: Font.DemiBold
+                font.pixelSize: Config.fontSize + 2
+                anchors.verticalCenter: parent.verticalCenter
+            }
         }
 
         // ─── Mode selector (always visible, even over a result) ──────
@@ -101,7 +127,11 @@ Item {
                     color: "transparent"
                     border.width: 3
                     border.color: Screenshot.capturing ? Colors.overlay : Colors.accent
-                    Behavior on border.color { ColorAnimation { duration: Config.animMedium } }
+                    Behavior on border.color {
+                        ColorAnimation {
+                            duration: Config.animMedium
+                        }
+                    }
 
                     Rectangle {
                         id: shutterInner
@@ -110,14 +140,30 @@ Item {
                         height: width
                         radius: Screenshot.capturing ? 6 : 28
                         color: Colors.accent
-                        Behavior on width { NumberAnimation { duration: Config.animMedium; easing.type: Easing.OutCubic } }
-                        Behavior on radius { NumberAnimation { duration: Config.animMedium; easing.type: Easing.OutCubic } }
+                        Behavior on width {
+                            NumberAnimation {
+                                duration: Config.animMedium
+                                easing.type: Easing.OutCubic
+                            }
+                        }
+                        Behavior on radius {
+                            NumberAnimation {
+                                duration: Config.animMedium
+                                easing.type: Easing.OutCubic
+                            }
+                        }
 
                         scale: captureHover.hovered ? 0.92 : 1.0
-                        Behavior on scale { NumberAnimation { duration: Config.animFast } }
+                        Behavior on scale {
+                            NumberAnimation {
+                                duration: Config.animFast
+                            }
+                        }
                     }
 
-                    HoverHandler { id: captureHover }
+                    HoverHandler {
+                        id: captureHover
+                    }
 
                     MouseArea {
                         anchors.fill: parent
@@ -132,9 +178,7 @@ Item {
                 anchors.horizontalCenter: parent.horizontalCenter
                 font.pixelSize: Config.fontSize - 1
                 color: Screenshot.lastError.length > 0 ? Colors.danger : Colors.subtext
-                text: Screenshot.capturing ? "Capturing…"
-                    : Screenshot.lastError.length > 0 ? Screenshot.lastError
-                    : "Click to capture · ↵"
+                text: Screenshot.capturing ? "Capturing…" : Screenshot.lastError.length > 0 ? Screenshot.lastError : "Click to capture · ↵"
                 opacity: 0.85
             }
         }
@@ -155,7 +199,7 @@ Item {
                 Image {
                     id: previewImage
                     anchors.fill: parent
-                    source: root.hasResult ? "file://" + Screenshot.lastPath : ""
+                    source: root.hasResult ? "file://" + Screenshot.lastPath + "#" + AnnotateState.screenshotRevision : ""
                     fillMode: Image.PreserveAspectFit
                     asynchronous: true
                 }
@@ -181,9 +225,7 @@ Item {
                     anchors.right: parent.right
                     font.pixelSize: Config.fontSize - 2
                     opacity: 0.5
-                    text: previewImage.status === Image.Ready
-                        ? previewImage.sourceSize.width + " × " + previewImage.sourceSize.height
-                        : ""
+                    text: previewImage.status === Image.Ready ? previewImage.sourceSize.width + " × " + previewImage.sourceSize.height : ""
                 }
             }
 
@@ -205,7 +247,12 @@ Item {
 
                     Row {
                         spacing: 5
-                        MaterialIcon { icon: "text_fields"; font.pixelSize: 13; opacity: 0.6; anchors.verticalCenter: parent.verticalCenter }
+                        MaterialIcon {
+                            icon: "text_fields"
+                            font.pixelSize: 13
+                            opacity: 0.6
+                            anchors.verticalCenter: parent.verticalCenter
+                        }
                         StyledText {
                             text: "EXTRACTED TEXT"
                             font.pixelSize: Config.fontSize - 3
@@ -233,20 +280,28 @@ Item {
                 spacing: 8
 
                 PrimaryButton {
-                    width: (parent.width - folderBtn.width - 16) * 0.6
+                    width: (parent.width - folderBtn.width - annotateBtn.width - 24) * 0.5
                     height: 40
-                    text: "New capture"
+                    text: "New"
                     icon: "photo_camera"
                     active: true
                     onClicked: root.manualNewCapture = true
                 }
 
                 PrimaryButton {
-                    width: (parent.width - folderBtn.width - 16) * 0.4
+                    width: (parent.width - folderBtn.width - annotateBtn.width - 24) * 0.5
                     height: 40
                     text: "Copy"
                     icon: "content_copy"
                     onClicked: Screenshot.copyLast()
+                }
+
+                IconButton {
+                    id: annotateBtn
+                    width: 40
+                    height: 40
+                    icon: "draw"
+                    onClicked: AnnotateState.beginScreenshot(IslandNavigation.screen, Screenshot.lastPath)
                 }
 
                 IconButton {
@@ -260,7 +315,12 @@ Item {
         }
 
         // ─── Options ─────────────────────────────────────────────────
-        Rectangle { width: parent.width; height: 1; color: Colors.overlay; opacity: 0.12 }
+        Rectangle {
+            width: parent.width
+            height: 1
+            color: Colors.overlay
+            opacity: 0.12
+        }
 
         Disclosure {
             width: parent.width
@@ -288,7 +348,11 @@ Item {
                 width: parent.width
                 spacing: 6
 
-                StyledText { text: "Save to"; font.pixelSize: Config.fontSize - 2; opacity: 0.6 }
+                StyledText {
+                    text: "Save to"
+                    font.pixelSize: Config.fontSize - 2
+                    opacity: 0.6
+                }
 
                 Row {
                     width: parent.width
@@ -307,7 +371,12 @@ Item {
                             anchors.margins: 10
                             spacing: 6
 
-                            MaterialIcon { icon: "folder_open"; font.pixelSize: 14; opacity: 0.6; anchors.verticalCenter: parent.verticalCenter }
+                            MaterialIcon {
+                                icon: "folder_open"
+                                font.pixelSize: 14
+                                opacity: 0.6
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
                             StyledText {
                                 width: parent.width - 20
                                 elide: Text.ElideMiddle
