@@ -27,7 +27,7 @@ Item {
             id: saveButton
             visible: AnnotateState.editingScreenshot
             width: AnnotateState.editingScreenshot ? 64 : 0
-            height: Config.idleBumpHeight
+            height: 32
             icon: AnnotateState.savingScreenshot ? "data_usage" : AnnotateState.screenshotSaveFailed ? "restart_alt" : "save"
             active: true
             enabled: !AnnotateState.savingScreenshot
