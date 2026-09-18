@@ -8,6 +8,7 @@ Item {
     property string draftFontFamily: Config.fontFamily
     property int draftFontSize: Config.fontSize
     property bool fontPickerOpen: false
+    property string fontFilterText: ""
 
     property int draftWidth: Config.idleBumpWidth
     property int draftHeight: Config.idleBumpHeight
@@ -234,7 +235,10 @@ Item {
                             MouseArea {
                                 anchors.fill: parent
                                 cursorShape: Qt.PointingHandCursor
-                                onClicked: root.fontPickerOpen = !root.fontPickerOpen
+                                onClicked: {
+                                    root.fontPickerOpen = !root.fontPickerOpen;
+                                    root.fontFilterText = "";
+                                }
                             }
                         }
 
@@ -245,7 +249,7 @@ Item {
                         Item {
                             width: parent.width
                             visible: root.fontPickerOpen
-                            height: visible ? 220 : 0
+                            height: visible ? 262 : 0
                             clip: true
 
                             Rectangle {
@@ -253,43 +257,63 @@ Item {
                                 radius: Colors.radiusLarge
                                 color: Colors.surface
 
-                                ListView {
-                                    id: fontList
+                                Column {
                                     anchors.fill: parent
                                     anchors.margins: 4
-                                    clip: true
-                                    boundsBehavior: Flickable.StopAtBounds
-                                    model: Qt.fontFamilies()
+                                    spacing: 4
 
-                                    delegate: Rectangle {
-                                        id: fontRow
-                                        required property string modelData
+                                    SearchField {
+                                        width: parent.width
+                                        height: 36
+                                        inputPixelSize: Config.fontSize - 2
+                                        placeholder: "Filter fonts…"
+                                        text: root.fontFilterText
+                                        onTextChanged: root.fontFilterText = text
+                                    }
 
-                                        width: fontList.width
-                                        height: 32
-                                        radius: Colors.radiusSmall
-                                        color: fontRowHover.hovered ? Colors.surfaceHigh : "transparent"
-
-                                        StyledText {
-                                            text: fontRow.modelData
-                                            font.family: fontRow.modelData
-                                            color: fontRow.modelData === root.draftFontFamily ? Colors.accent : Colors.text
-                                            anchors.left: parent.left
-                                            anchors.leftMargin: 10
-                                            anchors.right: parent.right
-                                            anchors.rightMargin: 10
-                                            anchors.verticalCenter: parent.verticalCenter
-                                            elide: Text.ElideRight
+                                    ListView {
+                                        id: fontList
+                                        width: parent.width
+                                        height: parent.height - 40
+                                        clip: true
+                                        boundsBehavior: Flickable.StopAtBounds
+                                        model: {
+                                            const filter = root.fontFilterText.toLowerCase();
+                                            return filter.length === 0
+                                                ? Qt.fontFamilies()
+                                                : Qt.fontFamilies().filter(f => f.toLowerCase().includes(filter));
                                         }
 
-                                        HoverHandler { id: fontRowHover }
+                                        delegate: Rectangle {
+                                            id: fontRow
+                                            required property string modelData
 
-                                        MouseArea {
-                                            anchors.fill: parent
-                                            cursorShape: Qt.PointingHandCursor
-                                            onClicked: {
-                                                root.draftFontFamily = fontRow.modelData;
-                                                root.fontPickerOpen = false;
+                                            width: fontList.width
+                                            height: 32
+                                            radius: Colors.radiusSmall
+                                            color: fontRowHover.hovered ? Colors.surfaceHigh : "transparent"
+
+                                            StyledText {
+                                                text: fontRow.modelData
+                                                font.family: fontRow.modelData
+                                                color: fontRow.modelData === root.draftFontFamily ? Colors.accent : Colors.text
+                                                anchors.left: parent.left
+                                                anchors.leftMargin: 10
+                                                anchors.right: parent.right
+                                                anchors.rightMargin: 10
+                                                anchors.verticalCenter: parent.verticalCenter
+                                                elide: Text.ElideRight
+                                            }
+
+                                            HoverHandler { id: fontRowHover }
+
+                                            MouseArea {
+                                                anchors.fill: parent
+                                                cursorShape: Qt.PointingHandCursor
+                                                onClicked: {
+                                                    root.draftFontFamily = fontRow.modelData;
+                                                    root.fontPickerOpen = false;
+                                                }
                                             }
                                         }
                                     }
