@@ -24,9 +24,10 @@ Item {
         }
 
         PrimaryButton {
+            id: saveButton
             visible: AnnotateState.editingScreenshot
-            width: 64
-            height: 36
+            width: AnnotateState.editingScreenshot ? 64 : 0
+            height: Config.idleBumpHeight
             icon: AnnotateState.savingScreenshot ? "data_usage" : AnnotateState.screenshotSaveFailed ? "restart_alt" : "save"
             active: true
             enabled: !AnnotateState.savingScreenshot
