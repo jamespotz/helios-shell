@@ -43,13 +43,24 @@ QtObject {
             windowGeometry.running = false;
             windowGeometry.running = true;
         } else {
-            root._shoot("");
+            if (IslandNavigation.open && IslandNavigation.destinationId === "screenshot") {
+                IslandNavigation.close();
+                fullscreenDelay.restart();
+            } else {
+                root._shoot("");
+            }
         }
     }
 
     function captureFullscreen() { root.capture(root.modeFullscreen) }
     function captureRegion() { root.capture(root.modeRegion) }
     function captureWindow() { root.capture(root.modeWindow) }
+
+    property Timer fullscreenDelay: Timer {
+        interval: 200
+        repeat: false
+        onTriggered: root._shoot("")
+    }
 
     // Re-copy the last result on demand (the "Copy" chip after a capture).
     function copyLast() {
@@ -118,6 +129,19 @@ QtObject {
         grimProc.running = true;
     }
 
+    function _captureSucceeded() {
+        root.capturing = false;
+        root.lastCopied = true;
+        if (root.ocrEnabled) ocrTextReader.running = true;
+
+        const fileName = root.lastPath.split("/").pop();
+        notificationProc.command = ["notify-send", "--app-name=Helios", "--icon=camera-photo",
+            "Screenshot taken", fileName];
+        notificationProc.running = true;
+        soundProc.command = ["canberra-gtk-play", "--id=screen-capture"];
+        soundProc.running = true;
+    }
+
     // slurp for region selection
     property Process regionPicker: Process {
         property string geometry: ""
@@ -156,11 +180,10 @@ QtObject {
     // grim capture, optional tesseract OCR, optional wl-copy — all one shot
     property Process grimProc: Process {
         onExited: exitCode => {
-            root.capturing = false;
             if (exitCode === 0) {
-                root.lastCopied = true;
-                if (root.ocrEnabled) ocrTextReader.running = true;
+                root._captureSucceeded();
             } else {
+                root.capturing = false;
                 root.lastError = "Screenshot failed (exit " + exitCode + ")";
                 root.lastPath = "";
             }
@@ -197,4 +220,6 @@ QtObject {
     property Process clipboardProc: Process {}
     property Process folderOpener: Process {}
     property Process fileOpener: Process {}
+    property Process notificationProc: Process {}
+    property Process soundProc: Process {}
 }

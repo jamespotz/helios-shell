@@ -54,7 +54,10 @@ ShellRoot {
         console.assert(!IslandNavigation.dismissesOnFocusLoss("screen-a"), "color picker survives eyedropper focus");
         console.assert(IslandNavigation.show("screen-a", "calendar"), "switches from retained to regular destination");
         console.assert(IslandNavigation.dismissesOnFocusLoss("screen-a"), "regular destination restores focus-loss dismissal");
-        if (liveAnnotationIsClean && saveHidesOverlay)
+        console.assert(IslandNavigation.show("screen-a", "screenshot"), "screenshot destination opens");
+        Screenshot.captureFullscreen();
+        const fullscreenCaptureClosesIsland = !IslandNavigation.open && Screenshot.capturing;
+        if (liveAnnotationIsClean && saveHidesOverlay && fullscreenCaptureClosesIsland)
             console.warn("ISLAND_NAVIGATION_TEST_PASS");
         else
             console.error("ISLAND_NAVIGATION_TEST_FAIL stale screenshot background");
