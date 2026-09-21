@@ -23,6 +23,16 @@ Item {
         function onRecordingChanged() { if (ScreenRecorder.recording) root.manualNewCapture = false; }
     }
 
+    Connections {
+        target: IslandNavigation
+        function onOpenChanged() {
+            if (IslandNavigation.open && IslandNavigation.destinationId === "recorder") {
+                ScreenRecorder.verifyLastOutputPath();
+            }
+        }
+    }
+    Component.onCompleted: ScreenRecorder.verifyLastOutputPath()
+
     implicitWidth: 360
     implicitHeight: col.implicitHeight
 

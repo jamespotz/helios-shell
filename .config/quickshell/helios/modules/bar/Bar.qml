@@ -342,6 +342,7 @@ PanelWindow {
         anchorItem: hitArea
         onRight: false
         active: ScreenRecorder.recording
+        fillColor: bar.mode === "idle" ? Colors.background : Colors.surface
         badge: Component {
             RecordingDot {}
         }
@@ -359,6 +360,7 @@ PanelWindow {
         onRight: true
         interactive: true
         active: Maintenance.hasAlert
+        fillColor: bar.mode === "idle" ? Colors.background : Colors.surface
         expanded: IslandNavigation.satelliteOpenFor(bar.screen.name, "maintenance")
         onClicked: IslandNavigation.toggle(bar.screen.name, "maintenance")
 

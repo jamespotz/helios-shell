@@ -113,6 +113,15 @@ QtObject {
         videoOpener.running = true;
     }
 
+    // Drop a completed result if its video was deleted outside the shell.
+    function verifyLastOutputPath() {
+        if (!root.lastOutputPath || root.recording || root.starting) return;
+        existsCheck.checkedPath = root.lastOutputPath;
+        existsCheck.command = ["test", "-f", root.lastOutputPath];
+        existsCheck.running = false;
+        existsCheck.running = true;
+    }
+
     function chooseOutputDir() {
         IslandNavigation.close();
         dirPicker.running = true;
@@ -214,6 +223,16 @@ QtObject {
 
     property Process folderOpener: Process {}
     property Process videoOpener: Process {}
+
+    property Process existsCheck: Process {
+        property string checkedPath: ""
+        onExited: exitCode => {
+            if (exitCode !== 0 && root.lastOutputPath === existsCheck.checkedPath) {
+                root.lastOutputPath = "";
+                root.lastThumbnailPath = "";
+            }
+        }
+    }
 
     property Process dirPicker: Process {
         command: ["zenity", "--file-selection", "--directory", "--title=Choose recordings folder"]
