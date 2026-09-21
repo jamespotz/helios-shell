@@ -55,6 +55,11 @@ QtObject {
     function captureFullscreen() { root.capture(root.modeFullscreen) }
     function captureRegion() { root.capture(root.modeRegion) }
     function captureWindow() { root.capture(root.modeWindow) }
+    function captureOcrRegion() {
+        root.ocrEnabled = true;
+        root.copyToClipboardEnabled = true;
+        root.capture(root.modeRegion);
+    }
 
     property Timer fullscreenDelay: Timer {
         interval: 200
