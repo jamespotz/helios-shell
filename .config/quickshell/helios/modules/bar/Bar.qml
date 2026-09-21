@@ -24,6 +24,7 @@ PanelWindow {
     readonly property bool taskMode: mode === "task"
     readonly property bool meetingMode: mode === "meeting"
     readonly property bool batteryMode: mode === "battery"
+    readonly property bool satelliteOpen: IslandNavigation.satelliteOpenFor(modelData.name, "maintenance")
 
     readonly property bool hasActiveMedia: {
         const players = Mpris.players ? Mpris.players.values : [];
@@ -120,14 +121,16 @@ PanelWindow {
         onTriggered: focusGrab.active = true
     }
 
-    onPanelOpenChanged: {
-        if (panelOpen && !suppressFocusDismiss)
+    function _syncFocusGrab() {
+        if (panelOpen || satelliteOpen)
             focusGrabDelay.restart();
         else {
             focusGrabDelay.stop();
             focusGrab.active = false;
         }
     }
+    onPanelOpenChanged: bar._syncFocusGrab()
+    onSatelliteOpenChanged: bar._syncFocusGrab()
 
     HyprlandFocusGrab {
         id: focusGrab
@@ -136,7 +139,7 @@ PanelWindow {
         onCleared: {
             if (bar.suppressFocusDismiss)
                 return;
-            if (bar.panelOpen)
+            if (bar.panelOpen || bar.satelliteOpen)
                 IslandNavigation.close();
         }
     }
