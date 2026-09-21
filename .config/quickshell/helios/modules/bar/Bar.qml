@@ -36,8 +36,7 @@ PanelWindow {
     readonly property int padH: mode === "idle" ? 0 : Config.islandContentPadH
     readonly property int padV: mode === "idle" ? 0 : Config.islandContentPadV
 
-    readonly property bool suppressFocusDismiss: Bridge.trayMenuOpen
-        || !IslandNavigation.dismissesOnFocusLoss(bar.modelData.name)
+    readonly property bool suppressFocusDismiss: Bridge.trayMenuOpen || !IslandNavigation.dismissesOnFocusLoss(bar.modelData.name)
 
     // Top, not Overlay: the bar is a persistent panel, and popups (launcher,
     // OSD, power menu, keybind cheatsheet) need to render strictly above it.
@@ -54,10 +53,7 @@ PanelWindow {
     // IPC-opened panel content needs immediate keyboard focus for search
     // fields and shortcuts. Passive cards must never steal keyboard input
     // from the active application when they appear.
-    WlrLayershell.keyboardFocus: bar.panelOpen ? WlrKeyboardFocus.Exclusive
-        : bar.expanded || IslandNavigation.satelliteOpenFor(bar.modelData.name, "maintenance") ? WlrKeyboardFocus.OnDemand
-        : WlrKeyboardFocus.None
-
+    WlrLayershell.keyboardFocus: bar.panelOpen && IslandNavigation.current && IslandNavigation.current.retainOnFocusLoss ? WlrKeyboardFocus.Exclusive : bar.panelOpen || bar.expanded || bar.satelliteOpen ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
     anchors.top: true
     // A small gap from the true screen edge so the pill's top-corner
     // rounding actually reads as rounded, instead of being flush-cut.
@@ -431,6 +427,8 @@ PanelWindow {
     }
     Component {
         id: maintenancePanelComp
-        PanelWrapper { destinationId: "maintenance" }
+        PanelWrapper {
+            destinationId: "maintenance"
+        }
     }
 }
