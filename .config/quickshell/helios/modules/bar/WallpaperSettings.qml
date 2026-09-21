@@ -11,6 +11,19 @@ Item {
     property string draftFolder: WallpaperLibrary.folderPath
     property bool folderEditorOpen: false
 
+    function scanIfOpen() {
+        if (IslandNavigation.open && IslandNavigation.destinationId === "wallpaper") {
+            WallpaperLibrary.scanFolder();
+        }
+    }
+
+    Connections {
+        target: IslandNavigation
+        function onOpenChanged() { root.scanIfOpen(); }
+    }
+
+    Component.onCompleted: root.scanIfOpen()
+
     implicitWidth: 440
     implicitHeight: col.implicitHeight
 
