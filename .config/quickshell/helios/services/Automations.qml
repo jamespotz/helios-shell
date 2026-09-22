@@ -7,25 +7,27 @@ import Quickshell.Services.UPower
 
 // Simple trigger/action rules — each one watches a state this shell
 // already tracks and calls straight into the service that owns the
-// resulting action (Bridge, DisplaySettings, PowerProfiles). Not a
-// generic automation DSL: exactly the four concrete rules asked for, each
-// off by default since auto-acting on a device/battery event is the kind
-// of thing that should be opt-in. The fourth ("meeting starts → DND") is
-// already covered by Calendar.qml's meetingFocusId — that's a Focus Modes
-// concern with its own picker in CalendarIsland.qml, not duplicated here.
+// resulting action (Bridge, DisplaySettings, Audio, PowerProfiles). Not a
+// generic automation DSL: five concrete rules, each off by default since
+// auto-acting on a device/battery event is the kind of thing that should
+// be opt-in. The fifth ("meeting starts → DND") is already covered by
+// Calendar.qml's meetingFocusId — that's a Focus Modes concern with its
+// own picker in CalendarIsland.qml, not duplicated here.
 QtObject {
     id: root
 
     property bool headphonesRule: false
+    property bool bluetoothAudioRule: false
     property bool monitorRule: false
     property bool batteryRule: false
 
     function setHeadphonesRule(v) { root.headphonesRule = v; root._save(); }
+    function setBluetoothAudioRule(v) { root.bluetoothAudioRule = v; root._save(); }
     function setMonitorRule(v) { root.monitorRule = v; root._save(); }
     function setBatteryRule(v) { root.batteryRule = v; root._save(); if (v) root._checkBattery(); }
 
     function _save() {
-        settingsFile.setText(JSON.stringify({ headphones: root.headphonesRule, monitor: root.monitorRule, battery: root.batteryRule }));
+        settingsFile.setText(JSON.stringify({ headphones: root.headphonesRule, bluetoothAudio: root.bluetoothAudioRule, monitor: root.monitorRule, battery: root.batteryRule }));
     }
 
     property FileView settingsFile: FileView {
@@ -39,6 +41,7 @@ QtObject {
                 const parsed = JSON.parse(settingsFile.text());
                 if (parsed) {
                     root.headphonesRule = !!parsed.headphones;
+                    root.bluetoothAudioRule = !!parsed.bluetoothAudio;
                     root.monitorRule = !!parsed.monitor;
                     root.batteryRule = !!parsed.battery;
                 }
@@ -67,6 +70,21 @@ QtObject {
         if (added.length === 0 || !root.headphonesRule) return;
         const screen = Hyprland.focusedMonitor ? Hyprland.focusedMonitor.name : (Quickshell.screens.length > 0 ? Quickshell.screens[0].name : "");
         if (screen) IslandNavigation.toggle(screen, "media");
+    }
+
+    // ─── Rule: Bluetooth audio connects → make it default output ─────
+    readonly property var connectedBluetoothAudio: Bluetooth.state.devices
+        .filter(device => device.connected && device.audio && device.audio.nodeName)
+        .map(device => ({ id: device.id, nodeName: device.audio.nodeName }))
+    property var _prevBluetoothAudioIds: []
+    property bool _bluetoothAudioReady: false
+
+    onConnectedBluetoothAudioChanged: {
+        const ids = root.connectedBluetoothAudio.map(device => device.id);
+        if (!root._bluetoothAudioReady) { root._prevBluetoothAudioIds = ids; return; }
+        const added = root.connectedBluetoothAudio.find(device => !root._prevBluetoothAudioIds.includes(device.id));
+        root._prevBluetoothAudioIds = ids;
+        if (added && root.bluetoothAudioRule) Audio.setOutput(added.nodeName);
     }
 
     // ─── Rule: external monitor connects → restore its last layout ───────
@@ -158,5 +176,8 @@ QtObject {
 
     onBatteryPercentChanged: root._checkBattery()
 
-    Component.onCompleted: root._headphonesReady = true
+    Component.onCompleted: {
+        root._headphonesReady = true;
+        root._bluetoothAudioReady = true;
+    }
 }

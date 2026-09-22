@@ -60,10 +60,11 @@ ShellRoot {
     }
 
     function test_extractProfileCombinesCodecAndProfile() {
-        devices.audioNodes = [{ properties: { "api.bluez5.address": "11:22", "api.bluez5.codec": "aac", "api.bluez5.profile": "a2dp-sink" } }];
+        devices.audioNodes = [{ name: "bluez_output.11_22.1", properties: { "api.bluez5.address": "11:22", "api.bluez5.codec": "aac", "api.bluez5.profile": "a2dp-sink" } }];
         const result = devices.state.devices[0].audio;
         root.compare(result.codec, "AAC");
         root.compare(result.profile, "A2DP");
+        root.compare(result.nodeName, "bluez_output.11_22.1");
     }
 
     function test_extractProfileHandlesCodecOnly() {

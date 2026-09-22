@@ -55,6 +55,30 @@ Item {
             spacing: 10
 
             MaterialIcon {
+                icon: "bluetooth_audio"
+                font.pixelSize: 20
+                color: Automations.bluetoothAudioRule ? Colors.accent : Colors.subtext
+                anchors.verticalCenter: parent.verticalCenter
+            }
+            Column {
+                width: parent.width - 20 - 10 - bluetoothAudioToggle.width - 10
+                anchors.verticalCenter: parent.verticalCenter
+                StyledText { text: "Bluetooth Audio Connects"; font.weight: Font.DemiBold }
+                StyledText { text: "Sets it as default output"; font.pixelSize: Config.fontSize - 2; color: Colors.subtext }
+            }
+            Toggle {
+                id: bluetoothAudioToggle
+                anchors.verticalCenter: parent.verticalCenter
+                checked: Automations.bluetoothAudioRule
+                onToggled: v => Automations.setBluetoothAudioRule(v)
+            }
+        }
+
+        Row {
+            width: parent.width
+            spacing: 10
+
+            MaterialIcon {
                 icon: "desktop_windows"
                 font.pixelSize: 20
                 color: Automations.monitorRule ? Colors.accent : Colors.subtext
