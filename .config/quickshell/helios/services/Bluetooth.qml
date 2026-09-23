@@ -97,6 +97,7 @@ QtObject {
     function connect(id) {
         const device = root._deviceForId(id);
         if (!device) { root._reportError("connect", "Device is no longer available"); return false; }
+        if (root._userDisconnectedId === id) root._userDisconnectedId = "";
         // Trust before connect so a flaky first connect (e.g. Soundcore R60i)
         // is retry-eligible via _scheduleReconnect instead of dying silently.
         device.trusted = true;
@@ -107,6 +108,10 @@ QtObject {
     function disconnect(id) {
         const device = root._deviceForId(id);
         if (!device) { root._reportError("disconnect", "Device is no longer available"); return false; }
+        // Remembered until the device reconnects (by hand or on its own) so
+        // a user-requested disconnect doesn't get undone by the trusted-
+        // device reconnect loop 5s later.
+        root._userDisconnectedId = id;
         device.disconnect();
         return true;
     }
@@ -180,6 +185,7 @@ QtObject {
             .filter(name => (name === prefix || name.startsWith(prefix + "-")) && card.profiles[name].available)
             .sort((a, b) => card.profiles[b].priority - card.profiles[a].priority);
         if (candidates.length === 0) return false;
+        profileProc.errText = "";
         profileProc.command = ["pactl", "set-card-profile", cardName, candidates[0]];
         profileProc.running = true;
         return true;
@@ -216,14 +222,25 @@ QtObject {
     readonly property int maxReconnectAttempts: 4
     readonly property var reconnectDelays: [5000, 15000, 30000, 60000]
     property bool _autoDiscovery: false
+    // Set by disconnect(id); excludes that device from reconnect targeting
+    // until it connects again. See disconnect()/connect() and onConnectedChanged.
+    property string _userDisconnectedId: ""
+    readonly property BluetoothReconnectCore _reconnectCore: BluetoothReconnectCore {}
 
     function _missingTrustedDevice() {
-        return root.nativeDevices.find(device => device.trusted && !device.connected) || null;
+        return root._reconnectCore.missingTrustedDevice(root.nativeDevices, root._userDisconnectedId);
     }
 
     function _idleMissingTrustedDevice() {
-        return root.nativeDevices.find(device => device.trusted && !device.connected
-            && !device.pairing && device.state !== QsBluetooth.BluetoothDeviceState.Connecting) || null;
+        return root._reconnectCore.idleMissingTrustedDevice(root.nativeDevices, root._userDisconnectedId);
+    }
+
+    // True while any device (not just the reconnect target) is mid-pair or
+    // mid-connect — including one the user is connecting by hand. Toggling
+    // discovery during that window starves its SDP negotiation, so the
+    // reconnect loop should back off rather than step on it.
+    function _anyDeviceNegotiating() {
+        return root._reconnectCore.anyDeviceNegotiating(root.nativeDevices);
     }
 
     function _stopAutoDiscovery() {
@@ -262,7 +279,19 @@ QtObject {
         // A connect/pair attempt (ours or the user's) may still be in
         // flight — some devices (Soundcore R60i) take 15-20s to finish SDP.
         // Toggling discovery mid-attempt starves that negotiation and drops
-        // the link. Skip to the next missing device instead of stalling on it.
+        // the link. Back off instead of stepping on it. Counts against the
+        // same finite budget as a real attempt, so a device stuck mid-
+        // negotiation forever can't defer this loop indefinitely.
+        if (root._anyDeviceNegotiating()) {
+            if (root.reconnectAttempt >= root.maxReconnectAttempts) {
+                root._cancelReconnect();
+                return;
+            }
+            root.reconnectAttempt++;
+            root._scheduleReconnect(false);
+            return;
+        }
+
         const idleDevice = root._idleMissingTrustedDevice();
         if (!idleDevice) {
             root._scheduleReconnect(false);
@@ -322,7 +351,13 @@ QtObject {
                     const id = modelData.address || modelData.dbusPath;
                     if (modelData.connected) {
                         if (id === root.autoConnectId) root.deviceAutoConnected(modelData.name || modelData.deviceName);
+                        if (id === root._userDisconnectedId) root._userDisconnectedId = "";
+                        // Stop chasing this device, then look for another
+                        // missing trusted device instead of dropping the
+                        // whole loop — one reconnect landing shouldn't
+                        // strand the rest.
                         root._cancelReconnect();
+                        root._scheduleReconnect(true);
                     } else if (modelData.trusted) {
                         root._scheduleReconnect(true);
                     }

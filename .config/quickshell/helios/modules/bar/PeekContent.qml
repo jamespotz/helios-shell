@@ -11,7 +11,7 @@ Item {
 
     required property var targetScreen
 
-    readonly property bool hasLeftCluster: Config.showWorkspaces || Config.showActiveWindow
+    readonly property bool hasLeftCluster: Config.showWorkspaces || Config.showTiledLayout || Config.showActiveWindow
     readonly property bool hasRightCluster: Config.showClock || (Config.showWeather && Weather.available)
         || Config.showTray || Config.showClipboard || Config.showStatusIndicators
 
@@ -32,6 +32,12 @@ Item {
 
             Workspaces {
                 visible: Config.showWorkspaces
+                targetScreen: root.targetScreen
+                anchors.verticalCenter: parent.verticalCenter
+            }
+
+            TiledLayoutIndicator {
+                active: Config.showTiledLayout
                 targetScreen: root.targetScreen
                 anchors.verticalCenter: parent.verticalCenter
             }

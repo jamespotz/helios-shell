@@ -3,7 +3,9 @@ singleton Audio 1.0 Audio.qml
 singleton Colors 1.0 Colors.qml
 singleton Bluetooth 1.0 Bluetooth.qml
 BluetoothDeviceCore 1.0 BluetoothDeviceCore.qml
+BluetoothReconnectCore 1.0 BluetoothReconnectCore.qml
 singleton Config 1.0 Config.qml
+TiledLayoutCore 1.0 TiledLayoutCore.qml
 singleton Bridge 1.0 Bridge.qml
 singleton IslandNavigation 1.0 IslandNavigation.qml
 singleton AppLaunch 1.0 AppLaunch.qml

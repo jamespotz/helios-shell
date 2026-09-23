@@ -178,6 +178,7 @@ QtObject {
     // "Island" settings tab's Widgets section. Keyed by settingsAdapter
     // property name so the settings UI can drive them generically.
     readonly property bool showWorkspaces: settingsAdapter.showWorkspaces
+    readonly property bool showTiledLayout: settingsAdapter.showTiledLayout
     readonly property bool showActiveWindow: settingsAdapter.showActiveWindow
     readonly property bool showClock: settingsAdapter.showClock
     readonly property bool showWeather: settingsAdapter.showWeather
@@ -191,6 +192,7 @@ QtObject {
     readonly property bool showIdleMedia: settingsAdapter.showIdleMedia
     readonly property bool showIdleClock: settingsAdapter.showIdleClock
     readonly property bool showIdleWeather: settingsAdapter.showIdleWeather
+    readonly property bool showIdleTiledLayout: settingsAdapter.showIdleTiledLayout
     // Off by default — these are the bulkier expanded-island widgets, opt-in
     // for anyone who wants a fuller idle bump instead of the minimal one.
     readonly property bool showIdleWorkspaces: settingsAdapter.showIdleWorkspaces
@@ -249,6 +251,7 @@ QtObject {
             property int islandContentPadV: 10
 
             property bool showWorkspaces: true
+            property bool showTiledLayout: false
             property bool showActiveWindow: true
             property bool showClock: true
             property bool showWeather: true
@@ -259,6 +262,7 @@ QtObject {
             property bool showIdleMedia: true
             property bool showIdleClock: true
             property bool showIdleWeather: true
+            property bool showIdleTiledLayout: false
             property bool showIdleWorkspaces: false
             property bool showIdleActiveWindow: false
             property bool showIdleTray: false

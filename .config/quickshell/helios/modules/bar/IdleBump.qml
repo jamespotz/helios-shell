@@ -40,6 +40,12 @@ Item {
             anchors.verticalCenter: parent.verticalCenter
         }
 
+        TiledLayoutIndicator {
+            active: Config.showIdleTiledLayout
+            targetScreen: root.targetScreen
+            anchors.verticalCenter: parent.verticalCenter
+        }
+
         ActiveWindow {
             visible: Config.showIdleActiveWindow
             anchors.verticalCenter: parent.verticalCenter

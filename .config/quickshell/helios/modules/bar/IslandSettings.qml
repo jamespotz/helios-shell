@@ -38,6 +38,7 @@ Item {
         { key: "showIdleMedia", icon: "music_note", label: "Now-playing cover" },
         { key: "showIdleClock", icon: "schedule", label: "Clock" },
         { key: "showIdleWeather", icon: "cloud", label: "Weather" },
+        { key: "showIdleTiledLayout", icon: "dashboard", label: "Tiled layout" },
         { key: "showIdleWorkspaces", icon: "grid_view", label: "Workspaces" },
         { key: "showIdleActiveWindow", icon: "web_asset", label: "Active window" },
         { key: "showIdleTray", icon: "widgets", label: "Tray icons" },
@@ -47,6 +48,7 @@ Item {
 
     readonly property var widgetOptions: [
         { key: "showWorkspaces", icon: "grid_view", label: "Workspaces" },
+        { key: "showTiledLayout", icon: "dashboard", label: "Tiled layout" },
         { key: "showActiveWindow", icon: "web_asset", label: "Active window" },
         { key: "showClock", icon: "schedule", label: "Clock" },
         { key: "showWeather", icon: "cloud", label: "Weather" },
