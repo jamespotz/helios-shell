@@ -42,7 +42,7 @@ Item {
         // Paused when the panel isn't visible.
         property real orbitAngle: 0
         NumberAnimation on orbitAngle {
-            running: root.active
+            running: root.active && !Config.reducedMotion
             from: 0
             to: 360
             duration: 60000
@@ -54,7 +54,7 @@ Item {
         // differently (see OrbitRope.phaseOffset) for an organic look.
         property real wavePhase: 0
         NumberAnimation on wavePhase {
-            running: root.active
+            running: root.active && !Config.reducedMotion
             from: 0
             to: Math.PI * 2
             duration: 4000

@@ -274,12 +274,14 @@ PanelWindow {
             // lockstep — mismatched width/height easing is what makes a
             // morph read as sloppy.
             Behavior on width {
+                enabled: !Config.reducedMotion
                 SpringAnimation {
                     spring: Config.islandSpringStiffness
                     damping: Config.islandSpringDamping
                 }
             }
             Behavior on height {
+                enabled: !Config.reducedMotion
                 SpringAnimation {
                     spring: Config.islandSpringStiffness
                     damping: Config.islandSpringDamping

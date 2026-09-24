@@ -73,7 +73,7 @@ Item {
         }
 
         Timer {
-            running: rainCanvas.visible
+            running: rainCanvas.visible && !Config.reducedMotion
             interval: 33
             repeat: true
             onTriggered: rainCanvas.requestPaint()
@@ -131,7 +131,7 @@ Item {
         }
 
         Timer {
-            running: snowCanvas.visible
+            running: snowCanvas.visible && !Config.reducedMotion
             interval: 33
             repeat: true
             onTriggered: snowCanvas.requestPaint()
@@ -238,7 +238,7 @@ Item {
         }
 
         Timer {
-            running: flash.visible
+            running: flash.visible && !Config.reducedMotion
             repeat: true
             interval: 5000 + Math.random() * 7000
             onTriggered: {

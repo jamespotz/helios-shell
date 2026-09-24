@@ -132,8 +132,10 @@ Loader {
 
                 PamContext {
                     id: pam
+                    // Started by Return, not on creation: starting early
+                    // answers the prompt with an empty field, which PAM
+                    // logs as a failed login on every screen at lock time.
                     config: Config.pamService
-                    active: true
 
                     onResponseRequiredChanged: {
                         if (responseRequired)

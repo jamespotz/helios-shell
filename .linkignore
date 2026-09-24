@@ -11,19 +11,19 @@ README.md
 ^link\.sh$
 ^unlink\.sh$
 ^\.linkignore$
-\docs
+^docs/
 ^tests/
 # Never link Python bytecode caches generated next to the helper scripts
 __pycache__
 \.claude
 AGENTS.md
 CLAUDE.md
-/MISSION.md
-/RESOURCES.md
-/NOTES.md
-/lessons/
-/reference/
-/assets/
-/learning-records/
+^MISSION\.md$
+^RESOURCES\.md$
+^NOTES\.md$
+^lessons/
+^reference/
+^assets/
+^learning-records/
 
 CONTEXT.md

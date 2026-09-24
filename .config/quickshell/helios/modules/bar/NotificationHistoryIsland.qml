@@ -22,7 +22,7 @@ Item {
         width: parent.width
         spacing: 12
 
-        // Header with clear button
+        // Header with DND and clear buttons
         Row {
             width: parent.width
 
@@ -33,46 +33,26 @@ Item {
                 StyledText { text: "Notification History"; font.weight: Font.DemiBold; anchors.verticalCenter: parent.verticalCenter }
             }
 
-            Item { width: Math.max(0, parent.width - parent.children[0].width - dndControl.width - clearBtn.width - 10); height: 1 }
+            Item { width: Math.max(0, parent.width - parent.children[0].width - actions.width); height: 1 }
 
             Row {
-                id: dndControl
-                anchors.verticalCenter: parent.verticalCenter
-                spacing: 6
-
-                StyledText {
-                    text: "DND"
-                    opacity: 0.7
-                    font.pixelSize: Config.fontSize - 2
-                    anchors.verticalCenter: parent.verticalCenter
-                }
-
-                Toggle {
-                    checked: Bridge.dndEnabled
-                    onToggled: value => Bridge.dndEnabled = value
-                }
-            }
-
-            Rectangle {
-                id: clearBtn
-                visible: Notifications.state.history.length > 0
-                width: visible ? clearText.implicitWidth + 16 : 0
-                height: 26
-                radius: 13
-                color: clearBtnHover.hovered ? Colors.surfaceHigh : "transparent"
+                id: actions
+                spacing: 4
                 anchors.verticalCenter: parent.verticalCenter
 
-                StyledText {
-                    id: clearText
-                    anchors.centerIn: parent
-                    text: "Clear"
-                    font.pixelSize: Config.fontSize - 1
-                    font.weight: Font.Medium
-                    color: Colors.accent
+                IconButton {
+                    icon: Bridge.dndEnabled ? "notifications_off" : "notifications_active"
+                    label: Bridge.dndEnabled ? "Turn off Do Not Disturb" : "Turn on Do Not Disturb"
+                    iconColor: Bridge.dndEnabled ? Colors.warning : Colors.text
+                    onClicked: Bridge.dndEnabled = !Bridge.dndEnabled
                 }
 
-                HoverHandler { id: clearBtnHover }
-                MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: Notifications.clearHistory() }
+                IconButton {
+                    icon: "delete"
+                    label: "Clear history"
+                    enabled: Notifications.state.history.length > 0
+                    onClicked: Notifications.clearHistory()
+                }
             }
         }
 

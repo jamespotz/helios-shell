@@ -4,8 +4,15 @@
 # this Hyprland fork's config-load-time bind marshalling didn't run the
 # semicolon-chained inline version, even though the exact same string worked
 # fine when run directly or via a live `hyprctl dispatch`.
-pkill -f 'quickshell -c helios'
-while pgrep -f 'quickshell -c helios' >/dev/null; do sleep 0.05; done
+pkill -f '^quickshell -c helios'
+# Give it ~5s to exit cleanly, then force it so a hung instance can't
+# block the relaunch forever.
+i=0
+while pgrep -f '^quickshell -c helios' >/dev/null; do
+    i=$((i + 1))
+    [ "$i" -eq 100 ] && pkill -KILL -f '^quickshell -c helios'
+    sleep 0.05
+done
 # glibc malloc fragments under the QML engine's alloc/free churn and never
 # hands the pages back, so RSS creeps up over a session (confirmed: ~1.1GB+
 # and still climbing after a few minutes without this). jemalloc doesn't

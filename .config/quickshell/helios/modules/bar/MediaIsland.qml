@@ -111,7 +111,7 @@ Item {
                         to: 360
                         duration: 6000
                         loops: Animation.Infinite
-                        running: root.media.playback.playing
+                        running: root.media.playback.playing && !Config.reducedMotion
                     }
 
                     MaterialIcon {

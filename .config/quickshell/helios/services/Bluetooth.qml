@@ -97,11 +97,13 @@ QtObject {
     function connect(id) {
         const device = root._deviceForId(id);
         if (!device) { root._reportError("connect", "Device is no longer available"); return false; }
-        if (root._userDisconnectedId === id) root._userDisconnectedId = "";
-        // Trust before connect so a flaky first connect (e.g. Soundcore R60i)
-        // is retry-eligible via _scheduleReconnect instead of dying silently.
-        device.trusted = true;
+        root._forgetUserDisconnect(id);
+        // Retry-eligible without touching trust, so a flaky first connect
+        // (e.g. Soundcore R60i) doesn't die silently and the Auto-connect
+        // toggle keeps whatever the user set.
+        root._requestedId = id;
         device.connect();
+        root._scheduleReconnect(true);
         return true;
     }
 
@@ -110,7 +112,8 @@ QtObject {
         if (!device) { root._reportError("disconnect", "Device is no longer available"); return false; }
         // Kept until the device connects again, so the reconnect loop
         // doesn't undo a manual disconnect 5s later.
-        root._userDisconnectedId = id;
+        root._userDisconnectedIds = Object.assign({}, root._userDisconnectedIds, { [id]: true });
+        if (root._requestedId === id) root._requestedId = "";
         device.disconnect();
         return true;
     }
@@ -119,6 +122,8 @@ QtObject {
         const device = root._deviceForId(id);
         if (!device) { root._reportError("forget", "Device is no longer available"); return false; }
         if (root.autoConnectId === id) root._cancelReconnect();
+        root._forgetUserDisconnect(id);
+        if (root._requestedId === id) root._requestedId = "";
         device.forget();
         return true;
     }
@@ -128,6 +133,11 @@ QtObject {
         if (!device) { root._reportError("set trusted", "Device is no longer available"); return false; }
         device.trusted = enabled;
         if (enabled) root._scheduleReconnect(true);
+        else if (root.autoConnectId === id) {
+            // Drop the in-flight attempt so it can't announce itself later.
+            root._cancelReconnect();
+            root._scheduleReconnect(false);
+        }
         return true;
     }
 
@@ -215,23 +225,39 @@ QtObject {
     }
 
     // Exceptional reconnect path for trusted devices that do not retain a
-    // BlueZ bond. Attempts are finite and increasingly spaced. On battery it
-    // runs only while the Bluetooth panel is open.
+    // BlueZ bond, and for the device the user last asked to connect. Bonded
+    // devices reconnect on their own. Attempts are finite and increasingly
+    // spaced, and the budget resets only on events from a target device or
+    // a user action. On battery it runs only while the Bluetooth panel is
+    // open.
     property int reconnectAttempt: 0
     readonly property int maxReconnectAttempts: 4
     readonly property var reconnectDelays: [5000, 15000, 30000, 60000]
     property bool _autoDiscovery: false
-    // Set by disconnect(id); excludes that device from reconnect targeting
-    // until it connects again. See disconnect()/connect() and onConnectedChanged.
-    property string _userDisconnectedId: ""
+    // Set by disconnect(id); excludes those devices from reconnect targeting
+    // until they connect again. See disconnect()/connect() and onConnectedChanged.
+    property var _userDisconnectedIds: ({})
+    // Set by connect(id); retried even when bonded, until it connects.
+    property string _requestedId: ""
     readonly property BluetoothReconnectCore _reconnectCore: BluetoothReconnectCore {}
 
-    function _missingTrustedDevice() {
-        return root._reconnectCore.missingTrustedDevice(root.nativeDevices, root._userDisconnectedId);
+    function _forgetUserDisconnect(id) {
+        if (!root._userDisconnectedIds[id]) return;
+        const next = Object.assign({}, root._userDisconnectedIds);
+        delete next[id];
+        root._userDisconnectedIds = next;
     }
 
-    function _idleMissingTrustedDevice() {
-        return root._reconnectCore.idleMissingTrustedDevice(root.nativeDevices, root._userDisconnectedId);
+    function _isReconnectTarget(device) {
+        return root._reconnectCore.isTarget(device, root._userDisconnectedIds, root._requestedId);
+    }
+
+    function _reconnectTarget() {
+        return root._reconnectCore.reconnectTarget(root.nativeDevices, root._userDisconnectedIds, root._requestedId);
+    }
+
+    function _idleReconnectTarget() {
+        return root._reconnectCore.idleReconnectTarget(root.nativeDevices, root._userDisconnectedIds, root._requestedId, root.autoConnectId);
     }
 
     // True while any device is mid-pair or mid-connect, including one the
@@ -256,19 +282,24 @@ QtObject {
     }
 
     function _scheduleReconnect(resetBudget) {
-        const device = root._missingTrustedDevice();
+        const device = root._reconnectTarget();
         if (!root.adapter || !root.adapter.enabled || !device || (UPower.onBattery && !root.active)) {
             root._cancelReconnect();
             return;
         }
-        if (resetBudget) root.reconnectAttempt = 0;
+        if (resetBudget) {
+            root.reconnectAttempt = 0;
+            // A pending final check belongs to the previous budget; letting
+            // it fire would stop discovery mid-cycle and report a failure.
+            reconnectFinalCheckTimer.stop();
+        }
         if (root.reconnectAttempt >= root.maxReconnectAttempts || reconnectTimer.running) return;
         reconnectTimer.interval = root.reconnectDelays[root.reconnectAttempt];
         reconnectTimer.start();
     }
 
     function _attemptReconnect() {
-        const device = root._missingTrustedDevice();
+        const device = root._reconnectTarget();
         if (!device || !root.adapter || !root.adapter.enabled || (UPower.onBattery && !root.active)) {
             root._cancelReconnect();
             return;
@@ -289,11 +320,8 @@ QtObject {
             return;
         }
 
-        const idleDevice = root._idleMissingTrustedDevice();
-        if (!idleDevice) {
-            root._scheduleReconnect(false);
-            return;
-        }
+        // Never null here: a target exists and none are negotiating.
+        const idleDevice = root._idleReconnectTarget();
 
         if (!root.adapter.discovering) {
             root._autoDiscovery = true;
@@ -320,8 +348,8 @@ QtObject {
         interval: root.reconnectDelays[root.reconnectDelays.length - 1]
         onTriggered: {
             root._stopAutoDiscovery();
-            const device = root._missingTrustedDevice();
-            if (device) root._reportError("reconnect", "Could not reconnect to " + (device.name || device.deviceName || "device"));
+            const device = root._deviceForId(root.autoConnectId);
+            if (device && !device.connected) root._reportError("reconnect", "Could not reconnect to " + (device.name || device.deviceName || "device"));
         }
     }
 
@@ -329,8 +357,10 @@ QtObject {
         onTriggered: root._attemptReconnect()
     }
 
+    // Bound to the ObjectModel, not its values array, so discovery adding
+    // a device creates one watcher instead of rebuilding them all.
     property Instantiator deviceWatchers: Instantiator {
-        model: root.nativeDevices
+        model: root.adapter ? root.adapter.devices : null
         delegate: QtObject {
             required property var modelData
             property Connections watcher: Connections {
@@ -340,6 +370,9 @@ QtObject {
                     const id = modelData.address || modelData.dbusPath;
                     if (id === root.pendingPairId && modelData.paired) {
                         root.pendingPairId = "";
+                        // Trust on first pair so Auto-connect starts on.
+                        // Later connects leave the user's choice alone.
+                        modelData.trusted = true;
                         if (!modelData.connected) modelData.connect();
                     }
                 }
@@ -347,13 +380,20 @@ QtObject {
                 function onConnectedChanged() {
                     const id = modelData.address || modelData.dbusPath;
                     if (modelData.connected) {
-                        if (id === root.autoConnectId) root.deviceAutoConnected(modelData.name || modelData.deviceName);
-                        if (id === root._userDisconnectedId) root._userDisconnectedId = "";
-                        // This one is back. Keep the loop going for any
-                        // other trusted device that's still missing.
-                        root._cancelReconnect();
-                        root._scheduleReconnect(true);
-                    } else if (modelData.trusted) {
+                        root._forgetUserDisconnect(id);
+                        if (id === root._requestedId) root._requestedId = "";
+                        if (id === root.autoConnectId) {
+                            root.deviceAutoConnected(modelData.name || modelData.deviceName);
+                            // The target is back. Fresh budget for any
+                            // other device that's still missing.
+                            root._cancelReconnect();
+                            root._scheduleReconnect(true);
+                        } else {
+                            // Another device's event must not refill the
+                            // budget of a target that stays unreachable.
+                            root._scheduleReconnect(false);
+                        }
+                    } else if (root._isReconnectTarget(modelData)) {
                         root._scheduleReconnect(true);
                     }
                 }

@@ -20,14 +20,14 @@ Rectangle {
     transformOrigin: Item.Center
 
     SequentialAnimation on opacity {
-        running: ScreenRecorder.recording
+        running: ScreenRecorder.recording && !Config.reducedMotion
         loops: Animation.Infinite
         NumberAnimation { from: 1; to: 0.3; duration: 800; easing.type: Easing.InOutSine }
         NumberAnimation { from: 0.3; to: 1; duration: 800; easing.type: Easing.InOutSine }
     }
 
     SequentialAnimation on scale {
-        running: ScreenRecorder.recording
+        running: ScreenRecorder.recording && !Config.reducedMotion
         loops: Animation.Infinite
         NumberAnimation { from: 1.0; to: 1.4; duration: 800; easing.type: Easing.InOutSine }
         NumberAnimation { from: 1.4; to: 1.0; duration: 800; easing.type: Easing.InOutSine }

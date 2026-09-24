@@ -144,7 +144,9 @@ QtObject {
         if (root.captureAudio) args.push("-a", "default_output");
         args.push("-o", root.lastOutputPath);
 
-        proc.command = ["sh", "-c", "mkdir -p '" + root.outputDir + "' && exec \"$@\"", "_"].concat(args);
+        // outputDir is $1, not spliced into the script, so a quote in the
+        // folder name can't break or inject the command.
+        proc.command = ["sh", "-c", "mkdir -p \"$1\" && shift && exec \"$@\"", "_", root.outputDir].concat(args);
         proc.running = false;
         proc.running = true;
     }

@@ -91,7 +91,7 @@ Item {
                     anchors.verticalCenter: parent.verticalCenter
 
                     SequentialAnimation on opacity {
-                        running: ScreenRecorder.recording
+                        running: ScreenRecorder.recording && !Config.reducedMotion
                         loops: Animation.Infinite
                         NumberAnimation { from: 1; to: 0.25; duration: 600 }
                         NumberAnimation { from: 0.25; to: 1; duration: 600 }

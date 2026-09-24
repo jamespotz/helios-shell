@@ -69,7 +69,7 @@ Item {
                     opacity: root.live ? 1 : 0.35
 
                     SequentialAnimation on opacity {
-                        running: root.live
+                        running: root.live && !Config.reducedMotion
                         loops: Animation.Infinite
                         NumberAnimation { from: 1; to: 0.35; duration: 1000; easing.type: Easing.InOutSine }
                         NumberAnimation { from: 0.35; to: 1; duration: 1000; easing.type: Easing.InOutSine }

@@ -111,31 +111,33 @@ QtObject {
         onTriggered: root._pollBandwidth()
     }
 
+    // One in-process read of /proc/net/dev per tick instead of spawning a
+    // shell. Each row is "iface: rx_bytes <7 more rx fields> tx_bytes ...".
     function _pollBandwidth() {
         const ifaces = root._activeInterfaces();
         if (!ifaces.length) { root.rxRate = 0; root.txRate = 0; root._lastBytes = null; return; }
-        bandwidthProc.command = ["sh", "-c",
-            ifaces.map(i => `cat /sys/class/net/${i}/statistics/rx_bytes /sys/class/net/${i}/statistics/tx_bytes 2>/dev/null`).join("; ")];
-        bandwidthProc.running = false;
-        bandwidthProc.running = true;
+        netDev.reload();
+        let rx = 0, tx = 0;
+        for (const line of netDev.text().split("\n")) {
+            const sep = line.indexOf(":");
+            if (sep < 0 || !ifaces.includes(line.slice(0, sep).trim())) continue;
+            const fields = line.slice(sep + 1).trim().split(/\s+/).map(Number);
+            rx += fields[0];
+            tx += fields[8];
+        }
+        const now = Date.now();
+        if (root._lastBytes) {
+            const dt = Math.max(0.5, (now - root._lastTime) / 1000);
+            root.rxRate = Math.max(0, (rx - root._lastBytes.rx) / dt);
+            root.txRate = Math.max(0, (tx - root._lastBytes.tx) / dt);
+        }
+        root._lastBytes = { rx, tx };
+        root._lastTime = now;
     }
 
-    property Process bandwidthProc: Process {
-        stdout: StdioCollector {
-            onStreamFinished: {
-                const nums = text.split("\n").map(Number).filter(n => !isNaN(n));
-                let rx = 0, tx = 0;
-                for (let i = 0; i + 1 < nums.length; i += 2) { rx += nums[i]; tx += nums[i + 1]; }
-                const now = Date.now();
-                if (root._lastBytes) {
-                    const dt = Math.max(0.5, (now - root._lastTime) / 1000);
-                    root.rxRate = Math.max(0, (rx - root._lastBytes.rx) / dt);
-                    root.txRate = Math.max(0, (tx - root._lastBytes.tx) / dt);
-                }
-                root._lastBytes = { rx, tx };
-                root._lastTime = now;
-            }
-        }
+    property FileView netDev: FileView {
+        path: "/proc/net/dev"
+        blockLoading: true
     }
 
     Component.onCompleted: { root.refreshEthernet(); root.refreshVpn(); }

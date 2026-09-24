@@ -12,6 +12,8 @@ Rectangle {
     property bool active: false
     property bool bounceOnHover: false
     property color iconColor: Colors.text
+    // Spoken name for assistive tech; falls back to the icon name.
+    property string label: ""
 
     signal clicked()
 
@@ -60,6 +62,10 @@ Rectangle {
         cursorShape: Qt.PointingHandCursor
         onClicked: root.clicked()
     }
+
+    Accessible.role: Accessible.Button
+    Accessible.name: root.label || root.icon.replace(/_/g, " ")
+    Accessible.onPressAction: root.clicked()
 
     activeFocusOnTab: root.enabled
     Keys.onReturnPressed: root.clicked()

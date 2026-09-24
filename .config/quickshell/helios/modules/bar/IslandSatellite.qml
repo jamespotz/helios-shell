@@ -51,6 +51,7 @@ Item {
     anchors.top: anchorItem.top
     x: root.onRight ? anchorItem.x + anchorItem.width + gap : anchorItem.x - width - gap
     Behavior on x {
+        enabled: !Config.reducedMotion
         SpringAnimation { spring: Config.satelliteSpringStiffness; damping: Config.satelliteSpringDamping }
     }
 
@@ -60,9 +61,11 @@ Item {
     width: root.expanded ? Math.min(root._expandedWidth, Config.islandMaxWidth) : root.badgeSize
     height: root.expanded ? Math.min(root._expandedHeight, Config.islandMaxHeight) : root.badgeSize
     Behavior on width {
+        enabled: !Config.reducedMotion
         SpringAnimation { spring: Config.satelliteSpringStiffness; damping: Config.satelliteSpringDamping }
     }
     Behavior on height {
+        enabled: !Config.reducedMotion
         SpringAnimation { spring: Config.satelliteSpringStiffness; damping: Config.satelliteSpringDamping }
     }
 

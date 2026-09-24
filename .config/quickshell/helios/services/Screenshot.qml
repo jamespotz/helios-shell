@@ -70,10 +70,8 @@ QtObject {
     // Re-copy the last result on demand (the "Copy" chip after a capture).
     function copyLast() {
         if (!root.lastPath) return;
-        clipboardProc.command = ["sh", "-c",
-            root.ocrEnabled && root.extractedText.length > 0
-                ? "wl-copy < '" + root._ocrTextPath + "'"
-                : "wl-copy < '" + root.lastPath + "'"];
+        clipboardProc.command = ["sh", "-c", "wl-copy < \"$1\"", "_",
+            root.ocrEnabled && root.extractedText.length > 0 ? root._ocrTextPath : root.lastPath];
         clipboardProc.running = false;
         clipboardProc.running = true;
     }
@@ -117,19 +115,20 @@ QtObject {
             + "-" + pad(ts.getHours()) + pad(ts.getMinutes()) + pad(ts.getSeconds());
         root.lastPath = root.outputDir + "/Screen-" + stamp + ".png";
 
-        let cmd = "set -o pipefail; mkdir -p '" + root.outputDir + "' && grim";
-        if (geometry) cmd += " -g '" + geometry + "'";
-        cmd += " '" + root.lastPath + "'";
+        // Paths go in as positional args, never spliced into the script, so
+        // a picked folder like "Bob's Shots" can't break or inject the command.
+        // $1 outputDir, $2 lastPath, $3 OCR text path, $4 geometry.
+        let cmd = "set -o pipefail; mkdir -p \"$1\" && grim";
+        if (geometry) cmd += " -g \"$4\"";
+        cmd += " \"$2\"";
         if (root.ocrEnabled) {
-            cmd += " && tesseract '" + root.lastPath + "' - -l eng 2>/dev/null > '" + root._ocrTextPath + "'";
+            cmd += " && tesseract \"$2\" - -l eng 2>/dev/null > \"$3\"";
         }
         if (root.copyToClipboardEnabled) {
-            cmd += root.ocrEnabled
-                ? " && wl-copy < '" + root._ocrTextPath + "'"
-                : " && wl-copy < '" + root.lastPath + "'";
+            cmd += root.ocrEnabled ? " && wl-copy < \"$3\"" : " && wl-copy < \"$2\"";
         }
 
-        grimProc.command = ["sh", "-c", cmd];
+        grimProc.command = ["sh", "-c", cmd, "_", root.outputDir, root.lastPath, root._ocrTextPath, geometry];
         grimProc.running = false;
         grimProc.running = true;
     }
