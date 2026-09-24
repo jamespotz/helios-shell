@@ -232,12 +232,27 @@ Item {
                             }
                         }
 
-                        StyledText {
+                        // Title + one-line body summary
+                        Column {
                             anchors.verticalCenter: parent.verticalCenter
                             width: row.width - 24 - 10 - 16 - 28 - 28 - 30
-                            elide: Text.ElideRight
-                            font.pixelSize: Config.fontSize - 1
-                            text: row.modelData.summary
+                            spacing: 1
+
+                            StyledText {
+                                width: parent.width
+                                elide: Text.ElideRight
+                                font.weight: Font.Medium
+                                font.pixelSize: Config.fontSize - 1
+                                text: row.modelData.summary
+                            }
+                            StyledText {
+                                width: parent.width
+                                visible: text !== ""
+                                elide: Text.ElideRight
+                                color: Colors.subtext
+                                font.pixelSize: Config.fontSize - 2
+                                text: (row.modelData.body || "").replace(/\s+/g, " ").trim()
+                            }
                         }
 
                         IconButton {
