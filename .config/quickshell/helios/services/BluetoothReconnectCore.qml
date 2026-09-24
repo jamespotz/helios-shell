@@ -1,10 +1,9 @@
 import QtQuick
 import Quickshell.Bluetooth as QsBluetooth
 
-// Pure device-selection logic for Bluetooth.qml's trusted-device reconnect
-// loop, extracted so it can be exercised with plain device objects instead
-// of the native BlueZ adapter — same split BluetoothDeviceCore applies to
-// device-state mapping.
+// Picks the target for Bluetooth.qml's trusted-device reconnect loop. Takes
+// plain device objects so tests don't need BlueZ. Same split as
+// BluetoothDeviceCore.
 QtObject {
     id: root
 

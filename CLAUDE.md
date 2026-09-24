@@ -1,3 +1,3 @@
 @AGENTS.md
 
-Always run the unslop skill
+Run the unslop skill on prose you write (docs, commit messages, reports), not on code.

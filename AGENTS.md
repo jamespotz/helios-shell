@@ -116,15 +116,16 @@ Prefer work that occurs in response to actual state changes rather than continuo
 ## Commands
 
 ```sh
-./.config/hypr/helios-reload.sh          # run
-quickshell -c helios -d                  # run detached
+./.config/hypr/helios-reload.sh          # run/relaunch (kills existing instances, preloads jemalloc)
 ./tests/run-<name>-test.sh               # run a single test; see tests/ for the full list
 ./link.sh                                # symlink new/changed files into $TARGET (default $HOME)
 ```
 
+Don't launch `quickshell -c helios` directly: it skips jemalloc (RSS grows past 1GB) and leaves duplicate instances running.
+
 The shell does **not** hot-reload when files are saved.
 
-Reload manually with `Super+Shift+R`, or relaunch Quickshell, before evaluating UI changes.
+Reload with `Super+Shift+R` (runs `helios-reload.sh`) before evaluating UI changes.
 
 ## Validation
 
@@ -134,7 +135,7 @@ After making a change:
 2. Reload or relaunch Quickshell when the change affects runtime QML.
 3. Verify the affected interaction or UI state directly.
 4. Check for QML/runtime errors introduced by the change.
-5. Instead of running a new instance of Quickshell kill all Quickshell instance before relaunching and always use the `./.config/hypr/helios-reload.sh`.
+5. Relaunch only via `./.config/hypr/helios-reload.sh`.
 
 Do not claim a change works solely because the code looks correct.
 

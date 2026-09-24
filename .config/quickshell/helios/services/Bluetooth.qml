@@ -108,9 +108,8 @@ QtObject {
     function disconnect(id) {
         const device = root._deviceForId(id);
         if (!device) { root._reportError("disconnect", "Device is no longer available"); return false; }
-        // Remembered until the device reconnects (by hand or on its own) so
-        // a user-requested disconnect doesn't get undone by the trusted-
-        // device reconnect loop 5s later.
+        // Kept until the device connects again, so the reconnect loop
+        // doesn't undo a manual disconnect 5s later.
         root._userDisconnectedId = id;
         device.disconnect();
         return true;
@@ -235,10 +234,9 @@ QtObject {
         return root._reconnectCore.idleMissingTrustedDevice(root.nativeDevices, root._userDisconnectedId);
     }
 
-    // True while any device (not just the reconnect target) is mid-pair or
-    // mid-connect — including one the user is connecting by hand. Toggling
-    // discovery during that window starves its SDP negotiation, so the
-    // reconnect loop should back off rather than step on it.
+    // True while any device is mid-pair or mid-connect, including one the
+    // user is connecting by hand. Toggling discovery then starves its SDP
+    // negotiation, so the reconnect loop backs off.
     function _anyDeviceNegotiating() {
         return root._reconnectCore.anyDeviceNegotiating(root.nativeDevices);
     }
@@ -279,9 +277,8 @@ QtObject {
         // A connect/pair attempt (ours or the user's) may still be in
         // flight — some devices (Soundcore R60i) take 15-20s to finish SDP.
         // Toggling discovery mid-attempt starves that negotiation and drops
-        // the link. Back off instead of stepping on it. Counts against the
-        // same finite budget as a real attempt, so a device stuck mid-
-        // negotiation forever can't defer this loop indefinitely.
+        // the link. Back off. This still uses up one attempt, so a device
+        // stuck negotiating can't stall the loop forever.
         if (root._anyDeviceNegotiating()) {
             if (root.reconnectAttempt >= root.maxReconnectAttempts) {
                 root._cancelReconnect();
@@ -352,10 +349,8 @@ QtObject {
                     if (modelData.connected) {
                         if (id === root.autoConnectId) root.deviceAutoConnected(modelData.name || modelData.deviceName);
                         if (id === root._userDisconnectedId) root._userDisconnectedId = "";
-                        // Stop chasing this device, then look for another
-                        // missing trusted device instead of dropping the
-                        // whole loop — one reconnect landing shouldn't
-                        // strand the rest.
+                        // This one is back. Keep the loop going for any
+                        // other trusted device that's still missing.
                         root._cancelReconnect();
                         root._scheduleReconnect(true);
                     } else if (modelData.trusted) {

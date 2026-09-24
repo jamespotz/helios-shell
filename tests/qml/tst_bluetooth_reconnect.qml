@@ -37,18 +37,16 @@ ShellRoot {
 
     BluetoothReconnectCore { id: core }
 
-    // R60i placed back in its case, then the user disconnects it by hand
-    // from the panel — the reconnect loop must not target it (see
-    // Bluetooth.qml's disconnect()/_userDisconnectedId).
+    // User disconnects the R60i from the panel. The reconnect loop must
+    // leave it alone. See Bluetooth.qml's _userDisconnectedId.
     function test_missingTrustedDeviceExcludesUserDisconnectedId() {
         const devices = [{ address: "R60I", trusted: true, connected: false }];
         root.compare(core.missingTrustedDevice(devices, "R60I"), null, "excluded device should not be targeted");
         root.compare(core.missingTrustedDevice(devices, "").address, "R60I", "non-excluded device is still targeted");
     }
 
-    // Two trusted devices are both missing (e.g. one manually disconnected,
-    // one out of range) — excluding the first must still surface the second
-    // instead of the loop giving up entirely.
+    // Two trusted devices missing, one disconnected by hand and one out of
+    // range. Excluding the first must still return the second.
     function test_missingTrustedDevicePicksNextWhenFirstExcluded() {
         const devices = [
             { address: "A", trusted: true, connected: false },
@@ -57,8 +55,8 @@ ShellRoot {
         root.compare(core.missingTrustedDevice(devices, "A").address, "B", "should fall through to the other missing device");
     }
 
-    // Regression for the finding: one device reconnecting shouldn't strand
-    // a second still-missing trusted device — the core must keep finding it.
+    // One device reconnecting must not hide a second trusted device that's
+    // still missing.
     function test_missingTrustedDeviceIgnoresNowConnectedDevice() {
         const devices = [
             { address: "A", trusted: true, connected: true },
