@@ -60,6 +60,12 @@ link_file() {
     link_count=$((link_count + 1))
 }
 
+# Quickshell's hot-reload watcher only sees saves inside its config dir, and
+# editors save by renaming a new file over the old one in the repo dir, so
+# per-file symlinks never trigger a reload. Link helios as one directory
+# instead (its files are excluded from the per-file loop via .linkignore).
+link_file "$SRC/.config/quickshell/helios" ".config/quickshell/helios"
+
 while IFS= read -r -d '' file; do
     rel="${file#"$SRC"/}"
     should_ignore "$rel" && continue

@@ -54,6 +54,9 @@ unlink_file() {
     unlink_count=$((unlink_count + 1))
 }
 
+# helios is linked as one directory (see link.sh).
+unlink_file "$SRC/.config/quickshell/helios" ".config/quickshell/helios"
+
 while IFS= read -r -d '' file; do
     rel="${file#"$SRC"/}"
     should_ignore "$rel" && continue

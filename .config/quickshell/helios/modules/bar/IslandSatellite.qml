@@ -92,6 +92,12 @@ Item {
         if (root.active) root.gap = root.restGap;
     }
 
+    // gap is driven imperatively (for the slide-in), so a Rest gap change
+    // from IslandSettings has to be pushed through by hand to apply live.
+    onRestGapChanged: {
+        if (root.active && !liquidSlideIn.running) root.gap = root.restGap;
+    }
+
     onActiveChanged: {
         // Stopping any in-flight tween first avoids it fighting a freshly
         // started one — a quick off/on in close succession could otherwise

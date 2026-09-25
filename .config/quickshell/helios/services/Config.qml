@@ -238,6 +238,8 @@ QtObject {
     property FileView settingsFile: FileView {
         path: Quickshell.statePath("island-appearance.json")
         watchChanges: true
+        // Pick up hand edits to the JSON live, not just on next launch.
+        onFileChanged: reload()
 
         JsonAdapter {
             id: settingsAdapter
@@ -283,7 +285,7 @@ QtObject {
             property real islandShadowSpread: 0.08
 
             property int satelliteBadgeSize: 32
-            property int satelliteRestGap: 6
+            property int satelliteRestGap: 10
             property int satellitePadH: 10
             property int satellitePadV: 10
             property real satelliteShadowGlowRadius: 5

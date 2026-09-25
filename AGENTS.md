@@ -123,9 +123,7 @@ Prefer work that occurs in response to actual state changes rather than continuo
 
 Don't launch `quickshell -c helios` directly: it skips jemalloc (RSS grows past 1GB) and leaves duplicate instances running.
 
-The shell does **not** hot-reload when files are saved.
-
-Reload with `Super+Shift+R` (runs `helios-reload.sh`) before evaluating UI changes.
+Quickshell hot-reloads in place when a file under `helios/` is saved. This works because `link.sh` links `~/.config/quickshell/helios` as one directory. Saves that rename a temp file over the original sometimes miss the reload. If the UI looks stale, check `quickshell -c helios log` for `Reloading configuration...` or press `Super+Shift+R`. A hot reload re-creates singletons, so in-memory state is reset.
 
 ## Validation
 

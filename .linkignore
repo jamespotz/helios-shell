@@ -12,6 +12,8 @@ README.md
 ^unlink\.sh$
 ^\.linkignore$
 ^docs/
+# Linked as a whole directory by link.sh so Quickshell hot-reloads on save
+^\.config/quickshell/helios/
 ^tests/
 # Never link Python bytecode caches generated next to the helper scripts
 __pycache__
