@@ -127,10 +127,10 @@ QtObject {
             usageFile.setText(JSON.stringify(root.launchCounts));
         }
         const command = action.command || [];
-        if (command.length) Quickshell.execDetached(command);
+        if (command.length) AppLaunch.exec(command);
         else {
             const parsed = String(action.execString || "").replace(/%[fFuUdDnNickvm]/g, "").trim();
-            if (parsed) Quickshell.execDetached(["sh", "-c", parsed]);
+            if (parsed) AppLaunch.exec(["sh", "-c", parsed]);
             else return { accepted: false, close: false };
         }
         IslandNavigation.close();

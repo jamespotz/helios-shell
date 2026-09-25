@@ -72,7 +72,7 @@ QtObject {
             keywords: (fields.Keywords || "").split(";").filter(k => k.length > 0),
             noDisplay: false,
             execute: function() {
-                Quickshell.execDetached(isTerminal
+                AppLaunch.exec(isTerminal
                     ? [Config.terminal, "-e", "sh", "-c", execCmd]
                     : ["sh", "-c", execCmd]);
             }

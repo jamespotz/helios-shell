@@ -73,6 +73,20 @@ QtObject {
         return (target && !target.noDisplay) ? target : null;
     }
 
+    // Under a UWSM session, apps go through `uwsm app` so each gets its own
+    // systemd scope instead of living in the compositor's cgroup.
+    readonly property bool useUwsm: !!Quickshell.env("UWSM_FINALIZE_VARNAMES")
+
+    // Single spawn path for launched apps. Strips the jemalloc LD_PRELOAD
+    // helios-reload.sh sets for quickshell itself, so apps don't inherit it.
+    function exec(command, workingDirectory) {
+        Quickshell.execDetached({
+            command: (root.useUwsm ? ["uwsm", "app", "--"] : []).concat(command),
+            environment: { LD_PRELOAD: null },
+            workingDirectory: workingDirectory || ""
+        });
+    }
+
     // Launches a resolved desktop entry, wrapping terminal apps (btop, nvim,
     // etc.) in the configured terminal — Quickshell's DesktopEntry.execute()
     // does NOT spawn a terminal even when runInTerminal is true.
@@ -80,11 +94,15 @@ QtObject {
         if (entry.runInTerminal) {
             const cmd = entry.command || [];
             if (cmd.length > 0) {
-                Quickshell.execDetached([Config.terminal, "-e"].concat(cmd));
+                root.exec([Config.terminal, "-e"].concat(cmd));
             } else {
                 const exec = (entry.execString || "").replace(/%[fFuUdDnNickvm]/g, "").trim();
-                if (exec) Quickshell.execDetached([Config.terminal, "-e", "sh", "-c", exec]);
+                if (exec) root.exec([Config.terminal, "-e", "sh", "-c", exec]);
             }
+        } else if (entry.id) {
+            // uwsm resolves the desktop entry itself (Exec field codes, Path).
+            if (root.useUwsm) root.exec([entry.id + ".desktop"]);
+            else root.exec(entry.command, entry.workingDirectory);
         } else {
             entry.execute();
         }
