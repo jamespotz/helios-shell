@@ -24,11 +24,6 @@ Item {
     implicitWidth: Math.max(Config.idleBumpWidth, row.implicitWidth + 28)
     implicitHeight: Config.idleBumpHeight
 
-    SystemClock {
-        id: clock
-        precision: SystemClock.Minutes
-    }
-
     Row {
         id: row
         anchors.centerIn: parent
@@ -95,12 +90,10 @@ Item {
 
         // Time — clean, medium weight, slightly larger than before for
         // the idle state to be readable at a glance.
-        StyledText {
+        FlipClock {
             visible: Config.showIdleClock
             anchors.verticalCenter: parent.verticalCenter
-            font.pixelSize: Config.fontSize
-            font.weight: Font.Medium
-            text: Qt.formatDateTime(clock.date, Config.timeFormat)
+            weight: Font.Medium
             opacity: 0.95
         }
 

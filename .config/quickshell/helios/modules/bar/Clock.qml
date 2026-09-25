@@ -26,16 +26,11 @@ Item {
 
     HoverHandler { id: clockHover }
 
-    StyledText {
+    FlipClock {
         id: text
-        anchors.fill: parent
-        font.weight: Font.Medium
-        text: Qt.formatDateTime(clock.date, "ddd d MMM  " + Config.timeFormat)
-
-        SystemClock {
-            id: clock
-            precision: SystemClock.Minutes
-        }
+        anchors.centerIn: parent
+        weight: Font.Medium
+        format: "ddd d MMM  " + Config.timeFormat
     }
 
     MouseArea {
