@@ -3,18 +3,19 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 
-// Screenshot service — captures via grim (fullscreen/region via slurp),
-// optionally OCRs the capture with tesseract, and optionally copies the
-// result to the clipboard with wl-copy. Saves to outputDir either way.
+// Screenshot service — captures via grim (fullscreen/region via slurp) and
+// optionally copies the result to the clipboard with wl-copy. Text mode picks
+// a region, OCRs it with tesseract, and always copies the extracted text.
+// Saves to outputDir either way.
 QtObject {
     id: root
 
     readonly property string modeFullscreen: "fullscreen"
     readonly property string modeRegion: "region"
     readonly property string modeWindow: "window"
+    readonly property string modeText: "text"
 
     property string mode: root.modeFullscreen
-    property bool ocrEnabled: false
     property bool copyToClipboardEnabled: true
     property bool capturing: false
     property string lastPath: ""
@@ -36,7 +37,7 @@ QtObject {
         root.lastCopied = false;
         root.extractedText = "";
 
-        if (root.mode === root.modeRegion) {
+        if (root.mode === root.modeRegion || root.mode === root.modeText) {
             regionPicker.running = false;
             regionPicker.running = true;
         } else if (root.mode === root.modeWindow) {
@@ -55,11 +56,7 @@ QtObject {
     function captureFullscreen() { root.capture(root.modeFullscreen) }
     function captureRegion() { root.capture(root.modeRegion) }
     function captureWindow() { root.capture(root.modeWindow) }
-    function captureOcrRegion() {
-        root.ocrEnabled = true;
-        root.copyToClipboardEnabled = true;
-        root.capture(root.modeRegion);
-    }
+    function captureText() { root.capture(root.modeText) }
 
     property Timer fullscreenDelay: Timer {
         interval: 200
@@ -71,7 +68,7 @@ QtObject {
     function copyLast() {
         if (!root.lastPath) return;
         clipboardProc.command = ["sh", "-c", "wl-copy < \"$1\"", "_",
-            root.ocrEnabled && root.extractedText.length > 0 ? root._ocrTextPath : root.lastPath];
+            root.extractedText.length > 0 ? root._ocrTextPath : root.lastPath];
         clipboardProc.running = false;
         clipboardProc.running = true;
     }
@@ -121,12 +118,10 @@ QtObject {
         let cmd = "set -o pipefail; mkdir -p \"$1\" && grim";
         if (geometry) cmd += " -g \"$4\"";
         cmd += " \"$2\"";
-        if (root.ocrEnabled) {
-            cmd += " && tesseract \"$2\" - -l eng 2>/dev/null > \"$3\"";
-        }
-        if (root.copyToClipboardEnabled) {
-            cmd += root.ocrEnabled ? " && wl-copy < \"$3\"" : " && wl-copy < \"$2\"";
-        }
+        if (root.mode === root.modeText)
+            cmd += " && tesseract \"$2\" - -l eng 2>/dev/null > \"$3\" && wl-copy < \"$3\"";
+        else if (root.copyToClipboardEnabled)
+            cmd += " && wl-copy < \"$2\"";
 
         grimProc.command = ["sh", "-c", cmd, "_", root.outputDir, root.lastPath, root._ocrTextPath, geometry];
         grimProc.running = false;
@@ -136,7 +131,7 @@ QtObject {
     function _captureSucceeded() {
         root.capturing = false;
         root.lastCopied = true;
-        if (root.ocrEnabled) ocrTextReader.running = true;
+        if (root.mode === root.modeText) ocrTextReader.running = true;
 
         const fileName = root.lastPath.split("/").pop();
         notificationProc.command = ["notify-send", "--app-name=Helios", "--icon=camera-photo",
@@ -181,7 +176,7 @@ QtObject {
         }
     }
 
-    // grim capture, optional tesseract OCR, optional wl-copy — all one shot
+    // grim capture, tesseract OCR in text mode, optional wl-copy — all one shot
     property Process grimProc: Process {
         onExited: exitCode => {
             if (exitCode === 0) {

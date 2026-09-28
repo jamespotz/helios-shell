@@ -31,4 +31,4 @@ set -e
 printf '%s\n' "$output"
 [[ "$test_status" -ne 124 ]]
 [[ -f "$test_root/result" ]]
-[[ "$(cat "$test_root/result")" == "region:true:true:true" ]]
+[[ "$(cat "$test_root/result")" == "text:false:true" ]]

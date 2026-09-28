@@ -14,15 +14,15 @@ def _run(cmd, timeout):
         return None
 
 
-def dnf_update_count():
+def dnf_update_packages():
     # --assumeno declines any interactive prompt (e.g. importing an untrusted
     # repo GPG key) instead of hanging or silently trusting it.
     result = _run(["dnf", "-q", "--assumeno", "check-update", "--json"], 90)
     if result is None or result.returncode != 0:
         return None
     try:
-        return len(json.loads(result.stdout).get("upgrades", []))
-    except json.JSONDecodeError:
+        return sorted({u["name"] for u in json.loads(result.stdout).get("upgrades", [])})
+    except (json.JSONDecodeError, KeyError):
         return None
 
 
@@ -100,8 +100,10 @@ def firmware_updates():
 
 
 if __name__ == "__main__":
+    dnf_packages = dnf_update_packages()
     print(json.dumps({
-        "dnf_updates": dnf_update_count(),
+        "dnf_updates": None if dnf_packages is None else len(dnf_packages),
+        "dnf_packages": dnf_packages or [],
         "flatpak_updates": flatpak_update_count(),
         "reboot_required": reboot_required(),
         "firmware_updates": firmware_updates(),

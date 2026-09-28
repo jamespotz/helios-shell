@@ -4,7 +4,7 @@ import "../../services"
 // Apple-style vibrancy surface: Hyprland supplies the real blur (via
 // `layerrule blur` for the "helios:bar" namespace in shell.qml); this
 // Canvas only paints a neutral tint + subtle specular rim on top.
-// Falls back to a flat fill when liquid glass is disabled.
+// Falls back to a flat fill (a Rectangle child) when liquid glass is disabled.
 //
 // Design principle: Apple's dark vibrancy materials are almost entirely
 // neutral gray with very slight warmth — no colored tints. The blur
@@ -60,18 +60,6 @@ Canvas {
         return "rgba(" + Math.round(c.r * 255) + ", " + Math.round(c.g * 255) + ", " + Math.round(c.b * 255) + ", " + alpha + ")";
     }
 
-    function paintFallback(context) {
-        if (root.glassAmount >= 0.999)
-            return;
-
-        context.save();
-        root.traceBody(context, 0);
-        context.globalAlpha = 1 - root.glassAmount;
-        context.fillStyle = root.fallbackColor;
-        context.fill();
-        context.restore();
-    }
-
     function paintGlass(context) {
         if (root.glassAmount <= 0.001)
             return;
@@ -124,14 +112,25 @@ Canvas {
 
         context.reset();
         context.clearRect(0, 0, width, height);
-        root.paintFallback(context);
         root.paintGlass(context);
     }
 
-    onWidthChanged: requestPaint()
-    onHeightChanged: requestPaint()
-    onCornerRadiusChanged: requestPaint()
-    onFallbackColorChanged: requestPaint()
+    // The flat fill is a Rectangle, not Canvas paint: the Canvas texture is
+    // truncated to whole device pixels, so at fractional scale (e.g. 1.25) an
+    // odd width lost a sliver off the right edge and the pill's right cap
+    // looked cut. A Rectangle's rounding is resolution-independent, and it
+    // spares a Canvas repaint on every frame of the island's width spring.
+    Rectangle {
+        anchors.fill: parent
+        radius: Math.min(root.cornerRadius, width / 2, height / 2)
+        color: root.fallbackColor
+        opacity: 1 - root.glassAmount
+        visible: opacity > 0.001
+    }
+
+    onWidthChanged: if (root.glassAmount > 0) requestPaint()
+    onHeightChanged: if (root.glassAmount > 0) requestPaint()
+    onCornerRadiusChanged: if (root.glassAmount > 0) requestPaint()
     onGlassAmountChanged: requestPaint()
 
     Behavior on glassAmount {

@@ -50,6 +50,7 @@ ShellRoot {
             Themes.currentLabel();
             NightLight.enabled;    // restores persisted state + spawns wlsunset if needed
             IdleInhibit.enabled;   // restores persisted state + spawns hypridle if needed
+            Automations.bluetoothAudioRule; // rules only run once the singleton exists
             WallpaperLibrary.images;
             shellRoot.restoreStartupWallpaper();
             WifiNetworks.networks;
@@ -115,6 +116,11 @@ ShellRoot {
         function location(text: string) { Weather.setLocation(text) }
     }
 
+
+    IpcHandler {
+        target: "maintenance"
+        function refresh() { Maintenance.refresh() }
+    }
 
     IpcHandler {
         target: "wallpaper"
@@ -196,7 +202,7 @@ ShellRoot {
         function full() { Screenshot.captureFullscreen() }
         function region() { Screenshot.captureRegion() }
         function window() { Screenshot.captureWindow() }
-        function ocr() { Screenshot.captureOcrRegion() }
+        function ocr() { Screenshot.captureText() }
         function toggle() {
             const screen = Utils.focusedScreen(Quickshell.screens, Hyprland.focusedMonitor);
             IslandNavigation.toggle(screen.name, "screenshot");

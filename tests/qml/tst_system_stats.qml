@@ -36,7 +36,12 @@ ShellRoot {
         root.compare(monitor.state.status, "stopped");
         root.compare(monitor.state.ready, false);
         root.compare(monitor.state.processes, []);
-        root.compare(monitor.state.networkSentHistory, []);
+        root.compare(monitor.state.history.cpu, []);
+        root.compare(monitor.state.history.netSent, []);
+        root.compare(monitor.state.storage, null);
+        root.compare(monitor.state.sensors, { cpu_c: null, fan_rpm: null });
+        root.compare(monitor.state.cpu.times, { system: 0, user: 0, idle: 0 });
+        root.compare(monitor.state.network.local_ip, null);
     }
 
     function test_ingestPublishesOneCoherentSnapshot() {
@@ -46,15 +51,60 @@ ShellRoot {
             disk: { read_mb: 1, write_mb: 2 }, network: { sent_mb: 3, received_mb: 4 },
             gpu: null, processes: [{ pid: 2, name: "worker" }],
             network_rate: { sent_kbs: 5, received_kbs: 6 },
-            network_history: { sent_kbs: [5], received_kbs: [6] }
+            disk_rate: { read_kbs: 7, write_kbs: 8 },
+            history: {
+                cpu: [10, 12], memory: [40], gpu: [],
+                disk_read_kbs: [7], disk_write_kbs: [8],
+                net_sent_kbs: [5], net_received_kbs: [6]
+            }
         };
         root.verify(monitor._ingest(JSON.stringify(sample)));
         root.compare(monitor.state.status, "live");
         root.compare(monitor.state.cpu.usage_percent, 12);
         root.compare(monitor.state.networkRate.receivedKBs, 6);
         root.compare(monitor.state.processes[0].pid, 2);
+        root.compare(monitor.state.diskRate, { readKBs: 7, writeKBs: 8 });
+        root.compare(monitor.state.history, {
+            cpu: [10, 12], memory: [40], gpu: [],
+            diskRead: [7], diskWrite: [8], netSent: [5], netReceived: [6]
+        });
+        const noHistory = Object.assign({}, sample);
+        delete noHistory.history;
+        root.verify(!monitor._ingest(JSON.stringify(noHistory)), "sample without history rejected");
         root.verify(!monitor._ingest("{broken"));
         root.compare(monitor.state.cpu.usage_percent, 12, "malformed sample replaced last good state");
+    }
+
+    function test_ingestsCardFieldsAndDefaultsOldPayloads() {
+        const base = {
+            cpu: { usage_percent: 5, per_core: [5], frequency_mhz: 3000 },
+            memory: { usage_percent: 40, used_gb: 4, total_gb: 10 },
+            disk: { read_mb: 1, write_mb: 2 }, network: { sent_mb: 3, received_mb: 4 },
+            gpu: null, processes: [],
+            network_rate: { sent_kbs: 0, received_kbs: 0 },
+            disk_rate: { read_kbs: 0, write_kbs: 0 },
+            history: {}
+        };
+        root.verify(monitor._ingest(JSON.stringify(base)), "old payload still ingests");
+        root.compare(monitor.state.storage, null);
+        root.compare(monitor.state.sensors, { cpu_c: null, fan_rpm: null });
+        root.compare(monitor.state.cpu.times, { system: 0, user: 0, idle: 0 });
+        root.compare(monitor.state.memory.cached_gb, 0);
+        root.compare(monitor.state.network.local_ip, null);
+
+        const full = Object.assign({}, base, {
+            cpu: Object.assign({}, base.cpu, { times: { system: 1, user: 2, idle: 97 } }),
+            memory: Object.assign({}, base.memory, { cached_gb: 3, swap_used_gb: 0.5, swap_total_gb: 8 }),
+            network: Object.assign({}, base.network, { iface: "wlo1", iface_type: "wifi", local_ip: "10.0.0.2" }),
+            storage: { mount: "/", total_gb: 100, used_gb: 25, free_gb: 75, percent: 25 },
+            sensors: { cpu_c: 55, fan_rpm: null }
+        });
+        root.verify(monitor._ingest(JSON.stringify(full)));
+        root.compare(monitor.state.cpu.times.idle, 97);
+        root.compare(monitor.state.memory.swap_used_gb, 0.5);
+        root.compare(monitor.state.network.local_ip, "10.0.0.2");
+        root.compare(monitor.state.storage.free_gb, 75);
+        root.compare(monitor.state.sensors, { cpu_c: 55, fan_rpm: null });
     }
 
     function test_rejectsUnknownProcessIntent() {
@@ -78,6 +128,7 @@ ShellRoot {
         try {
             root.test_stateIsCoherentBeforeSampling();
             root.test_ingestPublishesOneCoherentSnapshot();
+            root.test_ingestsCardFieldsAndDefaultsOldPayloads();
             root.test_rejectsUnknownProcessIntent();
             root.test_processQueryAndProtectionStayInsideModule();
             root.pass();

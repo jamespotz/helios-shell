@@ -16,6 +16,7 @@ QtObject {
     property double lastCheckedAt: 0
 
     property var dnfUpdates: null
+    property var dnfPackages: []
     property var flatpakUpdates: null
     property var rebootRequired: null
     property var firmwareUpdates: []
@@ -33,6 +34,23 @@ QtObject {
         unitsProc.running = true;
     }
 
+    // Opens a terminal that applies the pending updates, since sudo needs a
+    // real prompt. The dnf packages are named explicitly: a bare `dnf upgrade`
+    // as root reads root's own metadata cache, which can lag behind the user
+    // cache this check reads (a stale mirror) and then silently finds nothing.
+    // The terminal asks the shell to re-check once it's done.
+    function update() {
+        const steps = [];
+        if (root.dnfPackages.length > 0)
+            steps.push("sudo dnf upgrade --refresh " + root.dnfPackages.map(p => "'" + p + "'").join(" "));
+        if (root.flatpakUpdates > 0)
+            steps.push("flatpak update");
+        if (steps.length === 0) return;
+        steps.push("quickshell -c helios ipc call maintenance refresh >/dev/null");
+        steps.push("printf '\\nPress Enter to close'; read -r _");
+        AppLaunch.exec([Config.terminal, "-e", "sh", "-c", steps.join("; ")]);
+    }
+
     property Process infoProc: Process {
         command: ["python3", "-u", Quickshell.env("HOME") + "/.config/quickshell/helios/modules/bar/maintenance-info.py"]
         stdout: StdioCollector {
@@ -42,6 +60,7 @@ QtObject {
                 try {
                     const parsed = JSON.parse(text);
                     root.dnfUpdates = parsed.dnf_updates;
+                    root.dnfPackages = parsed.dnf_packages || [];
                     root.flatpakUpdates = parsed.flatpak_updates;
                     root.rebootRequired = parsed.reboot_required;
                     root.firmwareUpdates = parsed.firmware_updates || [];

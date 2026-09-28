@@ -3,9 +3,9 @@ import "../../services"
 import "../../components"
 
 // System maintenance — pending dnf/flatpak updates, reboot-required
-// status, pending firmware updates, and failed systemd units. Read-only
-// status + a manual refresh; actually applying updates needs a privileged
-// prompt this shell doesn't own, so that stays a terminal/GNOME Software job.
+// status, pending firmware updates, and failed systemd units. Status, a
+// manual refresh, and an Update action that hands off to a terminal (sudo
+// needs a real prompt).
 Item {
     id: root
 
@@ -69,6 +69,16 @@ Item {
                     color: Colors.subtext
                 }
             }
+        }
+
+        PrimaryButton {
+            width: parent.width
+            height: 40
+            visible: Maintenance.updateCount > 0
+            text: "Update"
+            icon: "system_update_alt"
+            active: true
+            onClicked: Maintenance.update()
         }
 
         Row {

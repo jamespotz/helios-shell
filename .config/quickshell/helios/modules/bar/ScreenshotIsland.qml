@@ -4,7 +4,7 @@ import "../../components"
 
 // Screenshot panel — segmented mode picker, shutter button, then swaps to a
 // result card (thumbnail, extracted text, quick actions) once a capture
-// lands. Options (OCR, clipboard, save location) live in a shared disclosure.
+// lands. Options (clipboard, save location) live in a shared disclosure.
 Item {
     id: root
 
@@ -23,19 +23,17 @@ Item {
             key: Screenshot.modeWindow,
             icon: "web_asset",
             label: "Window"
+        },
+        {
+            key: Screenshot.modeText,
+            icon: "text_fields",
+            label: "Text"
         }
     ]
 
     property bool manualNewCapture: false
     readonly property bool hasResult: !root.manualNewCapture && Screenshot.lastPath.length > 0 && !Screenshot.capturing && Screenshot.lastError.length === 0
-    readonly property string optionsSummary: {
-        let parts = [];
-        if (Screenshot.ocrEnabled)
-            parts.push("OCR");
-        if (Screenshot.copyToClipboardEnabled)
-            parts.push("Clipboard");
-        return parts.join(" · ");
-    }
+    readonly property string optionsSummary: Screenshot.copyToClipboardEnabled ? "Clipboard" : ""
 
     Connections {
         target: Screenshot
@@ -58,7 +56,7 @@ Item {
     }
     Component.onCompleted: Screenshot.verifyLastPath()
 
-    implicitWidth: 290
+    implicitWidth: Math.max(290, modeRow.implicitWidth)
     implicitHeight: col.implicitHeight
 
     Column {
@@ -85,6 +83,7 @@ Item {
 
         // ─── Mode selector (always visible, even over a result) ──────
         Row {
+            id: modeRow
             spacing: 6
             anchors.horizontalCenter: parent.horizontalCenter
 
@@ -231,7 +230,7 @@ Item {
 
             // ─── Extracted text card ────────────────────────────────
             Rectangle {
-                visible: Screenshot.ocrEnabled && Screenshot.extractedText.length > 0
+                visible: Screenshot.extractedText.length > 0
                 width: parent.width
                 height: extractedCol.implicitHeight + 20
                 radius: Colors.radiusSmall
@@ -325,15 +324,6 @@ Item {
         Disclosure {
             width: parent.width
             summary: root.optionsSummary
-
-            ToggleRow {
-                width: parent.width
-                icon: "text_fields"
-                title: "Extract text (OCR)"
-                subtitle: "Reads text from the capture"
-                checked: Screenshot.ocrEnabled
-                onToggled: v => Screenshot.ocrEnabled = v
-            }
 
             ToggleRow {
                 width: parent.width

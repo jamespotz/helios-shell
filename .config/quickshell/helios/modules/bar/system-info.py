@@ -6,6 +6,7 @@ import sys
 import time
 import os
 import signal
+import socket
 from collections import deque
 
 # --full switches the process snapshot from the dashboard's top-6-by-CPU
@@ -13,9 +14,18 @@ from collections import deque
 # for while that view is open, since SystemStats.qml restarts this script
 # with/without the flag as the view toggles.
 FULL_PROCESS_LIST = "--full" in sys.argv
+# --once prints a single snapshot and exits (used by tests).
+ONCE = "--once" in sys.argv
 FULL_PROCESS_LIMIT = 1000
 TOP_PROCESS_LIMIT = 6
-HISTORY_LENGTH = 30
+# 2s x 60 samples = a two-minute window for SystemMonitorIsland's graphs.
+SAMPLE_INTERVAL = 2.0
+HISTORY_LENGTH = 60
+# Slow-changing values, refreshed less often than the 2s tick.
+STORAGE_INTERVAL = 30.0
+INTERFACE_INTERVAL = 10.0
+VIRTUAL_INTERFACE_PREFIXES = ("lo", "docker", "br-", "veth", "virbr", "tun")
+HISTORY_KEYS = ("cpu", "memory", "gpu", "disk_read_kbs", "disk_write_kbs", "net_sent_kbs", "net_received_kbs")
 
 
 def act_on_process(pid, action):
@@ -61,14 +71,15 @@ def get_gpu():
 
 
 # psutil computes CPU% as a delta between two calls on the *same* Process
-# object. A fresh process_iter() every 5s tick would create new objects and
+# object. A fresh process_iter() every tick would create new objects and
 # always report 0.0%, so keep them cached by PID across iterations — this is
 # psutil's documented pattern for exactly this case.
 _process_cache = {}
 _process_metadata = {}
 _gpu_cache = None
 _last_gpu_sample = 0.0
-GPU_SAMPLE_INTERVAL = 15.0
+# nvidia-smi is a subprocess spawn; every other tick is live enough.
+GPU_SAMPLE_INTERVAL = 2 * SAMPLE_INTERVAL
 
 
 def get_gpu_cached():
@@ -131,6 +142,7 @@ def get_processes(limit=6):
                     "user": metadata["user"],
                     "cpu_percent": cpu_percent,
                     "memory_percent": round(p.memory_percent(), 1),
+                    "memory_mb": round(p.memory_info().rss / 1024**2, 1),
                 }
             )
         except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
@@ -139,23 +151,97 @@ def get_processes(limit=6):
     return results
 
 
-def get_system_stats(rate, sent_history, received_history, network_counters):
-    cpu_usage = psutil.cpu_percent(interval=0.5)
-    per_core = psutil.cpu_percent(percpu=True)
+_slow_cache = {}
+
+
+def cached(key, interval, compute):
+    now = time.monotonic()
+    entry = _slow_cache.get(key)
+    if entry is None or now - entry[0] >= interval:
+        entry = (now, compute())
+        _slow_cache[key] = entry
+    return entry[1]
+
+
+def get_storage():
+    usage = psutil.disk_usage("/")
+    return {
+        "mount": "/",
+        "total_gb": round(usage.total / 1024**3, 1),
+        "used_gb": round(usage.used / 1024**3, 1),
+        "free_gb": round(usage.free / 1024**3, 1),
+        "percent": usage.percent,
+    }
+
+
+def get_sensors():
+    cpu_c = None
+    fan_rpm = None
+    try:
+        temps = psutil.sensors_temperatures()
+        for chip, label in (("coretemp", "Package id 0"), ("k10temp", "Tctl"), ("zenpower", None)):
+            for entry in temps.get(chip, []):
+                if label is None or entry.label == label:
+                    cpu_c = entry.current
+                    break
+            if cpu_c is not None:
+                break
+    except Exception:
+        pass
+    try:
+        speeds = [fan.current for fans in psutil.sensors_fans().values() for fan in fans if fan.current > 0]
+        fan_rpm = max(speeds) if speeds else None
+    except Exception:
+        pass
+    return {"cpu_c": cpu_c, "fan_rpm": fan_rpm}
+
+
+def get_interface():
+    stats = psutil.net_if_stats()
+    for name, addresses in psutil.net_if_addrs().items():
+        if name.startswith(VIRTUAL_INTERFACE_PREFIXES) or not (name in stats and stats[name].isup):
+            continue
+        for address in addresses:
+            if address.family == socket.AF_INET:
+                wireless = os.path.exists(f"/sys/class/net/{name}/wireless")
+                return {"iface": name, "iface_type": "wifi" if wireless else "ethernet", "local_ip": address.address}
+    return {"iface": None, "iface_type": None, "local_ip": None}
+
+
+def get_system_stats(network_rate, disk_rate, history, network_counters, disk):
+    # Non-blocking: deltas since the previous tick (primed before the loop).
+    cpu_usage = psutil.cpu_percent(interval=None)
+    per_core = psutil.cpu_percent(interval=None, percpu=True)
+    times = psutil.cpu_times_percent(interval=None)
     frequency = psutil.cpu_freq()
     memory = psutil.virtual_memory()
-    disk = psutil.disk_io_counters()
+    swap = psutil.swap_memory()
+    gpu = get_gpu_cached()
+    history["cpu"].append(cpu_usage)
+    history["memory"].append(memory.percent)
+    # A failed nvidia-smi read records 0 once the graph has started, so the
+    # GPU series keeps the same time window as the others.
+    if gpu:
+        history["gpu"].append(gpu["usage_percent"])
+    elif history["gpu"]:
+        history["gpu"].append(0)
     snapshot = {
         "cpu": {
             "usage_percent": cpu_usage,
             "per_core": per_core,
             "frequency_mhz": frequency.current if frequency else None,
+            "times": {"system": times.system, "user": times.user, "idle": times.idle},
         },
         "memory": {
             "usage_percent": memory.percent,
             "used_gb": round(memory.used / 1024**3, 2),
             "total_gb": round(memory.total / 1024**3, 2),
+            "cached_gb": round(getattr(memory, "cached", 0) / 1024**3, 2),
+            "swap_used_gb": round(swap.used / 1024**3, 2),
+            "swap_total_gb": round(swap.total / 1024**3, 2),
         },
+        "storage": cached("storage", STORAGE_INTERVAL, get_storage),
+        "sensors": get_sensors(),
         "disk": {
             "read_mb": round(disk.read_bytes / 1024**2, 2),
             "write_mb": round(disk.write_bytes / 1024**2, 2),
@@ -163,15 +249,14 @@ def get_system_stats(rate, sent_history, received_history, network_counters):
         "network": {
             "sent_mb": round(network_counters.bytes_sent / 1024**2, 2),
             "received_mb": round(network_counters.bytes_recv / 1024**2, 2),
+            **cached("interface", INTERFACE_INTERVAL, get_interface),
         },
-        "gpu": get_gpu_cached(),
+        "gpu": gpu,
         "processes": get_processes(FULL_PROCESS_LIMIT if FULL_PROCESS_LIST else TOP_PROCESS_LIMIT),
     }
-    snapshot["network_rate"] = rate
-    snapshot["network_history"] = {
-        "sent_kbs": list(sent_history),
-        "received_kbs": list(received_history),
-    }
+    snapshot["network_rate"] = network_rate
+    snapshot["disk_rate"] = disk_rate
+    snapshot["history"] = {key: list(values) for key, values in history.items()}
     return snapshot
 
 
@@ -181,24 +266,44 @@ if "--signal" in sys.argv:
     print(json.dumps(result, separators=(",", ":")))
     raise SystemExit(0 if result["success"] else 1)
 
-sent_history = deque(maxlen=HISTORY_LENGTH)
-received_history = deque(maxlen=HISTORY_LENGTH)
+history = {key: deque(maxlen=HISTORY_LENGTH) for key in HISTORY_KEYS}
 last_network = None
+last_disk = None
 last_sample_time = None
+psutil.cpu_percent(interval=None)
+psutil.cpu_percent(interval=None, percpu=True)
+psutil.cpu_times_percent(interval=None)
+time.sleep(0.5)  # so the first sample measures something instead of reading 0%
+
+
+def _kbs(current, previous, elapsed):
+    return max(0, current - previous) / 1024 / elapsed
+
 
 while True:
     counters = psutil.net_io_counters()
+    disk = psutil.disk_io_counters()
     now = time.monotonic()
-    rate = {"sent_kbs": 0, "received_kbs": 0}
-    if last_network is not None and last_sample_time is not None:
+    network_rate = {"sent_kbs": 0, "received_kbs": 0}
+    disk_rate = {"read_kbs": 0, "write_kbs": 0}
+    if last_sample_time is not None:
         elapsed = max(now - last_sample_time, 0.001)
-        rate = {
-            "sent_kbs": max(0, counters.bytes_sent - last_network.bytes_sent) / 1024 / elapsed,
-            "received_kbs": max(0, counters.bytes_recv - last_network.bytes_recv) / 1024 / elapsed,
+        network_rate = {
+            "sent_kbs": _kbs(counters.bytes_sent, last_network.bytes_sent, elapsed),
+            "received_kbs": _kbs(counters.bytes_recv, last_network.bytes_recv, elapsed),
         }
-        sent_history.append(rate["sent_kbs"])
-        received_history.append(rate["received_kbs"])
+        disk_rate = {
+            "read_kbs": _kbs(disk.read_bytes, last_disk.read_bytes, elapsed),
+            "write_kbs": _kbs(disk.write_bytes, last_disk.write_bytes, elapsed),
+        }
+        history["net_sent_kbs"].append(network_rate["sent_kbs"])
+        history["net_received_kbs"].append(network_rate["received_kbs"])
+        history["disk_read_kbs"].append(disk_rate["read_kbs"])
+        history["disk_write_kbs"].append(disk_rate["write_kbs"])
     last_network = counters
+    last_disk = disk
     last_sample_time = now
-    print(json.dumps(get_system_stats(rate, sent_history, received_history, counters), separators=(",", ":")), flush=True)
-    time.sleep(5)
+    print(json.dumps(get_system_stats(network_rate, disk_rate, history, counters, disk), separators=(",", ":")), flush=True)
+    if ONCE:
+        break
+    time.sleep(SAMPLE_INTERVAL)

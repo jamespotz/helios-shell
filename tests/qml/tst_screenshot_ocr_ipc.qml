@@ -9,13 +9,11 @@ ShellRoot {
     readonly property Process resultWriter: Process {}
 
     Component.onCompleted: {
-        Screenshot.ocrEnabled = false;
         Screenshot.copyToClipboardEnabled = false;
-        Screenshot.captureOcrRegion();
+        Screenshot.captureText();
         root.resultWriter.command = ["sh", "-c", "printf '%s' \"$1\" > \"$0\"; kill -TERM $PPID",
             Quickshell.env("OCR_IPC_TEST_RESULT"),
-            Screenshot.mode + ":" + Screenshot.ocrEnabled + ":"
-                + Screenshot.copyToClipboardEnabled + ":" + Screenshot.capturing];
+            Screenshot.mode + ":" + Screenshot.copyToClipboardEnabled + ":" + Screenshot.capturing];
         root.resultWriter.running = true;
     }
 }
