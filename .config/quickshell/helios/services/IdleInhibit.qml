@@ -20,7 +20,7 @@ QtObject {
     property alias lockTimeout: adapter.lockTimeout      // seconds before lock (0 = never)
     property alias dpmsTimeout: adapter.dpmsTimeout      // seconds before DPMS off (0 = never)
     property alias dimTimeout: adapter.dimTimeout        // seconds before dimming (0 = never)
-    property bool inhibited: false     // temporary caffeine mode — not persisted
+    property alias inhibited: adapter.inhibited          // caffeine mode
 
     readonly property string configPath: Quickshell.env("HOME") + "/.config/hypr/hypridle-helios.conf"
     readonly property string helios: "quickshell -c helios ipc call"
@@ -131,6 +131,7 @@ QtObject {
             property int lockTimeout: 300
             property int dpmsTimeout: 600
             property int dimTimeout: 240
+            property bool inhibited: false
         }
 
         // Fires once the async load actually completes — the correct place
@@ -143,4 +144,5 @@ QtObject {
     onLockTimeoutChanged: root.settingsFile.writeAdapter()
     onDpmsTimeoutChanged: root.settingsFile.writeAdapter()
     onDimTimeoutChanged: root.settingsFile.writeAdapter()
+    onInhibitedChanged: root.settingsFile.writeAdapter()
 }

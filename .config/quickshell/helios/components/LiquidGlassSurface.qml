@@ -1,5 +1,5 @@
 import QtQuick
-import "../../services"
+import "../services"
 
 // Apple-style vibrancy surface: Hyprland supplies the real blur (via
 // `layerrule blur` for the "helios:bar" namespace in shell.qml); this

@@ -108,9 +108,35 @@ PanelWindow {
         function brightnessDown() { osd.adjustBrightness(-5) }
     }
 
-    PanelBackground {
+    // PanelBackground's look (shadow, translucent surface, hairline border),
+    // with the fill swapped for LiquidGlassSurface so the OSD follows the
+    // same Liquid Glass toggle as the island.
+    Rectangle {
+        id: panel
         anchors.fill: parent
         anchors.margins: osd.shadowPadding
+        radius: Colors.radiusLarge
+        color: "transparent"
+        border.width: 0.5
+        border.color: Qt.rgba(Colors.outline.r, Colors.outline.g, Colors.outline.b, 0.5)
+
+        // The shadow fills the panel's interior too, which darkens the
+        // translucent glass tint — hide it with glass on so the OSD matches
+        // the island's transparency.
+        SurfaceShadow {
+            anchors.fill: parent
+            z: -1
+            cornerRadius: panel.radius
+            visible: !Bridge.liquidGlassEnabled
+        }
+
+        LiquidGlassSurface {
+            anchors.fill: parent
+            z: -1
+            active: Bridge.liquidGlassEnabled
+            cornerRadius: panel.radius
+            fallbackColor: Qt.alpha(Colors.surface, Colors.panelOpacity)
+        }
 
         Row {
             anchors.fill: parent
