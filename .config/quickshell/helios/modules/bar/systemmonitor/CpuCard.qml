@@ -94,11 +94,15 @@ MonitorCard {
             StyledText { anchors.right: parent.right; width: 60; anchors.verticalCenter: parent.verticalCenter; horizontalAlignment: Text.AlignRight; text: "CPU"; opacity: 0.6; font.pixelSize: Config.fontSize - 3 }
         }
 
+        // A fixed count, not the array: processes is replaced every tick, and
+        // modeling on it would rebuild these rows each time.
         Repeater {
-            model: root.stats.processes.slice(0, 5)
+            model: 5
 
             Item {
-                required property var modelData
+                required property int index
+                readonly property var modelData: root.stats.processes[index] || null
+                visible: !!modelData
                 width: parent.width
                 height: 26
 
@@ -107,7 +111,7 @@ MonitorCard {
                     anchors.verticalCenter: parent.verticalCenter
                     width: parent.width - 160
                     elide: Text.ElideRight
-                    text: modelData.name
+                    text: modelData ? modelData.name : ""
                     font.pixelSize: Config.fontSize - 1
                 }
                 StyledText {
@@ -115,7 +119,7 @@ MonitorCard {
                     width: 80
                     anchors.verticalCenter: parent.verticalCenter
                     horizontalAlignment: Text.AlignRight
-                    text: root.formatMemory(modelData.memory_mb || 0)
+                    text: modelData ? root.formatMemory(modelData.memory_mb || 0) : ""
                     opacity: 0.7
                     font.pixelSize: Config.fontSize - 2
                     font.family: Config.monoFontFamily
@@ -125,8 +129,8 @@ MonitorCard {
                     anchors.verticalCenter: parent.verticalCenter
                     width: 60
                     horizontalAlignment: Text.AlignRight
-                    text: modelData.cpu_percent.toFixed(1) + "%"
-                    color: root.levelColor(modelData.cpu_percent, 50, 80)
+                    text: modelData ? modelData.cpu_percent.toFixed(1) + "%" : ""
+                    color: root.levelColor(modelData ? modelData.cpu_percent : 0, 50, 80)
                     font.pixelSize: Config.fontSize - 2
                     font.family: Config.monoFontFamily
                 }

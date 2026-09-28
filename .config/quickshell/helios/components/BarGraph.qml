@@ -5,7 +5,9 @@ import "../services"
 // each colored by its own level. Samples are right-aligned on a fixed
 // `capacity` grid, so a graph that is still warming up fills in from the
 // right. The Repeater models a count, not `values`, so delegates stay put
-// and only their heights change on each tick.
+// and only their heights change on each tick. Heights snap rather than
+// animate: once the history is full every bar shifts one slot per tick, and
+// animating that would make all bars morph instead of scroll.
 //
 // Requires an explicit `width` and `height` from the caller.
 Item {
@@ -56,11 +58,6 @@ Item {
                     height: Math.max(2, parent.height * Math.min(Math.max(bar.value, 0), root.maxValue) / root.maxValue)
                     radius: parent.radius
                     color: root.colorFor(bar.value)
-
-                    Behavior on height {
-                        enabled: !Config.reducedMotion
-                        NumberAnimation { duration: Config.animMedium; easing.type: Easing.OutCubic }
-                    }
                 }
             }
         }

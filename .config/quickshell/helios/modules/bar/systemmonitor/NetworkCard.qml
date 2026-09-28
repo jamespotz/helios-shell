@@ -9,9 +9,17 @@ MonitorCard {
     readonly property var stats: SystemStats.state
     readonly property var network: root.stats.network
     readonly property var speedTest: SystemStats.speedTest
+    // Connected Wi-Fi network, from NetworkManager via Quickshell.Networking —
+    // only when that Wi-Fi device is the interface whose IP is shown.
+    readonly property string ssid: {
+        const device = WifiNetworks.wifiDevice;
+        if (!device || device.name !== root.network.iface) return "";
+        const connected = device.networks.values.find(network => network.connected);
+        return connected ? connected.name : "";
+    }
 
     title: "Network"
-    label: root.network.iface || "Not connected"
+    label: root.ssid || root.network.iface || "Not connected"
     icon: root.network.iface_type === "wifi" ? "wifi" : root.network.iface ? "lan" : "wifi_off"
     footerText: !root.speedTest ? ""
         : root.speedTest.running ? "Testing…"
@@ -29,7 +37,7 @@ MonitorCard {
         StyledText {
             anchors.left: parent.left
             anchors.verticalCenter: parent.verticalCenter
-            text: "Local"
+            text: "Local" + (root.network.iface ? " · " + root.network.iface : "")
             opacity: 0.7
             font.pixelSize: Config.fontSize - 2
         }

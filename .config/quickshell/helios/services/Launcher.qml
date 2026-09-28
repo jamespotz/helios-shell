@@ -40,11 +40,13 @@ QtObject {
             });
     }
 
-    function _action(id, title, icon, keywords, execute) {
-        return { id: id, title: title, icon: icon, keywords: keywords, activation: { kind: "action", execute: execute } };
+    function _action(id, title, icon, keywords, execute, keepOpen) {
+        return { id: id, title: title, icon: icon, keywords: keywords, activation: { kind: "action", execute: execute, keepOpen: !!keepOpen } };
     }
+    // Swaps the open Island to another destination, so the Island must stay
+    // open afterwards instead of closing like other actions.
     function _destinationAction(id, title, icon, keywords) {
-        return root._action("destination:" + id, title, icon, keywords, () => IslandNavigation.select(id));
+        return root._action("destination:" + id, title, icon, keywords, () => IslandNavigation.select(id), true);
     }
     function _score(entry, needle) {
         const title = String(entry.title || "").toLowerCase();
@@ -117,9 +119,10 @@ QtObject {
             emojiCopy.running = false; emojiCopy.running = true;
         } else if (activation.kind === "action") accepted = activation.execute() !== false;
         else accepted = false;
-        if (accepted) IslandNavigation.close();
-        else root.activationError = "Action could not be completed";
-        return { accepted: accepted, close: accepted };
+        const close = accepted && !activation.keepOpen;
+        if (close) IslandNavigation.close();
+        if (!accepted) root.activationError = "Action could not be completed";
+        return { accepted: accepted, close: close };
     }
     function runDesktopAction(action, appName) {
         if (appName) {

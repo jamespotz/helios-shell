@@ -99,7 +99,9 @@ QtObject {
             onStreamFinished: {
                 const found = text.split("\n").filter(line => line.length > 0);
                 root.diskAnalyzer = found.find(tool => ["baobab", "filelight", "qdirstat"].includes(tool)) || "";
-                root.speedTestTool = found.find(tool => ["speedtest", "speedtest-cli", "librespeed-cli"].includes(tool)) || "";
+                // Open-source CLIs first; Ookla's `speedtest` needs its license
+                // accepted interactively once, which the shell won't do for you.
+                root.speedTestTool = ["librespeed-cli", "speedtest-cli", "speedtest"].find(tool => found.includes(tool)) || "";
             }
         }
     }
@@ -107,13 +109,36 @@ QtObject {
     function runSpeedTest() {
         if (!root.speedTestTool || speedProc.running) return;
         const args = {
-            "speedtest": ["speedtest", "--format=json", "--accept-license", "--accept-gdpr"],
+            "speedtest": ["speedtest", "--format=json"],
             "speedtest-cli": ["speedtest-cli", "--json"],
             "librespeed-cli": ["librespeed-cli", "--json"]
         };
         speedProc.command = args[root.speedTestTool];
         root.speedTest = { running: true, downMbps: 0, upMbps: 0, error: "" };
         speedProc.running = true;
+        speedTimeout.restart();
+    }
+
+    // Called when the System monitor closes: a result only means something
+    // while you're looking at it, and a test still running is abandoned.
+    function clearSpeedTest() {
+        speedTimeout.stop();
+        speedProc.running = false;
+        root.speedTest = null;
+    }
+
+    function _speedTestFailed() {
+        return root.speedTestTool === "speedtest"
+            ? "Run `speedtest` once to accept its license"
+            : "Speed test failed";
+    }
+
+    property Timer speedTimeout: Timer {
+        interval: 90000
+        onTriggered: {
+            speedProc.running = false;
+            root.speedTest = { running: false, downMbps: 0, upMbps: 0, error: "Speed test timed out" };
+        }
     }
 
     // Each CLI reports in its own unit: Ookla bytes/s, speedtest-cli bits/s,
@@ -131,11 +156,13 @@ QtObject {
     property Process speedProc: Process {
         stdout: StdioCollector {
             onStreamFinished: {
+                if (!speedTimeout.running) return; // timed out or cleared
+                speedTimeout.stop();
                 try {
                     const speed = root._parseSpeedTest(text);
                     root.speedTest = { running: false, downMbps: speed.down, upMbps: speed.up, error: "" };
                 } catch (e) {
-                    root.speedTest = { running: false, downMbps: 0, upMbps: 0, error: "Speed test failed" };
+                    root.speedTest = { running: false, downMbps: 0, upMbps: 0, error: root._speedTestFailed() };
                 }
             }
         }

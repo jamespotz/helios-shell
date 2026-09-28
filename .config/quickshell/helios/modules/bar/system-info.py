@@ -24,7 +24,9 @@ HISTORY_LENGTH = 60
 # Slow-changing values, refreshed less often than the 2s tick.
 STORAGE_INTERVAL = 30.0
 INTERFACE_INTERVAL = 10.0
-VIRTUAL_INTERFACE_PREFIXES = ("lo", "docker", "br-", "veth", "virbr", "tun")
+# Skipped by the no-default-route fallback: container bridges and VPN tunnels.
+VIRTUAL_INTERFACE_PREFIXES = ("lo", "docker", "br-", "veth", "virbr", "tun", "wg", "tailscale", "zt")
+_TOTAL_MEMORY = psutil.virtual_memory().total
 HISTORY_KEYS = ("cpu", "memory", "gpu", "disk_read_kbs", "disk_write_kbs", "net_sent_kbs", "net_received_kbs")
 
 
@@ -134,6 +136,7 @@ def get_processes(limit=6):
                 metadata = {"name": name, "cmdline": cmdline, "user": user}
                 _process_metadata[pid] = metadata
 
+            rss = p.memory_info().rss
             results.append(
                 {
                     "pid": pid,
@@ -141,8 +144,8 @@ def get_processes(limit=6):
                     "cmdline": metadata["cmdline"],
                     "user": metadata["user"],
                     "cpu_percent": cpu_percent,
-                    "memory_percent": round(p.memory_percent(), 1),
-                    "memory_mb": round(p.memory_info().rss / 1024**2, 1),
+                    "memory_percent": round(rss / _TOTAL_MEMORY * 100, 1),
+                    "memory_mb": round(rss / 1024**2, 1),
                 }
             )
         except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
@@ -163,10 +166,19 @@ def cached(key, interval, compute):
     return entry[1]
 
 
+def _mount_point(path):
+    path = os.path.realpath(path)
+    while not os.path.ismount(path):
+        path = os.path.dirname(path)
+    return path
+
+
+# The filesystem holding $HOME — the same as / unless /home is its own partition.
 def get_storage():
-    usage = psutil.disk_usage("/")
+    mount = _mount_point(os.path.expanduser("~"))
+    usage = psutil.disk_usage(mount)
     return {
-        "mount": "/",
+        "mount": mount,
         "total_gb": round(usage.total / 1024**3, 1),
         "used_gb": round(usage.used / 1024**3, 1),
         "free_gb": round(usage.free / 1024**3, 1),
@@ -179,12 +191,12 @@ def get_sensors():
     fan_rpm = None
     try:
         temps = psutil.sensors_temperatures()
-        for chip, label in (("coretemp", "Package id 0"), ("k10temp", "Tctl"), ("zenpower", None)):
-            for entry in temps.get(chip, []):
-                if label is None or entry.label == label:
-                    cpu_c = entry.current
-                    break
-            if cpu_c is not None:
+        # Package/die sensor first; otherwise the chip's first reading.
+        for chip, labels in (("coretemp", ("Package id", "Physical id")), ("k10temp", ("Tctl", "Tdie")), ("zenpower", ("Tctl", "Tdie"))):
+            entries = temps.get(chip, [])
+            match = next((entry for entry in entries if entry.label.startswith(labels)), entries[0] if entries else None)
+            if match is not None:
+                cpu_c = match.current
                 break
     except Exception:
         pass
@@ -196,12 +208,32 @@ def get_sensors():
     return {"cpu_c": cpu_c, "fan_rpm": fan_rpm}
 
 
+# Interface of the lowest-metric IPv4 default route, from /proc/net/route.
+def _default_route_interface():
+    try:
+        with open("/proc/net/route") as routes:
+            defaults = []
+            for line in routes.readlines()[1:]:
+                fields = line.split()
+                # Destination 0.0.0.0 with the RTF_UP flag set.
+                if len(fields) > 6 and fields[1] == "00000000" and int(fields[3], 16) & 1:
+                    defaults.append((int(fields[6]), fields[0]))
+            return min(defaults)[1] if defaults else None
+    except (OSError, ValueError):
+        return None
+
+
 def get_interface():
     stats = psutil.net_if_stats()
-    for name, addresses in psutil.net_if_addrs().items():
-        if name.startswith(VIRTUAL_INTERFACE_PREFIXES) or not (name in stats and stats[name].isup):
+    addresses = psutil.net_if_addrs()
+    default = _default_route_interface()
+    candidates = [default] if default else [
+        name for name in addresses if not name.startswith(VIRTUAL_INTERFACE_PREFIXES)
+    ]
+    for name in candidates:
+        if not (name in stats and stats[name].isup):
             continue
-        for address in addresses:
+        for address in addresses.get(name, []):
             if address.family == socket.AF_INET:
                 wireless = os.path.exists(f"/sys/class/net/{name}/wireless")
                 return {"iface": name, "iface_type": "wifi" if wireless else "ethernet", "local_ip": address.address}

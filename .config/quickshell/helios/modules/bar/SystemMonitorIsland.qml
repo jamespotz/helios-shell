@@ -22,7 +22,10 @@ Item {
     onViewChanged: SystemStats.setProcessDetail(root.view === "processes")
 
     Component.onCompleted: SystemStats.setActive(true)
-    Component.onDestruction: SystemStats.setActive(false)
+    Component.onDestruction: {
+        SystemStats.setActive(false);
+        SystemStats.clearSpeedTest();
+    }
 
     implicitWidth: 620
     implicitHeight: root.view === "dashboard" ? col.implicitHeight : processView.implicitHeight

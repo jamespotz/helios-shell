@@ -19,6 +19,11 @@ ShellRoot {
             root.verify(result.id === "window:0x1" && result.activation.address === "0x1", "normalized window");
             const rejected = Launcher.activate({ activation: { kind: "unknown" } });
             root.verify(!rejected.accepted && !rejected.close, "failed activation remains open");
+            IslandNavigation.show("test", "launcher");
+            const destination = Launcher.actions.find(action => action.id === "destination:keybinds");
+            const opened = Launcher.activate(Launcher._normalized("action", destination, 1));
+            root.verify(opened.accepted && !opened.close, "destination action accepted without closing");
+            root.verify(IslandNavigation.open && IslandNavigation.destinationId === "keybinds", "destination action opens destination");
             Launcher.search("/em smile");
             root.verify(Launcher.emojiMode, "emoji mode");
             console.warn("LAUNCHER_TEST_PASS");
