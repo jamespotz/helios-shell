@@ -201,6 +201,17 @@ QtObject {
     readonly property bool showIdleStatusIndicators: settingsAdapter.showIdleStatusIndicators
     readonly property bool showIdleClipboard: settingsAdapter.showIdleClipboard
 
+    // Workspace indicator look — "dots" (pill for the focused workspace) or
+    // "numbers" (Material Symbols counter_N glyphs). Set from IslandSettings.
+    readonly property string workspaceIndicatorStyle: settingsAdapter.workspaceIndicatorStyle
+    // false = only the monitor's active workspace is shown.
+    readonly property bool showAllWorkspaces: settingsAdapter.showAllWorkspaces
+
+    function setWorkspaceIndicatorStyle(style) {
+        settingsAdapter.workspaceIndicatorStyle = style;
+        root.settingsFile.writeAdapter();
+    }
+
     function setWidgetVisible(key, value) {
         settingsAdapter[key] = value;
         root.settingsFile.writeAdapter();
@@ -270,6 +281,9 @@ QtObject {
             property bool showIdleTray: false
             property bool showIdleStatusIndicators: false
             property bool showIdleClipboard: false
+
+            property string workspaceIndicatorStyle: "dots"
+            property bool showAllWorkspaces: true
 
             property string wallpaperTransitionStyle: "any"
 

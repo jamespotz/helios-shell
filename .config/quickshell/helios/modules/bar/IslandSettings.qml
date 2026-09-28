@@ -537,6 +537,80 @@ Item {
             }
         }
 
+        // --- Workspaces ------------------------------------------------
+        Column {
+            width: parent.width
+            spacing: 10
+
+            StyledText { font.bold: true; text: "Workspaces" }
+
+            SettingsCard {
+                Item {
+                    width: parent.width
+                    height: 48
+
+                    Row {
+                        anchors.left: parent.left
+                        anchors.leftMargin: 14
+                        anchors.verticalCenter: parent.verticalCenter
+                        spacing: 10
+
+                        MaterialIcon { icon: "grid_view"; font.pixelSize: 16; opacity: 0.8; anchors.verticalCenter: parent.verticalCenter }
+                        StyledText { text: "Indicator"; anchors.verticalCenter: parent.verticalCenter }
+                    }
+
+                    SegmentedControl {
+                        anchors.right: parent.right
+                        anchors.rightMargin: 8
+                        anchors.verticalCenter: parent.verticalCenter
+                        implicitHeight: 32
+                        model: [
+                            { value: "dots", label: "Dots" },
+                            { value: "numbers", label: "Numbers" }
+                        ]
+                        currentValue: Config.workspaceIndicatorStyle
+                        onActivated: v => Config.setWorkspaceIndicatorStyle(v)
+                    }
+
+                    Rectangle {
+                        visible: Config.workspaceIndicatorStyle === "numbers"
+                        anchors.left: parent.left
+                        anchors.right: parent.right
+                        anchors.leftMargin: 14
+                        anchors.bottom: parent.bottom
+                        height: 1
+                        color: Colors.overlay
+                        opacity: 0.15
+                    }
+                }
+
+                // Only meaningful for numbers — dots always show every workspace.
+                Item {
+                    visible: Config.workspaceIndicatorStyle === "numbers"
+                    width: parent.width
+                    height: 40
+
+                    Row {
+                        anchors.left: parent.left
+                        anchors.leftMargin: 14
+                        anchors.verticalCenter: parent.verticalCenter
+                        spacing: 10
+
+                        MaterialIcon { icon: "view_week"; font.pixelSize: 16; opacity: 0.8; anchors.verticalCenter: parent.verticalCenter }
+                        StyledText { text: "Show all workspaces"; anchors.verticalCenter: parent.verticalCenter }
+                    }
+
+                    Toggle {
+                        anchors.right: parent.right
+                        anchors.rightMargin: 14
+                        anchors.verticalCenter: parent.verticalCenter
+                        checked: Config.showAllWorkspaces
+                        onToggled: v => Config.setWidgetVisible("showAllWorkspaces", v)
+                    }
+                }
+            }
+        }
+
         // --- Clock format ----------------------------------------------
         Column {
             width: parent.width
