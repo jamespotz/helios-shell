@@ -201,14 +201,29 @@ QtObject {
     readonly property bool showIdleStatusIndicators: settingsAdapter.showIdleStatusIndicators
     readonly property bool showIdleClipboard: settingsAdapter.showIdleClipboard
 
-    // Workspace indicator look — "dots" (pill for the focused workspace) or
-    // "numbers" (Material Symbols counter_N glyphs). Set from IslandSettings.
+    // Workspace indicator look — "dots" (pill for the focused workspace),
+    // "numbers" (Material Symbols counter_N glyphs), or "custom" (a
+    // user-picked Material Symbol per workspace, counter_N when unset).
+    // Set from IslandSettings.
     readonly property string workspaceIndicatorStyle: settingsAdapter.workspaceIndicatorStyle
+    // Workspace id (as a string key) → Material Symbol name.
+    readonly property var workspaceIcons: settingsAdapter.workspaceIcons
     // false = only the monitor's active workspace is shown.
     readonly property bool showAllWorkspaces: settingsAdapter.showAllWorkspaces
 
     function setWorkspaceIndicatorStyle(style) {
         settingsAdapter.workspaceIndicatorStyle = style;
+        root.settingsFile.writeAdapter();
+    }
+
+    // Empty icon clears the override. Reassigns a copy so bindings update.
+    function setWorkspaceIcon(id, icon) {
+        const icons = Object.assign({}, settingsAdapter.workspaceIcons);
+        if (icon)
+            icons[id] = icon;
+        else
+            delete icons[id];
+        settingsAdapter.workspaceIcons = icons;
         root.settingsFile.writeAdapter();
     }
 
@@ -284,6 +299,7 @@ QtObject {
 
             property string workspaceIndicatorStyle: "dots"
             property bool showAllWorkspaces: true
+            property var workspaceIcons: ({})
 
             property string wallpaperTransitionStyle: "any"
 

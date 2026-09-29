@@ -10,6 +10,8 @@ Item {
     property real value: 0.5 // 0..1
     property real centerValue: 0.5
     property color fillColor: Colors.accent
+    // Spoken name for assistive tech.
+    property string label: ""
 
     signal moved(real value)
     signal released()
@@ -92,6 +94,11 @@ Item {
         onPositionChanged: mouse => { if (pressed) root.moved(posToValue(mouse.y)); }
         onReleased: root.released()
     }
+
+    Accessible.role: Accessible.Slider
+    Accessible.name: root.label
+    Accessible.onIncreaseAction: root.moved(Math.min(1, root.value + 0.05))
+    Accessible.onDecreaseAction: root.moved(Math.max(0, root.value - 0.05))
 
     activeFocusOnTab: root.enabled
     Keys.onUpPressed: if (root.enabled) root.moved(Math.min(1, root.value + 0.05))

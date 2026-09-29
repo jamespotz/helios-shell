@@ -36,7 +36,7 @@ PanelWindow {
         { id: "wallpaper", label: "Wallpaper", icon: "wallpaper", group: "Personalization",
           keywords: ["wallpaper", "background", "transition", "folder"] },
         { id: "helios", label: "Helios", icon: "auto_awesome", group: "Personalization",
-          keywords: ["island", "idle bump", "widgets", "workspace indicator", "clock format", "weather location", "liquid glass", "spring", "morph", "collapse delay"] },
+          keywords: ["island", "idle bump", "widgets", "workspace indicator", "workspace icons", "clock format", "weather location", "liquid glass", "spring", "morph", "collapse delay"] },
         { id: "displays", label: "Displays", icon: "monitor", group: "Hardware",
           keywords: ["resolution", "refresh rate", "scale", "vrr", "adaptive sync", "night light", "blue light", "warmth", "color temperature"] },
         { id: "sound", label: "Sound", icon: "volume_up", group: "Hardware",

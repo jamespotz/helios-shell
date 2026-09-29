@@ -20,6 +20,8 @@ QtObject {
     property color danger: "#ff453a"
     property color warning: "#ffd60a"
     property color success: "#30d158"
+    // Switch knobs and slider thumbs stay white in every theme, like Apple's.
+    readonly property color knob: "#ffffff"
 
     // Full role set — Apple's semantic palette translated into the same
     // property structure Themes.qml expects. Neutral, desaturated grays with

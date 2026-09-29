@@ -4,16 +4,19 @@ import "../../components"
 import "../../services"
 
 // Apple-style workspace indicators. "dots" style: rounded pill for the
-// active workspace, small dots for others. "numbers" style: counter_N
-// glyphs — a filled badge slides to the active workspace, or, when only the
-// current workspace is shown, the number rolls like an odometer.
+// active workspace, small dots for others. "numbers" and "custom" styles:
+// one glyph per workspace (counter_N, or the user's icon in custom) — a
+// filled badge slides to the active workspace, or, when only the current
+// workspace is shown, the glyph rolls like an odometer.
 Item {
     id: root
 
     required property var targetScreen
     readonly property var monitor: targetScreen ? Hyprland.monitorFor(targetScreen) : null
     readonly property var activeWs: monitor ? monitor.activeWorkspace : Hyprland.focusedWorkspace
-    readonly property bool numbers: Config.workspaceIndicatorStyle === "numbers"
+    // Glyph styles — "numbers" and "custom" share layout and motion.
+    readonly property bool numbers: Config.workspaceIndicatorStyle !== "dots"
+    readonly property bool custom: Config.workspaceIndicatorStyle === "custom"
     readonly property bool rolling: numbers && !Config.showAllWorkspaces
 
     // Delegate showing the active workspace — the sliding badge tracks it.
@@ -30,14 +33,16 @@ Item {
     implicitWidth: rolling ? roller.width : row.implicitWidth
     implicitHeight: rolling ? roller.height : row.implicitHeight
 
-    // counter_N glyphs only exist for 0–9; higher ids fall back to plain text.
+    // Custom icon when set; otherwise counter_N, which only exists for 0–9 —
+    // higher ids fall back to plain text.
     component WorkspaceGlyph: Item {
         id: wsGlyph
         property var workspace: null
         property bool filled: false
         property color color: Colors.text
         readonly property int wsId: workspace ? workspace.id : 0
-        readonly property bool hasGlyph: wsId >= 0 && wsId <= 9
+        readonly property string customIcon: root.custom ? (Config.workspaceIcons[wsId] || "") : ""
+        readonly property bool hasGlyph: customIcon !== "" || (wsId >= 0 && wsId <= 9)
 
         implicitWidth: icon.implicitWidth
         implicitHeight: icon.implicitHeight
@@ -45,7 +50,7 @@ Item {
         MaterialIcon {
             id: icon
             anchors.centerIn: parent
-            icon: "counter_" + (wsGlyph.hasGlyph ? wsGlyph.wsId : 0)
+            icon: wsGlyph.customIcon || "counter_" + (wsGlyph.hasGlyph ? wsGlyph.wsId : 0)
             opacity: wsGlyph.hasGlyph ? 1 : 0
             filled: wsGlyph.filled
             color: wsGlyph.color

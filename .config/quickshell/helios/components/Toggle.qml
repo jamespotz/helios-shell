@@ -9,6 +9,8 @@ Rectangle {
     id: root
 
     property bool checked: false
+    // Spoken name for assistive tech.
+    property string label: ""
 
     signal toggled(bool checked)
 
@@ -29,7 +31,7 @@ Rectangle {
         width: 18
         height: 18
         radius: 9
-        color: "#ffffff"
+        color: Colors.knob
         anchors.verticalCenter: parent.verticalCenter
         x: root.checked ? parent.width - width - 3 : 3
 
@@ -59,6 +61,13 @@ Rectangle {
         cursorShape: Qt.PointingHandCursor
         onClicked: root.toggled(!root.checked)
     }
+
+    Accessible.role: Accessible.CheckBox
+    Accessible.name: root.label
+    Accessible.checkable: true
+    Accessible.checked: root.checked
+    Accessible.onToggleAction: root.toggled(!root.checked)
+    Accessible.onPressAction: root.toggled(!root.checked)
 
     activeFocusOnTab: root.enabled
     Keys.onReturnPressed: root.toggled(!root.checked)

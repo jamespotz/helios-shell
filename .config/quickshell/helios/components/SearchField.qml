@@ -40,6 +40,8 @@ Rectangle {
 
         TextInput {
             id: input
+            Accessible.role: Accessible.EditableText
+            Accessible.name: root.placeholder
             width: parent.width - 28 - 10
             anchors.verticalCenter: parent.verticalCenter
             color: Colors.text

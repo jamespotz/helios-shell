@@ -50,7 +50,7 @@ Rectangle {
         radius: parent.radius
         color: "transparent"
         border.width: 2
-        border.color: Colors.accent
+        border.color: root.active ? Colors.accentText : Colors.accent
         visible: root.activeFocus
     }
 

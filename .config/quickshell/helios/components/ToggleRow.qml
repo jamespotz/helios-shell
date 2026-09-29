@@ -59,6 +59,7 @@ Item {
 
         Toggle {
             id: toggle
+            label: root.title
             anchors.right: parent.right
             anchors.verticalCenter: parent.verticalCenter
             checked: root.checked

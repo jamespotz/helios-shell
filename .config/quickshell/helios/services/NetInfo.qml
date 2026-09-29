@@ -1,6 +1,7 @@
 pragma Singleton
 import QtQuick
 import Quickshell.Io
+import Quickshell.Networking
 
 // Ethernet status, VPN connections, and bandwidth — the nmcli-backed
 // counterparts to WifiNetworks.qml, which only covers wifi. Same
@@ -104,11 +105,16 @@ QtObject {
         return ifaces;
     }
 
+    // Idle while offline — there's no traffic to sample.
+    readonly property bool _online: root.ethernetConnected
+        || [NetworkConnectivity.Full, NetworkConnectivity.Portal, NetworkConnectivity.Limited].includes(Networking.connectivity)
+
     property Timer bandwidthTimer: Timer {
         interval: 2000
-        running: true
+        running: root._online
         repeat: true
         onTriggered: root._pollBandwidth()
+        onRunningChanged: if (!running) { root.rxRate = 0; root.txRate = 0; root._lastBytes = null; }
     }
 
     // One in-process read of /proc/net/dev per tick instead of spawning a

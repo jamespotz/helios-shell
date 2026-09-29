@@ -20,7 +20,13 @@ Item {
 
     // Countdown text needs its own tick — the event's start time doesn't
     // change, "now" does.
-    Timer { interval: 1000; running: true; repeat: true; onTriggered: root._nowTick = Date.now() }
+    Timer {
+        interval: 1000
+        running: root.event !== null
+        repeat: true
+        triggeredOnStart: true
+        onTriggered: root._nowTick = Date.now()
+    }
     property double _nowTick: Date.now()
 
     readonly property int minutesUntil: {

@@ -91,7 +91,9 @@ QtObject {
         const job = root.thumbnailQueue[0];
         root.thumbnailQueue = root.thumbnailQueue.slice(1);
         thumbnailer.outputPath = job.outputPath;
-        thumbnailer.command = ["sh", "-c", "mkdir -p \"$(dirname \"$2\")\" && { [ -f \"$2\" ] || ffmpeg -y -loglevel error -ss 00:00:00.5 -i \"$1\" -frames:v 1 -vf scale=320:-1 \"$2\"; }", "_", job.sourcePath, job.outputPath];
+        thumbnailer.command = ["sh", "-c", "mkdir -p \"$(dirname \"$2\")\" && { [ -f \"$2\" ] || ffmpeg -y -loglevel error -ss \"$3\" -i \"$1\" -frames:v 1 -vf scale=320:-1 \"$2\"; }", "_", job.sourcePath, job.outputPath,
+            // Stills have no frame at 0.5s; videos skip a possibly black first frame.
+            /\.(mp4|webm|mkv|mov)$/i.test(job.sourcePath) ? "0.5" : "0"];
         thumbnailer.running = true;
     }
 

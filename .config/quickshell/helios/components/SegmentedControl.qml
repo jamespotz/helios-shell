@@ -88,6 +88,12 @@ Rectangle {
                     onClicked: root.activated(segment.modelData.value)
                 }
 
+                Accessible.role: Accessible.RadioButton
+                Accessible.name: segment.modelData.label
+                Accessible.checkable: true
+                Accessible.checked: segment.modelData.value === root.currentValue
+                Accessible.onPressAction: root.activated(segment.modelData.value)
+
                 activeFocusOnTab: true
                 Keys.onReturnPressed: root.activated(segment.modelData.value)
                 Keys.onSpacePressed: root.activated(segment.modelData.value)

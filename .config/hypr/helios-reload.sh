@@ -18,4 +18,7 @@ done
 # and still climbing after a few minutes without this). jemalloc doesn't
 # have that behavior — same instance stayed flat around ~270MB.
 export LD_PRELOAD=/lib64/libjemalloc.so.2
+# Third-party .desktop files with non-spec escapes (swappy's Exec) log a
+# warning on every entry rescan — thousands per session, none actionable.
+export QT_LOGGING_RULES="${QT_LOGGING_RULES:+$QT_LOGGING_RULES;}quickshell.desktopentry.warning=false"
 exec quickshell -c helios -d

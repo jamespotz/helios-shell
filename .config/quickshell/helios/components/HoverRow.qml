@@ -8,6 +8,8 @@ Rectangle {
     id: root
 
     property bool highlighted: false
+    // Spoken name for assistive tech — rows hold arbitrary content.
+    property string label: ""
     readonly property bool hovering: hoverHandler.hovered
 
     signal clicked()
@@ -53,6 +55,10 @@ Rectangle {
         cursorShape: Qt.PointingHandCursor
         onClicked: root.clicked()
     }
+
+    Accessible.role: Accessible.Button
+    Accessible.name: root.label
+    Accessible.onPressAction: root.clicked()
 
     activeFocusOnTab: root.enabled
     Keys.onReturnPressed: root.clicked()

@@ -78,6 +78,12 @@ Rectangle {
         onClicked: root.clicked()
     }
 
+    Accessible.role: Accessible.Button
+    Accessible.name: root.text
+    Accessible.checkable: true
+    Accessible.checked: root.active
+    Accessible.onPressAction: root.clicked()
+
     activeFocusOnTab: root.enabled
     Keys.onReturnPressed: root.clicked()
     Keys.onSpacePressed: root.clicked()

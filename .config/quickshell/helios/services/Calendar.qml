@@ -114,7 +114,8 @@ QtObject {
     // Surfaces one timed event at a time, starting 5 minutes before it
     // begins, for the Island to auto-peek (see Bar.qml's meetingMode,
     // modeled on notifyMode/taskMode) independent of whether the Calendar
-    // tab is open — this timer always runs, unlike refreshTimer above.
+    // tab is open. Rather than polling, alertTimer sleeps until the next
+    // event's alert time and is rescheduled whenever events change.
     property var upcomingAlert: null
     property var _alertedKeys: ({})
 
@@ -130,7 +131,10 @@ QtObject {
 
     function _eventKey(event) { return event.date + "|" + event.startTime + "|" + event.summary; }
 
-    function dismissAlert() { root.upcomingAlert = null; }
+    function dismissAlert() {
+        root.upcomingAlert = null;
+        root._scheduleAlert();
+    }
 
     function _scanForAlerts() {
         if (root.upcomingAlert) return;
@@ -142,7 +146,7 @@ QtObject {
             if (root._alertedKeys[key]) continue;
             const minutesUntil = (start.getTime() - now) / 60000;
             // [-1, 5]: fires once, 5 minutes ahead of start, and stays valid
-            // for a minute after in case the 20s scan interval just missed it.
+            // for a minute after in case the timer fired late (e.g. resume).
             if (minutesUntil <= 5 && minutesUntil >= -1) {
                 root._alertedKeys = Object.assign({}, root._alertedKeys, { [key]: true });
                 root.upcomingAlert = event;
@@ -152,12 +156,29 @@ QtObject {
         }
     }
 
+    function _scheduleAlert() {
+        root._scanForAlerts();
+        alertTimer.stop();
+        if (root.upcomingAlert) return;
+        const now = Date.now();
+        let next = Infinity;
+        for (const event of root.events) {
+            const start = root._eventStart(event);
+            if (!start || root._alertedKeys[root._eventKey(event)]) continue;
+            const due = start.getTime() - 5 * 60000;
+            if (due > now) next = Math.min(next, due);
+        }
+        if (next === Infinity) return;
+        // Capped so a suspend/resume can't leave the timer asleep past the
+        // meeting — Timer counts elapsed runtime, not wall-clock time.
+        alertTimer.interval = Math.min(next - now + 100, 5 * 60000);
+        alertTimer.start();
+    }
+
+    onEventsChanged: root._scheduleAlert()
+
     property Timer alertTimer: Timer {
-        interval: 20000
-        running: true
-        repeat: true
-        triggeredOnStart: true
-        onTriggered: root._scanForAlerts()
+        onTriggered: root._scheduleAlert()
     }
 
     // Which Focus preset (if any) to auto-apply when a meeting alert

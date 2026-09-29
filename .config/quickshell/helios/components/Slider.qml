@@ -13,6 +13,8 @@ Item {
     property color fillColor: Colors.accent
     property real trackHeight: 8
     property bool thumbHoverOnly: false
+    // Spoken name for assistive tech.
+    property string label: ""
 
     signal moved(real value)
 
@@ -57,7 +59,7 @@ Item {
             width: 16
             height: 16
             radius: 8
-            color: "#ffffff"
+            color: Colors.knob
             opacity: root.showThumb ? 1 : 0
             anchors.verticalCenter: parent.verticalCenter
             x: track.width * root.fraction - width / 2
@@ -87,6 +89,11 @@ Item {
         onPressed: mouse => { root.forceActiveFocus(); root.moved(posToValue(mouse.x)); }
         onPositionChanged: mouse => { if (pressed) root.moved(posToValue(mouse.x)); }
     }
+
+    Accessible.role: Accessible.Slider
+    Accessible.name: root.label
+    Accessible.onIncreaseAction: root.moved(Math.min(root.maxValue, root.value + root._step))
+    Accessible.onDecreaseAction: root.moved(Math.max(0, root.value - root._step))
 
     activeFocusOnTab: root.enabled
     readonly property real _step: root.maxValue > 0 ? root.maxValue / 20 : 0.05

@@ -29,11 +29,16 @@ MaterialIcon {
     onActiveChanged: refresh()
     Component.onCompleted: refresh()
 
-    Timer {
-        interval: 1500
-        running: root.active
-        repeat: true
-        onTriggered: root.refresh()
+    // Layout comes from config/workspace rules, so it can only change on a
+    // config reload or when a workspace is (re)created. `hyprctl keyword`
+    // changes emit no event and won't show until the next workspace switch.
+    Connections {
+        target: Hyprland
+        enabled: root.active
+        function onRawEvent(event) {
+            if (["configreloaded", "createworkspacev2", "moveworkspacev2"].includes(event.name))
+                root.refresh();
+        }
     }
 
     Process {

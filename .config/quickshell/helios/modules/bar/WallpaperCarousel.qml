@@ -118,18 +118,23 @@ Column {
                 readonly property bool selected: WallpaperLibrary.path === modelData
                 readonly property bool browsed: ListView.isCurrentItem
                 readonly property bool isVideoThumb: ["mp4", "webm", "mkv", "mov"].includes(modelData.split(".").pop().toLowerCase())
-                readonly property string videoThumbPath: Quickshell.env("HOME") + "/.cache/helios/wallpaper-thumbs/" + modelData.replace(/[^A-Za-z0-9]/g, "_") + ".jpg"
-                readonly property bool videoThumbReady: !!WallpaperLibrary.readyThumbnails[thumb.videoThumbPath]
+                readonly property string thumbPath: Quickshell.env("HOME") + "/.cache/helios/wallpaper-thumbs/" + modelData.replace(/[^A-Za-z0-9]/g, "_") + ".jpg"
+                readonly property bool thumbReady: !!WallpaperLibrary.readyThumbnails[thumb.thumbPath]
+                // Stills too large for Qt's image allocation limit (e.g. 12800x8000
+                // upscales) fail to decode even with sourceSize — fall back to an
+                // ffmpeg thumbnail like videos use.
+                property bool decodeFailed: false
+                readonly property bool useThumb: isVideoThumb || decodeFailed
 
                 Component.onCompleted: {
-                    if (thumb.isVideoThumb) WallpaperLibrary.requestThumbnail(thumb.modelData, thumb.videoThumbPath);
+                    if (thumb.isVideoThumb) WallpaperLibrary.requestThumbnail(thumb.modelData, thumb.thumbPath);
                 }
 
                 Item {
                     id: card
                     anchors.fill: parent
 
-                    readonly property bool showPlaceholder: thumb.isVideoThumb && (!thumb.videoThumbReady || img.status === Image.Error)
+                    readonly property bool showPlaceholder: thumb.useThumb && (!thumb.thumbReady || img.status === Image.Error)
 
                     ClippingRectangle {
                         anchors.fill: parent
@@ -140,19 +145,24 @@ Column {
                         Image {
                             id: img
                             anchors.fill: parent
-                            source: thumb.isVideoThumb
-                                ? (thumb.videoThumbReady ? "file://" + thumb.videoThumbPath : "")
+                            source: thumb.useThumb
+                                ? (thumb.thumbReady ? "file://" + thumb.thumbPath : "")
                                 : "file://" + thumb.modelData
                             fillMode: Image.PreserveAspectCrop
                             asynchronous: true
                             visible: !card.showPlaceholder
                             sourceSize: Qt.size(root.cardWidth * 2, root.cardHeight * 2)
+                            onStatusChanged: {
+                                if (status !== Image.Error || thumb.useThumb) return;
+                                thumb.decodeFailed = true;
+                                WallpaperLibrary.requestThumbnail(thumb.modelData, thumb.thumbPath);
+                            }
                         }
 
                         MaterialIcon {
                             anchors.centerIn: parent
                             visible: card.showPlaceholder
-                            icon: "movie"
+                            icon: thumb.isVideoThumb ? "movie" : "image"
                             font.pixelSize: 22
                             opacity: 0.6
                         }
