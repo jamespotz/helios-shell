@@ -102,6 +102,23 @@ ShellRoot {
         root.verify(destroyed, "default action was not invoked");
     }
 
+    function test_urgencyDrivesExpiry() {
+        root.compare(notices._record("u", { urgency: 2 }).urgency, 2, "record keeps urgency");
+        root.compare(notices._record("u", {}).urgency, 1, "missing urgency is normal");
+        const low = { id: "l", urgency: 0 }, normal = { id: "n", urgency: 1 }, critical = { id: "c", urgency: 2 };
+        let e = notices.expiry([low], 4000, true);
+        root.compare(e.interval, 2000, "low alone is half");
+        e = notices.expiry([low, normal], 4000, true);
+        root.compare(e.interval, 4000, "normal sets full duration");
+        e = notices.expiry([critical, normal], 4000, true);
+        root.compare(e.dismissIds.join(","), "n", "critical kept");
+        e = notices.expiry([critical], 4000, true);
+        root.compare(e.interval, 0, "only critical: no timer");
+        e = notices.expiry([critical, low], 4000, false);
+        root.compare(e.interval, 4000, "critical times out when not kept");
+        root.compare(e.dismissIds.join(","), "c,l", "all dismissed when not kept");
+    }
+
     function test_hyprland056FocusRequestUsesWindowAddress() {
         root.compare(
             AppLaunch._focusRequest("0xAbC123"),
@@ -229,6 +246,7 @@ ShellRoot {
         try {
             root.test_historyEntryDoesNotRetainNotificationObjects();
             root.test_actionInvocationDoesNotReadDestroyedNotification();
+            root.test_urgencyDrivesExpiry();
             root.test_hyprland056FocusRequestUsesWindowAddress();
             root.test_actionSchedulesBoundedFocusRetries();
             if (root.integrationTargetClass) {

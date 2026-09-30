@@ -53,6 +53,7 @@ ShellRoot {
             NightLight.enabled;    // restores persisted state + spawns wlsunset if needed
             IdleInhibit.enabled;   // restores persisted state + spawns hypridle if needed
             Automations.bluetoothAudioRule; // rules only run once the singleton exists
+            AlertSounds.soundFor;   // listens for alerts from startup
             WallpaperLibrary.images;
             shellRoot.restoreStartupWallpaper();
             WifiNetworks.networks;

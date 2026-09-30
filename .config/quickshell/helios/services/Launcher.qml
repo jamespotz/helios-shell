@@ -15,7 +15,10 @@ QtObject {
     property string view: "list"
     readonly property bool emojiMode: /^\/em(?:oji)?(?:\s+.*)?$/i.test(root.query.trim())
 
-    readonly property var actions: [
+    readonly property var actions: root._allActions.filter(action => !action.id.startsWith("destination:")
+        || !Config.destinationHidden(action.id.slice("destination:".length)))
+
+    readonly property var _allActions: [
         root._action("dnd", "Toggle Do Not Disturb", "notifications", "dnd silence", () => { Bridge.toggleDnd(); return true; }),
         root._action("nightlight", "Toggle Night Light", "eco", "color temperature blue light", () => { NightLight.toggle(); return true; }),
         root._action("idle", "Toggle Caffeine (keep awake)", "bolt", "idle inhibit sleep", () => { IdleInhibit.toggleInhibit(); return true; }),

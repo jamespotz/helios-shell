@@ -147,7 +147,7 @@ QtObject {
     // Calendar.qml's meeting alert: fire once, and only re-fire after the
     // device has recovered well above the threshold (recharged) and dropped
     // again, so it doesn't spam every scan while just idling at 19%.
-    readonly property int lowBatteryThreshold: 20
+    readonly property int lowBatteryThreshold: Config.batteryAlertThreshold
     property var lowBatteryAlert: null
     property var _lowBatteryAlerted: ({})
 

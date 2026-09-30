@@ -26,6 +26,17 @@ ShellRoot {
             root.verify(IslandNavigation.open && IslandNavigation.destinationId === "keybinds", "destination action opens destination");
             IslandNavigation.close();
             root.verify(Launcher.view === "list", "closing resets view");
+            Config.setDestinationHidden("keybinds", true);
+            Config.setDestinationHidden("weather", true);
+            root.verify(Config.destinationHidden("keybinds") && !Config.destinationHidden("calendar"), "hidden destinations tracked");
+            root.verify(!Launcher.actions.some(a => a.id === "destination:keybinds" || a.id === "destination:weather"), "hidden destinations leave the Launcher");
+            root.verify(Launcher.actions.some(a => a.id === "destination:calendar"), "other destinations stay");
+            root.verify(IslandNavigation.show("test", "keybinds"), "shortcuts still open hidden destinations");
+            IslandNavigation.close();
+            Config.setDestinationHidden("keybinds", false);
+            root.verify(Launcher.actions.some(a => a.id === "destination:keybinds"), "unhide restores action");
+            Config.resetOptions(["hiddenDestinations"]);
+            root.verify(!Config.destinationHidden("weather"), "reset shows all");
             Launcher.setView("grid");
             const apps = Launcher.results.map(result => result.title);
             root.verify(apps.length === Launcher.applications.length, "grid lists every application");

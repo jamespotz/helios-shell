@@ -6,8 +6,8 @@ import "../../services"
 import "../../components"
 
 // The collapsed idle pill — Apple Dynamic Island style: minimal, clean,
-// with generous internal spacing and refined typography. Shows only
-// essential glanceable info: time, weather, and now-playing art.
+// with generous internal spacing and refined typography. Which widgets
+// show, their order, and their side come from Config (Settings > Island).
 Item {
     id: root
 
@@ -19,126 +19,170 @@ Item {
         return players.find(p => p.isPlaying) || null;
     }
 
+    readonly property var layout: Config.idleWidgetLayout
+    readonly property var leftKeys: root.layout.slice(0, root.layout.indexOf("|"))
+    readonly property var rightKeys: root.layout.slice(root.layout.indexOf("|") + 1)
+
+    function shows(key) {
+        if (!Config.widgetShown("idle", key)) return false;
+        if (key === "media") return root.mediaPlaying;
+        if (key === "weather") return Weather.available;
+        return true;
+    }
+
+    readonly property bool hasLeft: root.leftKeys.some(k => root.shows(k))
+    readonly property bool hasRight: root.rightKeys.some(k => root.shows(k))
+    readonly property bool split: root.hasLeft && root.hasRight
+
     // Content-driven width with a comfortable floor — Apple's idle pill
-    // never looks cramped; generous horizontal padding (28px total).
-    implicitWidth: Math.max(Config.idleBumpWidth, row.implicitWidth + 28)
+    // never looks cramped; generous horizontal padding (28px total). With
+    // widgets on both sides, each group hugs its edge and the gap sits in
+    // the middle; one side alone stays centered.
+    implicitWidth: Math.max(Config.idleBumpWidth, root.split
+        ? leftRow.implicitWidth + rightRow.implicitWidth + Config.idleWidgetSpacing * 2 + 28
+        : leftRow.implicitWidth + rightRow.implicitWidth + 28)
     implicitHeight: Config.idleBumpHeight
 
-    Row {
-        id: row
-        anchors.centerIn: parent
+    readonly property var widgets: ({
+        workspaces: workspacesWidget, tiledLayout: tiledLayoutWidget, activeWindow: activeWindowWidget,
+        media: mediaWidget, clock: clockWidget, weather: weatherWidget, tray: trayWidget,
+        clipboard: clipboardWidget, statusIndicators: statusWidget
+    })
+
+    // Inline components can't reach this file's ids, so the pill is passed in.
+    component Side: Row {
+        id: side
+        property var keys: []
+        property var pill
+        anchors.verticalCenter: parent.verticalCenter
         spacing: Config.idleWidgetSpacing
 
-        Workspaces {
-            visible: Config.showIdleWorkspaces
-            targetScreen: root.targetScreen
-            anchors.verticalCenter: parent.verticalCenter
-        }
+        Repeater {
+            model: side.keys
 
-        TiledLayoutIndicator {
-            active: Config.showIdleTiledLayout
-            targetScreen: root.targetScreen
-            anchors.verticalCenter: parent.verticalCenter
+            Loader {
+                required property string modelData
+                anchors.verticalCenter: parent ? parent.verticalCenter : undefined
+                active: Config.widgetShown("idle", modelData)
+                // hasContent: widgets that hide themselves (tiled layout).
+                visible: side.pill.shows(modelData) && (!item || item.hasContent !== false)
+                sourceComponent: side.pill.widgets[modelData]
+            }
         }
+    }
 
-        ActiveWindow {
-            visible: Config.showIdleActiveWindow
-            anchors.verticalCenter: parent.verticalCenter
-            width: Math.min(implicitWidth, 120)
+    Side {
+        id: leftRow
+        keys: root.leftKeys
+        pill: root
+        x: root.split ? 14 : (root.width - implicitWidth) / 2
+    }
+
+    Side {
+        id: rightRow
+        keys: root.rightKeys
+        pill: root
+        x: root.split ? root.width - 14 - implicitWidth : (root.width - implicitWidth) / 2
+    }
+
+    Component {
+        id: workspacesWidget
+        Workspaces { targetScreen: root.targetScreen }
+    }
+
+    Component {
+        id: tiledLayoutWidget
+        TiledLayoutIndicator { active: true; targetScreen: root.targetScreen }
+    }
+
+    Component {
+        id: activeWindowWidget
+        ActiveWindow { width: Math.min(implicitWidth, 120) }
+    }
+
+    // Now-playing: album art thumbnail in a circle plus a compact
+    // visualizer. Uses ClippingRectangle (the same rounded-image primitive
+    // the wallpaper preview uses) rather than a hidden Image + MultiEffect
+    // mask, which rendered nothing.
+    Component {
+        id: mediaWidget
+        Row {
+            spacing: Config.idleWidgetSpacing
+
+            ClippingRectangle {
+                width: 20
+                height: 20
+                anchors.verticalCenter: parent.verticalCenter
+                radius: width / 2
+                color: Colors.surfaceHigh
+                clip: true
+
+                MaterialIcon {
+                    anchors.centerIn: parent
+                    visible: !(root.player && root.player.trackArtUrl)
+                    icon: "music_note"
+                    font.pixelSize: 11
+                    color: Colors.subtext
+                }
+
+                Image {
+                    anchors.fill: parent
+                    visible: !!(root.player && root.player.trackArtUrl)
+                    source: root.player && root.player.trackArtUrl ? root.player.trackArtUrl : ""
+                    fillMode: Image.PreserveAspectCrop
+                    asynchronous: true
+                }
+            }
+
+            MiniVisualizer {
+                active: root.mediaPlaying
+                levels: active ? Cava.downsample(Cava.bars, 5).map(v => v / Cava.maxRange) : []
+                barColor: Colors.accent
+                maxHeight: 12
+                anchors.verticalCenter: parent.verticalCenter
+            }
         }
+    }
 
-        // Now-playing: album art thumbnail in a circle. Uses
-        // ClippingRectangle (the same rounded-image primitive the wallpaper
-        // preview uses) rather than a hidden Image + MultiEffect mask, which
-        // rendered nothing.
-        ClippingRectangle {
-            visible: root.mediaPlaying && Config.showIdleMedia
-            width: 20
-            height: 20
-            anchors.verticalCenter: parent.verticalCenter
-            radius: width / 2
-            color: Colors.surfaceHigh
-            clip: true
+    Component {
+        id: clockWidget
+        FlipClock { weight: Font.Medium; opacity: 0.95 }
+    }
+
+    Component {
+        id: weatherWidget
+        Row {
+            spacing: Config.idleWidgetSpacing
 
             MaterialIcon {
-                anchors.centerIn: parent
-                visible: !(root.player && root.player.trackArtUrl)
-                icon: "music_note"
-                font.pixelSize: 11
-                color: Colors.subtext
+                icon: Weather.icon
+                color: Colors.accent
+                font.pixelSize: 13
+                anchors.verticalCenter: parent.verticalCenter
             }
 
-            Image {
-                id: idleArtImg
-                anchors.fill: parent
-                visible: !!(root.player && root.player.trackArtUrl)
-                source: root.player && root.player.trackArtUrl ? root.player.trackArtUrl : ""
-                fillMode: Image.PreserveAspectCrop
-                asynchronous: true
+            StyledText {
+                anchors.verticalCenter: parent.verticalCenter
+                font.pixelSize: Config.fontSize - 1
+                font.weight: Font.Medium
+                text: Math.round(Weather.tempC) + "°"
+                opacity: 0.85
             }
         }
+    }
 
-        // Audio visualizer — kept compact, Apple-style minimal bars
-        MiniVisualizer {
-            visible: root.mediaPlaying && Config.showIdleMedia
-            active: root.mediaPlaying && Config.showIdleMedia
-            levels: active ? Cava.downsample(Cava.bars, 5).map(v => v / Cava.maxRange) : []
-            barColor: Colors.accent
-            maxHeight: 12
-            anchors.verticalCenter: parent.verticalCenter
-        }
+    Component {
+        id: trayWidget
+        Tray {}
+    }
 
-        // Time — clean, medium weight, slightly larger than before for
-        // the idle state to be readable at a glance.
-        FlipClock {
-            visible: Config.showIdleClock
-            anchors.verticalCenter: parent.verticalCenter
-            weight: Font.Medium
-            opacity: 0.95
-        }
+    Component {
+        id: clipboardWidget
+        ClipboardWidget { targetScreen: root.targetScreen }
+    }
 
-        // Thin separator between time and weather — Apple uses these
-        // sparingly for visual grouping without adding a gap.
-        Rectangle {
-            visible: Config.showIdleClock && Weather.available && Config.showIdleWeather
-            width: 1
-            height: 12
-            radius: 0.5
-            color: Colors.overlay
-            opacity: 0.4
-            anchors.verticalCenter: parent.verticalCenter
-        }
-
-        // Weather: icon + temp, compact
-        MaterialIcon {
-            visible: Weather.available && Config.showIdleWeather
-            icon: Weather.icon
-            color: Colors.accent
-            font.pixelSize: 13
-            anchors.verticalCenter: parent.verticalCenter
-        }
-
-        StyledText {
-            visible: Weather.available && Config.showIdleWeather
-            anchors.verticalCenter: parent.verticalCenter
-            font.pixelSize: Config.fontSize - 1
-            font.weight: Font.Medium
-            text: Math.round(Weather.tempC) + "°"
-            opacity: 0.85
-        }
-
-        Tray { visible: Config.showIdleTray; anchors.verticalCenter: parent.verticalCenter }
-
-        ClipboardWidget {
-            visible: Config.showIdleClipboard
-            targetScreen: root.targetScreen
-            anchors.verticalCenter: parent.verticalCenter
-        }
-
-        StatusIndicators {
-            visible: Config.showIdleStatusIndicators
-            targetScreen: root.targetScreen
-            anchors.verticalCenter: parent.verticalCenter
-        }
+    Component {
+        id: statusWidget
+        StatusIndicators { targetScreen: root.targetScreen }
     }
 }

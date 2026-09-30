@@ -14,7 +14,10 @@ MaterialIcon {
     property string layout: ""
     readonly property TiledLayoutCore core: TiledLayoutCore {}
 
-    visible: active && layout.length > 0
+    // Read by the Island's widget Loaders, which can't use `visible`
+    // (it also reflects the Loader's own visibility).
+    readonly property bool hasContent: active && layout.length > 0
+    visible: hasContent
     icon: core.iconForLayout(layout)
     color: Colors.accent
     font.pixelSize: 14

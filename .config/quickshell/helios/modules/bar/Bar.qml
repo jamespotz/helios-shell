@@ -28,6 +28,8 @@ PanelWindow {
     readonly property bool meetingMode: mode === "meeting"
     readonly property bool batteryMode: mode === "battery"
     readonly property bool satelliteOpen: IslandNavigation.satelliteOpenFor(modelData.name, "maintenance")
+    readonly property var hyprMonitor: Hyprland.monitorFor(modelData)
+    readonly property bool hasFullscreen: !!hyprMonitor && !!hyprMonitor.activeWorkspace && hyprMonitor.activeWorkspace.hasFullscreen
 
     readonly property bool hasActiveMedia: {
         const players = Mpris.players ? Mpris.players.values : [];
@@ -51,7 +53,9 @@ PanelWindow {
     //
     // Annotate mode moves the bar above the drawing surface. The overlay uses
     // Top, so this Overlay-layer toolbar receives its own pointer events.
-    WlrLayershell.layer: bar.mode === "annotate" ? WlrLayer.Overlay : WlrLayer.Top
+    // A fullscreen window covers Top too; see IslandGestures.overFullscreen.
+    WlrLayershell.layer: bar.mode === "annotate" || IslandGestures.overFullscreen(Config.islandOverFullscreen, bar.hasFullscreen, bar.mode)
+        ? WlrLayer.Overlay : WlrLayer.Top
     WlrLayershell.namespace: "helios:bar"
     // IPC-opened panel content needs immediate keyboard focus for search
     // fields and shortcuts. Passive cards must never steal keyboard input
@@ -268,6 +272,31 @@ PanelWindow {
         TapHandler {
             enabled: !Config.hoverExpand && bar.mode === "idle"
             onTapped: bar.hovering = true
+        }
+
+        // Idle-pill gestures (Settings > Island > Gestures). Open panels and
+        // alert cards keep their own input. Child buttons that take the
+        // right/middle press (tray icons) still win over these.
+        readonly property bool gesturesActive: bar.mode === "idle" || bar.mode === "peek"
+        property real wheelRest: 0
+        WheelHandler {
+            enabled: hitArea.gesturesActive && Config.gestureScroll !== "off"
+            acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
+            onWheel: event => {
+                const r = IslandGestures._accumulate(hitArea.wheelRest, event.angleDelta.y);
+                hitArea.wheelRest = r.rest;
+                IslandGestures.scroll(r.steps);
+            }
+        }
+        TapHandler {
+            enabled: hitArea.gesturesActive
+            acceptedButtons: Qt.MiddleButton | Qt.RightButton
+            onTapped: (eventPoint, button) => {
+                if (button === Qt.MiddleButton)
+                    IslandGestures.middleClick();
+                else
+                    IslandGestures.rightClick(bar.modelData.name);
+            }
         }
 
         Item {

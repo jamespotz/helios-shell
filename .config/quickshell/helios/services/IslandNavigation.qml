@@ -1,5 +1,7 @@
 pragma Singleton
 import QtQuick
+import Quickshell
+import Quickshell.Hyprland
 
 QtObject {
     id: root
@@ -42,24 +44,37 @@ QtObject {
         },
         {
             mode: "task",
-            active: () => Tasks.items.length > 0
+            active: () => Config.showTaskAlerts && Tasks.items.length > 0
         },
         {
             mode: "meeting",
-            active: () => Calendar.upcomingAlert !== null,
+            active: () => Config.showMeetingAlerts && Calendar.upcomingAlert !== null,
             dismiss: () => Calendar.dismissAlert()
         },
         {
             mode: "battery",
-            active: () => Bluetooth.lowBatteryAlert !== null,
+            active: () => Config.showBatteryAlerts && Bluetooth.lowBatteryAlert !== null,
             dismiss: () => Bluetooth.dismissLowBattery()
         }
     ]
 
+    // Which screens show alert cards (Settings > Island > Screens): "all",
+    // "focused", or a screen name. When the target can't be resolved or its
+    // island is off, every screen shows them, so alerts never vanish.
+    readonly property var _alertScreens: Quickshell.screens.map(s => s.name).filter(name => Config.islandShownOn(name))
+    readonly property string _focusedScreen: Hyprland.focusedMonitor ? Hyprland.focusedMonitor.name : ""
+
+    function _alertsOn(screenName, setting, focusedName, availableNames) {
+        const target = setting === "focused" ? focusedName : setting;
+        if (setting === "all" || !availableNames.includes(target)) return true;
+        return screenName === target;
+    }
+
     function modeFor(screenName, hovering) {
         if (root.panelOpenFor(screenName))
             return root.destinationId;
-        const alert = root._alerts.find(a => a.active());
+        const alert = root._alertsOn(screenName, Config.alertScreen, root._focusedScreen, root._alertScreens)
+            ? root._alerts.find(a => a.active()) : null;
         if (alert)
             return alert.mode;
         return hovering ? "peek" : "idle";

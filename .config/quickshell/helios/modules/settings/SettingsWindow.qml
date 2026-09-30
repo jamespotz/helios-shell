@@ -39,7 +39,7 @@ PanelWindow {
         { id: "wallpaper", label: "Wallpaper", icon: "wallpaper", group: "Personalization", component: wallpaperPage,
           keywords: ["wallpaper", "background", "transition", "folder"] },
         { id: "island", label: "Island", icon: "auto_awesome", group: "Personalization", component: islandPage,
-          keywords: ["island", "idle bump", "widgets", "expanded", "padding", "liquid glass", "spring", "morph", "collapse delay", "shadow", "satellite", "badge"] },
+          keywords: ["island", "idle bump", "widgets", "order", "reorder", "left", "right", "launcher", "destinations", "hide", "expanded", "padding", "liquid glass", "spring", "motion", "preset", "snappy", "bouncy", "reduce motion", "morph", "collapse delay", "shadow", "satellite", "badge", "gestures", "scroll", "middle click", "right click", "fullscreen", "alerts", "do not disturb", "dnd", "sounds", "critical", "battery", "meeting", "task"] },
         { id: "workspaces", label: "Workspaces", icon: "grid_view", group: "Personalization", component: workspacesPage,
           keywords: ["workspace indicator", "workspace icons", "dots", "numbers"] },
         { id: "dock", label: "Dock", icon: "dock_to_bottom", group: "Personalization", component: dockPage,

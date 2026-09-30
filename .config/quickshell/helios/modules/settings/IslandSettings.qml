@@ -9,34 +9,55 @@ import "../../components"
 Item {
     id: root
 
-    readonly property var idleWidgetOptions: [
-        { key: "showIdleMedia", icon: "music_note", label: "Now-playing cover" },
-        { key: "showIdleClock", icon: "schedule", label: "Clock" },
-        { key: "showIdleWeather", icon: "cloud", label: "Weather" },
-        { key: "showIdleTiledLayout", icon: "dashboard", label: "Tiled layout" },
-        { key: "showIdleWorkspaces", icon: "grid_view", label: "Workspaces" },
-        { key: "showIdleActiveWindow", icon: "web_asset", label: "Active window" },
-        { key: "showIdleTray", icon: "widgets", label: "Tray icons" },
-        { key: "showIdleStatusIndicators", icon: "sensors", label: "Status icons" },
-        { key: "showIdleClipboard", icon: "content_paste", label: "Clipboard" }
-    ]
-
-    readonly property var widgetOptions: [
-        { key: "showWorkspaces", icon: "grid_view", label: "Workspaces" },
-        { key: "showTiledLayout", icon: "dashboard", label: "Tiled layout" },
-        { key: "showActiveWindow", icon: "web_asset", label: "Active window" },
-        { key: "showClock", icon: "schedule", label: "Clock" },
-        { key: "showWeather", icon: "cloud", label: "Weather" },
-        { key: "showTray", icon: "widgets", label: "Tray icons" },
-        { key: "showStatusIndicators", icon: "sensors", label: "Status icons" },
-        { key: "showClipboard", icon: "content_paste", label: "Clipboard" }
-    ]
+    readonly property var widgetMeta: ({
+        media: { icon: "music_note", label: "Now-playing cover" },
+        clock: { icon: "schedule", label: "Clock" },
+        weather: { icon: "cloud", label: "Weather" },
+        tiledLayout: { icon: "dashboard", label: "Tiled layout" },
+        workspaces: { icon: "grid_view", label: "Workspaces" },
+        activeWindow: { icon: "web_asset", label: "Active window" },
+        tray: { icon: "widgets", label: "Tray icons" },
+        statusIndicators: { icon: "sensors", label: "Status icons" },
+        clipboard: { icon: "content_paste", label: "Clipboard" }
+    })
+    readonly property var idleWidgetKeys: Config.widgetKeys.idle.map(k => Config.widgetOption("idle", k)).concat(["idleLayout"])
+    readonly property var peekWidgetKeys: Config.widgetKeys.peek.map(k => Config.widgetOption("peek", k)).concat(["peekLayout"])
 
     implicitWidth: 320
     implicitHeight: col.implicitHeight
 
     component ConfigToggle: OptionToggle { target: Config }
     component ConfigSlider: OptionSlider { target: Config }
+    component ConfigChoice: OptionChoice { target: Config }
+
+    readonly property var motionChoices: [
+        { value: "snappy", label: "Snappy" },
+        { value: "smooth", label: "Smooth" },
+        { value: "bouncy", label: "Bouncy" }
+    ]
+
+    // Raw spring sliders behind a disclosure; the Motion presets cover the
+    // common cases. Summary names the active preset ("Custom" otherwise).
+    component MotionAdvanced: Disclosure {
+        id: advanced
+        property string stiffnessKey
+        property string dampingKey
+        title: "Advanced motion"
+        summary: Config.motionPreset.charAt(0).toUpperCase() + Config.motionPreset.slice(1)
+
+        StyledText {
+            width: parent.width
+            wrapMode: Text.WordWrap
+            text: "Higher stiffness snaps open faster. Damping near 1 stays smooth; lower overshoots, higher eases in slower."
+            font.pixelSize: Config.fontSize - 2
+            opacity: 0.6
+        }
+
+        SettingsCard {
+            ConfigSlider { option: advanced.stiffnessKey; icon: "speed"; label: "Stiffness"; format: v => v.toFixed(1) }
+            ConfigSlider { option: advanced.dampingKey; icon: "waves"; label: "Damping"; format: v => v.toFixed(1); last: true }
+        }
+    }
 
     // Section-level Reset, right-aligned under its card.
     component ResetChip: Chip {
@@ -65,22 +86,10 @@ Item {
 
             SectionTitle {
                 title: "Idle"
-                subtitle: "The small collapsed pill. Width and height are its resting size — the island still grows past them when hovered or expanded."
+                subtitle: "The small collapsed pill. Drag to reorder; widgets below the divider sit on the right. Width and height are its resting size — the island still grows past them."
             }
 
-            SettingsCard {
-                Repeater {
-                    model: root.idleWidgetOptions
-                    ConfigToggle {
-                        required property var modelData
-                        required property int index
-                        icon: modelData.icon
-                        label: modelData.label
-                        option: modelData.key
-                        last: index === root.idleWidgetOptions.length - 1
-                    }
-                }
-            }
+            WidgetLayoutList { surface: "idle"; meta: root.widgetMeta }
 
             SettingsCard {
                 ConfigSlider { option: "idleBumpWidth"; icon: "width"; label: "Width" }
@@ -90,8 +99,7 @@ Item {
             }
 
             ResetChip {
-                keys: root.idleWidgetOptions.map(o => o.key)
-                    .concat(["idleBumpWidth", "idleBumpHeight", "islandTopGap", "idleWidgetSpacing"])
+                keys: root.idleWidgetKeys.concat(["idleBumpWidth", "idleBumpHeight", "islandTopGap", "idleWidgetSpacing"])
             }
         }
 
@@ -102,22 +110,10 @@ Item {
 
             SectionTitle {
                 title: "Expanded"
-                subtitle: "What shows and how much padding it gets when the island expands."
+                subtitle: "The hover row. Drag to reorder; the divider splits the left and right groups."
             }
 
-            SettingsCard {
-                Repeater {
-                    model: root.widgetOptions
-                    ConfigToggle {
-                        required property var modelData
-                        required property int index
-                        icon: modelData.icon
-                        label: modelData.label
-                        option: modelData.key
-                        last: index === root.widgetOptions.length - 1
-                    }
-                }
-            }
+            WidgetLayoutList { surface: "peek"; meta: root.widgetMeta }
 
             SettingsCard {
                 ConfigSlider { option: "islandContentPadH"; icon: "padding"; label: "Side padding" }
@@ -126,7 +122,7 @@ Item {
             }
 
             ResetChip {
-                keys: root.widgetOptions.map(o => o.key).concat(["islandContentPadH", "islandContentPadV", "peekHeight"])
+                keys: root.peekWidgetKeys.concat(["islandContentPadH", "islandContentPadV", "peekHeight"])
             }
         }
 
@@ -137,7 +133,7 @@ Item {
 
             SectionTitle {
                 title: "Behavior"
-                subtitle: "With Open on hover off, click the idle pill to open it. Higher stiffness snaps open faster; damping near 1 stays smooth, lower values overshoot, higher values ease in slower."
+                subtitle: "With Open on hover off, click the idle pill to open it. Motion sets how the island and its satellites spring open. Over fullscreen: Alerts shows alert cards and shortcut-opened panels above fullscreen apps."
             }
 
             SettingsCard {
@@ -159,15 +155,90 @@ Item {
                     format: v => Math.round(v) + " ms"
                 }
                 ConfigSlider { option: "hoverCollapseDelay"; icon: "timer"; label: "Collapse delay"; format: v => Math.round(v) + " ms" }
-                ConfigSlider { option: "islandSpringStiffness"; icon: "speed"; label: "Stiffness"; format: v => v.toFixed(1) }
-                ConfigSlider { option: "islandSpringDamping"; icon: "waves"; label: "Damping"; format: v => v.toFixed(1) }
+                SettingsRow {
+                    icon: "animation"
+                    label: "Motion"
+                    SegmentedControl {
+                        implicitHeight: 32
+                        enabled: !Config.reducedMotion
+                        opacity: enabled ? 1 : 0.4
+                        model: root.motionChoices
+                        currentValue: Config.motionPreset
+                        onActivated: v => Config.applyMotionPreset(v)
+                    }
+                }
+                ConfigToggle { option: "reducedMotion"; icon: "motion_photos_off"; label: "Reduce motion" }
+                ConfigChoice {
+                    option: "islandOverFullscreen"
+                    icon: "fullscreen"
+                    label: "Over fullscreen"
+                    choices: [{ value: "hidden", label: "Hidden" }, { value: "alerts", label: "Alerts" }]
+                }
                 ConfigSlider { option: "islandShadowGlowRadius"; icon: "blur_circular"; label: "Shadow glow"; format: v => v.toFixed(1) + " px" }
                 ConfigSlider { option: "islandShadowSpread"; icon: "gradient"; label: "Shadow spread"; format: v => v.toFixed(2); last: true }
             }
 
-            ResetChip {
-                keys: ["hoverExpand", "hoverExpandDelay", "hoverCollapseDelay", "islandSpringStiffness", "islandSpringDamping", "islandShadowGlowRadius", "islandShadowSpread"]
+            MotionAdvanced {
+                stiffnessKey: "islandSpringStiffness"
+                dampingKey: "islandSpringDamping"
             }
+
+            ResetChip {
+                keys: ["hoverExpand", "hoverExpandDelay", "hoverCollapseDelay", "islandSpringStiffness", "islandSpringDamping",
+                    "islandOverFullscreen", "islandShadowGlowRadius", "islandShadowSpread"]
+            }
+        }
+
+        // --- Gestures ------------------------------------------------------
+        Column {
+            width: parent.width
+            spacing: 10
+
+            SectionTitle {
+                title: "Gestures"
+                subtitle: "On the idle pill and hover row. Open panels and alerts keep their own clicks."
+            }
+
+            SettingsCard {
+                ConfigChoice {
+                    option: "gestureScroll"
+                    icon: "swap_vert"
+                    label: "Scroll"
+                    choices: [{ value: "off", label: "Off" }, { value: "volume", label: "Volume" }, { value: "workspace", label: "Workspace" }]
+                }
+                ConfigChoice {
+                    option: "gestureMiddleClick"
+                    icon: "mouse"
+                    label: "Middle click"
+                    choices: [{ value: "off", label: "Off" }, { value: "playpause", label: "Play/pause" }, { value: "mute", label: "Mute" }]
+                    last: true
+                }
+            }
+
+            StyledText {
+                text: "Right click opens"
+                font.pixelSize: Config.fontSize - 1
+                opacity: 0.8
+            }
+
+            Flow {
+                width: parent.width
+                spacing: 6
+
+                Repeater {
+                    model: Config.options.gestureRightClick.choices
+
+                    Chip {
+                        required property string modelData
+                        readonly property var destination: IslandNavigation.resolve(modelData)
+                        active: Config.gestureRightClick === modelData
+                        text: destination ? destination.label : "Nothing"
+                        onClicked: Config.setOption("gestureRightClick", modelData)
+                    }
+                }
+            }
+
+            ResetChip { keys: ["gestureScroll", "gestureMiddleClick", "gestureRightClick"] }
         }
 
         // --- Alerts --------------------------------------------------------
@@ -177,7 +248,31 @@ Item {
 
             SectionTitle {
                 title: "Alerts"
-                subtitle: "Notification, task, meeting, and battery cards. Hovering a notification keeps it open."
+                subtitle: "Cards that take over the island. Hovering a notification keeps it open; low-priority ones leave in half the time."
+            }
+
+            SettingsCard {
+                SettingsRow {
+                    icon: "do_not_disturb_on"
+                    label: "Do Not Disturb"
+                    Toggle {
+                        label: "Do Not Disturb"
+                        checked: Bridge.dndEnabled
+                        onToggled: v => Bridge.dndEnabled = v
+                    }
+                }
+                ConfigToggle { option: "showTaskAlerts"; icon: "progress_activity"; label: "Task progress" }
+                ConfigToggle { option: "showMeetingAlerts"; icon: "event"; label: "Meeting reminders" }
+                ConfigToggle { option: "showBatteryAlerts"; icon: "battery_alert"; label: "Device battery" }
+                ConfigSlider {
+                    visible: Config.showBatteryAlerts
+                    option: "batteryAlertThreshold"
+                    icon: "battery_2_bar"
+                    label: "Battery below"
+                    format: v => Math.round(v) + "%"
+                }
+                ConfigToggle { option: "keepCriticalAlerts"; icon: "priority_high"; label: "Keep critical until dismissed" }
+                ConfigToggle { option: "alertSounds"; icon: "volume_up"; label: "Alert sounds"; last: true }
             }
 
             SettingsCard {
@@ -191,7 +286,10 @@ Item {
                 }
             }
 
-            ResetChip { keys: ["notifyWidth", "notifyDuration"] }
+            ResetChip {
+                keys: ["showTaskAlerts", "showMeetingAlerts", "showBatteryAlerts", "batteryAlertThreshold",
+                    "keepCriticalAlerts", "alertSounds", "notifyWidth", "notifyDuration"]
+            }
         }
 
         // --- Satellite -----------------------------------------------------
@@ -201,7 +299,7 @@ Item {
 
             SectionTitle {
                 title: "Satellite"
-                subtitle: "The small badges next to the island (recording, maintenance). Their motion is independent from the island's."
+                subtitle: "The small badges next to the island (recording, maintenance). Motion presets set their spring too; Advanced tunes it separately."
             }
 
             SettingsCard {
@@ -210,15 +308,47 @@ Item {
                 ConfigSlider { option: "satellitePadH"; icon: "padding"; label: "Side padding" }
                 ConfigSlider { option: "satellitePadV"; icon: "padding"; label: "Vertical padding" }
                 ConfigSlider { option: "satelliteShadowGlowRadius"; icon: "blur_circular"; label: "Shadow glow"; format: v => v.toFixed(1) + " px" }
-                ConfigSlider { option: "satelliteShadowSpread"; icon: "gradient"; label: "Shadow spread"; format: v => v.toFixed(2) }
-                ConfigSlider { option: "satelliteSpringStiffness"; icon: "speed"; label: "Stiffness"; format: v => v.toFixed(1) }
-                ConfigSlider { option: "satelliteSpringDamping"; icon: "waves"; label: "Damping"; format: v => v.toFixed(1); last: true }
+                ConfigSlider { option: "satelliteShadowSpread"; icon: "gradient"; label: "Shadow spread"; format: v => v.toFixed(2); last: true }
+            }
+
+            MotionAdvanced {
+                stiffnessKey: "satelliteSpringStiffness"
+                dampingKey: "satelliteSpringDamping"
             }
 
             ResetChip {
                 keys: ["satelliteBadgeSize", "satelliteRestGap", "satellitePadH", "satellitePadV",
                     "satelliteShadowGlowRadius", "satelliteShadowSpread", "satelliteSpringStiffness", "satelliteSpringDamping"]
             }
+        }
+
+        // --- Launcher ------------------------------------------------------
+        Column {
+            width: parent.width
+            spacing: 10
+
+            SectionTitle {
+                title: "Launcher"
+                subtitle: "Destinations offered in Launcher search. Shortcuts and status icons still open hidden ones."
+            }
+
+            Flow {
+                width: parent.width
+                spacing: 6
+
+                Repeater {
+                    model: IslandNavigation.destinations.filter(d => d.id !== "launcher")
+
+                    Chip {
+                        required property var modelData
+                        active: !Config.destinationHidden(modelData.id)
+                        text: modelData.id === "powermenu" ? "Power menu" : modelData.label
+                        onClicked: Config.setDestinationHidden(modelData.id, active)
+                    }
+                }
+            }
+
+            ResetChip { keys: ["hiddenDestinations"] }
         }
 
         // --- Screens -------------------------------------------------------
@@ -228,7 +358,7 @@ Item {
 
             SectionTitle {
                 title: "Screens"
-                subtitle: "Panels opened with a shortcut still appear on a screen that's off. At least one screen keeps the island."
+                subtitle: "Panels opened with a shortcut still appear on a screen that's off. At least one screen keeps the island. If the alert screen is missing or off, alerts show everywhere."
             }
 
             SettingsCard {
@@ -257,6 +387,31 @@ Item {
                     }
                 }
             }
+
+            StyledText {
+                text: "Show alerts on"
+                font.pixelSize: Config.fontSize - 1
+                opacity: 0.8
+            }
+
+            Flow {
+                width: parent.width
+                spacing: 6
+
+                Repeater {
+                    model: [{ value: "all", label: "All screens" }, { value: "focused", label: "Focused screen" }]
+                        .concat(Quickshell.screens.filter(s => s.name).map(s => ({ value: s.name, label: s.name })))
+
+                    Chip {
+                        required property var modelData
+                        active: Config.alertScreen === modelData.value
+                        text: modelData.label
+                        onClicked: Config.setOption("alertScreen", modelData.value)
+                    }
+                }
+            }
+
+            ResetChip { keys: ["alertScreen"] }
         }
     }
 }

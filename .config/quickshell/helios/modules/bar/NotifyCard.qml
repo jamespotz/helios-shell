@@ -26,26 +26,28 @@ Item {
 
     // Auto-dismiss notifications after a pause. Each new notification
     // restarts the timer, and hovering keeps the current card or stack open.
+    // Urgency sets the pause and which cards go (see NotificationCore.expiry):
+    // low-only stacks leave sooner, critical ones can wait for a dismiss.
     // This timer only exists while notifications are actually on screen, so
     // nothing ticks down while an open panel covers them.
-    Timer {
-        id: autoDismissTimer
-        interval: Config.notifyDuration
-        onTriggered: {
-            if (root.hovering) { autoDismissTimer.restart(); return; }
-            if (root.count === 1) Notifications.dismiss(root.list[0].id);
-            else if (root.count > 1) Notifications.dismissAll();
-        }
-    }
+    readonly property var expiry: Notifications.expiry(root.list, Config.notifyDuration, Config.keepCriticalAlerts)
 
-    onCountChanged: {
-        if (root.count > 0) autoDismissTimer.restart();
+    function _rearm() {
+        if (root.expiry.interval > 0) autoDismissTimer.restart();
         else autoDismissTimer.stop();
     }
 
-    Component.onCompleted: {
-        if (root.count > 0) autoDismissTimer.restart();
+    Timer {
+        id: autoDismissTimer
+        interval: Math.max(1, root.expiry.interval)
+        onTriggered: {
+            if (root.hovering) { autoDismissTimer.restart(); return; }
+            for (const id of root.expiry.dismissIds) Notifications.dismiss(id);
+        }
     }
+
+    onExpiryChanged: root._rearm()
+    Component.onCompleted: root._rearm()
 
     Column {
         id: col

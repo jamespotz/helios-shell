@@ -85,6 +85,34 @@ QtObject {
     readonly property real islandSpringStiffness: settingsAdapter.islandSpringStiffness
     readonly property real islandSpringDamping: settingsAdapter.islandSpringDamping
 
+    // Motion presets set the island and satellite springs together. The
+    // active preset is derived from those four values rather than stored,
+    // so moving an Advanced slider reads as "custom".
+    readonly property var motionPresets: ({
+        snappy: { stiffness: 7.0, damping: 1.0 },
+        smooth: { stiffness: 4.0, damping: 1.0 },
+        bouncy: { stiffness: 4.0, damping: 0.4 }
+    })
+    readonly property var motionKeys: ["islandSpringStiffness", "islandSpringDamping", "satelliteSpringStiffness", "satelliteSpringDamping"]
+    readonly property string motionPreset: {
+        for (const name in root.motionPresets) {
+            const p = root.motionPresets[name];
+            if (islandSpringStiffness === p.stiffness && islandSpringDamping === p.damping
+                    && satelliteSpringStiffness === p.stiffness && satelliteSpringDamping === p.damping)
+                return name;
+        }
+        return "custom";
+    }
+
+    function applyMotionPreset(name) {
+        const p = root.motionPresets[name];
+        if (!p) return;
+        root.setOption("islandSpringStiffness", p.stiffness);
+        root.setOption("islandSpringDamping", p.damping);
+        root.setOption("satelliteSpringStiffness", p.stiffness);
+        root.setOption("satelliteSpringDamping", p.damping);
+    }
+
     // How long the island stays expanded after the cursor leaves before it
     // collapses back to the idle bump — user-tunable from Settings >
     // Island.
@@ -95,6 +123,24 @@ QtObject {
     readonly property bool hoverExpand: settingsAdapter.hoverExpand
     readonly property int hoverExpandDelay: settingsAdapter.hoverExpandDelay
 
+    // What the idle pill does with the wheel, middle click and right click
+    // (see IslandGestures), and whether alerts and shortcut-opened panels
+    // rise above a fullscreen window — user-tunable from Settings > Island.
+    readonly property string gestureScroll: settingsAdapter.gestureScroll
+    readonly property string gestureMiddleClick: settingsAdapter.gestureMiddleClick
+    readonly property string gestureRightClick: settingsAdapter.gestureRightClick
+    readonly property string islandOverFullscreen: settingsAdapter.islandOverFullscreen
+
+    // Which alert cards may take over the island, the Bluetooth low-battery
+    // threshold, whether critical notifications wait to be dismissed, and
+    // alert sounds — user-tunable from Settings > Island > Alerts.
+    readonly property bool showTaskAlerts: settingsAdapter.showTaskAlerts
+    readonly property bool showMeetingAlerts: settingsAdapter.showMeetingAlerts
+    readonly property bool showBatteryAlerts: settingsAdapter.showBatteryAlerts
+    readonly property int batteryAlertThreshold: settingsAdapter.batteryAlertThreshold
+    readonly property bool keepCriticalAlerts: settingsAdapter.keepCriticalAlerts
+    readonly property bool alertSounds: settingsAdapter.alertSounds
+
     // Screen names the island is turned off on. An island panel opened on
     // one of them (keybind/IPC) still shows until it closes.
     readonly property var islandHiddenScreens: settingsAdapter.islandHiddenScreens
@@ -104,6 +150,20 @@ QtObject {
     function islandShownOn(screenName) {
         const hidden = root.islandHiddenScreens;
         return !hidden.includes(screenName) || Quickshell.screens.every(s => hidden.includes(s.name));
+    }
+
+    // Which screens show alert cards: "all", "focused", or a screen name —
+    // see IslandNavigation._alertsOn. Set from Settings > Island > Screens.
+    readonly property string alertScreen: settingsAdapter.alertScreen
+
+    // Island destinations left out of Launcher search. Shortcuts, status
+    // icons and IPC still open them. Set from Settings > Island > Launcher.
+    readonly property var hiddenDestinations: settingsAdapter.hiddenDestinations
+    function destinationHidden(id) { return root.hiddenDestinations.includes(id); }
+    function setDestinationHidden(id, hidden) {
+        const rest = root.hiddenDestinations.filter(d => d !== id);
+        settingsAdapter.hiddenDestinations = hidden ? rest.concat([id]) : rest;
+        root._save();
     }
 
     function setIslandShownOn(screenName, shown) {
@@ -156,6 +216,50 @@ QtObject {
     readonly property bool showIdleTray: settingsAdapter.showIdleTray
     readonly property bool showIdleStatusIndicators: settingsAdapter.showIdleStatusIndicators
     readonly property bool showIdleClipboard: settingsAdapter.showIdleClipboard
+
+    // Widget order and side for the idle pill and the hover row. Each list
+    // holds every widget key once plus one "|" marker: keys before it sit
+    // on the left, after it on the right. Whether a widget shows is still
+    // its show*/showIdle* toggle above. Set from Settings > Island.
+    readonly property var widgetKeys: ({
+        idle: ["workspaces", "tiledLayout", "activeWindow", "media", "clock", "weather", "tray", "clipboard", "statusIndicators"],
+        peek: ["workspaces", "tiledLayout", "activeWindow", "clock", "weather", "tray", "clipboard", "statusIndicators"]
+    })
+    readonly property var idleWidgetLayout: root._sanitizeLayout("idle", settingsAdapter.idleLayout)
+    readonly property var peekWidgetLayout: root._sanitizeLayout("peek", settingsAdapter.peekLayout)
+
+    function layoutFor(surface) { return surface === "idle" ? root.idleWidgetLayout : root.peekWidgetLayout; }
+
+    // The show*/showIdle* option that toggles a widget key.
+    function widgetOption(surface, key) {
+        return (surface === "idle" ? "showIdle" : "show") + key.charAt(0).toUpperCase() + key.slice(1);
+    }
+
+    function widgetShown(surface, key) {
+        return key === "|" || !!root[root.widgetOption(surface, key)];
+    }
+
+    // Drops unknown and repeated keys, appends missing ones at the end, and
+    // keeps exactly one marker (last, when it was missing).
+    function _sanitizeLayout(surface, stored) {
+        const known = root.widgetKeys[surface];
+        const source = Array.isArray(stored) ? stored : root.options[surface + "Layout"].value;
+        const out = [];
+        for (const key of source)
+            if ((key === "|" || known.includes(key)) && !out.includes(key)) out.push(key);
+        const missing = known.filter(key => !out.includes(key));
+        const marker = out.indexOf("|");
+        if (marker < 0) return out.concat(missing, ["|"]);
+        return out.concat(missing);
+    }
+
+    function moveWidget(surface, key, index) {
+        const layout = root.layoutFor(surface).filter(k => k !== key);
+        if (layout.length === root.layoutFor(surface).length) return;
+        layout.splice(Math.max(0, Math.min(index, layout.length)), 0, key);
+        settingsAdapter[surface + "Layout"] = layout;
+        root._save();
+    }
 
     // Workspace indicator look — "dots" (pill for the focused workspace),
     // "numbers" (Material Symbols counter_N glyphs), or "custom" (a
@@ -215,6 +319,12 @@ QtObject {
         peekHeight: { value: 44, range: [32, 72] },
         notifyWidth: { value: 380, range: [300, 600] },
         notifyDuration: { value: 5000, range: [1000, 30000], step: 500 },
+        showTaskAlerts: { value: true },
+        showMeetingAlerts: { value: true },
+        showBatteryAlerts: { value: true },
+        batteryAlertThreshold: { value: 20, range: [5, 50], step: 5 },
+        keepCriticalAlerts: { value: true },
+        alertSounds: { value: false },
 
         showWorkspaces: { value: true },
         showTiledLayout: { value: false },
@@ -234,6 +344,8 @@ QtObject {
         showIdleTray: { value: false },
         showIdleStatusIndicators: { value: false },
         showIdleClipboard: { value: false },
+        idleLayout: { value: ["workspaces", "tiledLayout", "activeWindow", "media", "clock", "weather", "tray", "clipboard", "statusIndicators", "|"] },
+        peekLayout: { value: ["workspaces", "tiledLayout", "activeWindow", "|", "clock", "weather", "tray", "clipboard", "statusIndicators"] },
 
         workspaceIndicatorStyle: { value: "dots", choices: ["dots", "numbers", "custom"] },
         showAllWorkspaces: { value: true },
@@ -250,6 +362,12 @@ QtObject {
         hoverCollapseDelay: { value: 260, range: [0, 2000], step: 10 },
         hoverExpand: { value: true },
         hoverExpandDelay: { value: 80, range: [0, 1000], step: 10 },
+        gestureScroll: { value: "volume", choices: ["off", "volume", "workspace"] },
+        gestureMiddleClick: { value: "playpause", choices: ["off", "playpause", "mute"] },
+        gestureRightClick: { value: "off", choices: ["off", "launcher", "notifications", "media", "calendar", "volume"] },
+        islandOverFullscreen: { value: "hidden", choices: ["hidden", "alerts"] },
+        hiddenDestinations: { value: [] },
+        alertScreen: { value: "all" },
         islandSpringStiffness: { value: 4.0, range: [0.5, 12], step: 0.1 },
         islandSpringDamping: { value: 1.0, range: [0.1, 8], step: 0.1 },
         islandShadowGlowRadius: { value: 14, range: [0, 32], step: 0.5 },
@@ -336,6 +454,8 @@ QtObject {
             property bool showIdleTray: root.options.showIdleTray.value
             property bool showIdleStatusIndicators: root.options.showIdleStatusIndicators.value
             property bool showIdleClipboard: root.options.showIdleClipboard.value
+            property var idleLayout: root.options.idleLayout.value
+            property var peekLayout: root.options.peekLayout.value
             property string workspaceIndicatorStyle: root.options.workspaceIndicatorStyle.value
             property bool showAllWorkspaces: root.options.showAllWorkspaces.value
             property var workspaceIcons: ({})
@@ -346,6 +466,18 @@ QtObject {
             property int hoverCollapseDelay: root.options.hoverCollapseDelay.value
             property bool hoverExpand: root.options.hoverExpand.value
             property int hoverExpandDelay: root.options.hoverExpandDelay.value
+            property string gestureScroll: root.options.gestureScroll.value
+            property string gestureMiddleClick: root.options.gestureMiddleClick.value
+            property string gestureRightClick: root.options.gestureRightClick.value
+            property string islandOverFullscreen: root.options.islandOverFullscreen.value
+            property var hiddenDestinations: root.options.hiddenDestinations.value
+            property string alertScreen: root.options.alertScreen.value
+            property bool showTaskAlerts: root.options.showTaskAlerts.value
+            property bool showMeetingAlerts: root.options.showMeetingAlerts.value
+            property bool showBatteryAlerts: root.options.showBatteryAlerts.value
+            property int batteryAlertThreshold: root.options.batteryAlertThreshold.value
+            property bool keepCriticalAlerts: root.options.keepCriticalAlerts.value
+            property bool alertSounds: root.options.alertSounds.value
             property var islandHiddenScreens: []
             property real islandSpringStiffness: root.options.islandSpringStiffness.value
             property real islandSpringDamping: root.options.islandSpringDamping.value

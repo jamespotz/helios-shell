@@ -3,50 +3,66 @@ import "../../services"
 import "../../components"
 
 // Hover-expanded state — Apple menu bar philosophy: two clearly separated
-// zones (left: navigation/context, right: utilities/status) with generous
-// internal spacing and thin separators for visual grouping. Each zone
-// self-hides when all its children are toggled off.
+// zones with generous internal spacing and a thin separator between them.
+// Which widgets show, their order, and their side come from Config
+// (Settings > Island); each zone self-hides when none of its widgets show.
 Item {
     id: root
 
     required property var targetScreen
 
-    readonly property bool hasLeftCluster: Config.showWorkspaces || Config.showTiledLayout || Config.showActiveWindow
-    readonly property bool hasRightCluster: Config.showClock || (Config.showWeather && Weather.available)
-        || Config.showTray || Config.showClipboard || Config.showStatusIndicators
+    readonly property var layout: Config.peekWidgetLayout
+    readonly property var leftKeys: root.layout.slice(0, root.layout.indexOf("|"))
+    readonly property var rightKeys: root.layout.slice(root.layout.indexOf("|") + 1)
+
+    function shows(key) {
+        if (!Config.widgetShown("peek", key)) return false;
+        return key !== "weather" || Weather.available;
+    }
+
+    readonly property bool hasLeftCluster: root.leftKeys.some(k => root.shows(k))
+    readonly property bool hasRightCluster: root.rightKeys.some(k => root.shows(k))
 
     implicitWidth: row.implicitWidth
     implicitHeight: Config.peekHeight
+
+    readonly property var widgets: ({
+        workspaces: workspacesWidget, tiledLayout: tiledLayoutWidget, activeWindow: activeWindowWidget,
+        clock: clockWidget, weather: weatherWidget, tray: trayWidget,
+        clipboard: clipboardWidget, statusIndicators: statusWidget
+    })
+
+    // Inline components can't reach this file's ids, so the row is passed in.
+    component Cluster: Row {
+        id: cluster
+        property var keys: []
+        property var peek
+        anchors.verticalCenter: parent.verticalCenter
+        spacing: 12
+
+        Repeater {
+            model: cluster.keys
+
+            Loader {
+                required property string modelData
+                anchors.verticalCenter: parent ? parent.verticalCenter : undefined
+                active: Config.widgetShown("peek", modelData)
+                // hasContent: widgets that hide themselves (tiled layout).
+                visible: cluster.peek.shows(modelData) && (!item || item.hasContent !== false)
+                sourceComponent: cluster.peek.widgets[modelData]
+            }
+        }
+    }
 
     Row {
         id: row
         anchors.verticalCenter: parent.verticalCenter
         spacing: 0
 
-        // --- Left cluster: workspace context ---
-        Row {
-            id: leftCluster
+        Cluster {
             visible: root.hasLeftCluster
-            anchors.verticalCenter: parent.verticalCenter
-            spacing: 12
-
-            Workspaces {
-                visible: Config.showWorkspaces
-                targetScreen: root.targetScreen
-                anchors.verticalCenter: parent.verticalCenter
-            }
-
-            TiledLayoutIndicator {
-                active: Config.showTiledLayout
-                targetScreen: root.targetScreen
-                anchors.verticalCenter: parent.verticalCenter
-            }
-
-            ActiveWindow {
-                visible: Config.showActiveWindow
-                anchors.verticalCenter: parent.verticalCenter
-                width: Math.min(implicitWidth, 200)
-            }
+            keys: root.leftKeys
+            peek: root
         }
 
         // --- Separator between clusters ---
@@ -65,53 +81,50 @@ Item {
             }
         }
 
-        // --- Right cluster: utilities & status ---
-        Row {
-            id: rightCluster
+        Cluster {
             visible: root.hasRightCluster
-            anchors.verticalCenter: parent.verticalCenter
-            spacing: 10
-
-            Clock {
-                visible: Config.showClock
-                targetScreen: root.targetScreen
-                anchors.verticalCenter: parent.verticalCenter
-            }
-
-            WeatherWidget {
-                visible: Config.showWeather && Weather.available
-                targetScreen: root.targetScreen
-                anchors.verticalCenter: parent.verticalCenter
-            }
-
-            // Thin separator before system tray/indicators
-            Rectangle {
-                visible: (Config.showClock || (Config.showWeather && Weather.available))
-                    && (Config.showTray || Config.showClipboard || Config.showStatusIndicators)
-                width: 1
-                height: 14
-                radius: 0.5
-                color: Colors.overlay
-                opacity: 0.3
-                anchors.verticalCenter: parent.verticalCenter
-            }
-
-            Tray {
-                visible: Config.showTray
-                anchors.verticalCenter: parent.verticalCenter
-            }
-
-            ClipboardWidget {
-                visible: Config.showClipboard
-                targetScreen: root.targetScreen
-                anchors.verticalCenter: parent.verticalCenter
-            }
-
-            StatusIndicators {
-                visible: Config.showStatusIndicators
-                targetScreen: root.targetScreen
-                anchors.verticalCenter: parent.verticalCenter
-            }
+            keys: root.rightKeys
+            peek: root
         }
+    }
+
+    Component {
+        id: workspacesWidget
+        Workspaces { targetScreen: root.targetScreen }
+    }
+
+    Component {
+        id: tiledLayoutWidget
+        TiledLayoutIndicator { active: true; targetScreen: root.targetScreen }
+    }
+
+    Component {
+        id: activeWindowWidget
+        ActiveWindow { width: Math.min(implicitWidth, 200) }
+    }
+
+    Component {
+        id: clockWidget
+        Clock { targetScreen: root.targetScreen }
+    }
+
+    Component {
+        id: weatherWidget
+        WeatherWidget { targetScreen: root.targetScreen }
+    }
+
+    Component {
+        id: trayWidget
+        Tray {}
+    }
+
+    Component {
+        id: clipboardWidget
+        ClipboardWidget { targetScreen: root.targetScreen }
+    }
+
+    Component {
+        id: statusWidget
+        StatusIndicators { targetScreen: root.targetScreen }
     }
 }
