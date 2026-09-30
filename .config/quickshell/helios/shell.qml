@@ -18,6 +18,7 @@ import "./modules/osd"
 import "./modules/lock"
 import "./modules/polkit"
 import "./modules/annotate"
+import "./modules/dock"
 
 ShellRoot {
     id: shellRoot
@@ -62,6 +63,11 @@ ShellRoot {
         Bar {}
     }
 
+    Variants {
+        model: Quickshell.screens
+        DockWindow {}
+    }
+
     Osd {}
     Lock {}
     TrayMenu {}
@@ -77,9 +83,9 @@ ShellRoot {
         running: true
         command: [
             "hyprctl", "--batch",
-            "keyword layerrule blur,namespace:^(helios:bar|helios:settings)$ ; " +
-            "keyword layerrule ignorealpha 0.15,namespace:^(helios:bar|helios:settings)$ ; " +
-            "keyword layerrule xray 0,namespace:^(helios:bar|helios:settings)$"
+            "keyword layerrule blur,namespace:^(helios:bar|helios:settings|helios:dock)$ ; " +
+            "keyword layerrule ignorealpha 0.15,namespace:^(helios:bar|helios:settings|helios:dock)$ ; " +
+            "keyword layerrule xray 0,namespace:^(helios:bar|helios:settings|helios:dock)$"
         ]
     }
 
@@ -93,7 +99,20 @@ ShellRoot {
             const screen = Utils.focusedScreen(Quickshell.screens, Hyprland.focusedMonitor);
             IslandNavigation.show(screen.name, "launcher");
         }
+        function apps() {
+            const screen = Utils.focusedScreen(Quickshell.screens, Hyprland.focusedMonitor);
+            Launcher.showApps(screen.name);
+        }
         function close() { IslandNavigation.close() }
+    }
+
+    IpcHandler {
+        target: "dock"
+        function toggle() { Dock.setOption("enabled", !Dock.enabled) }
+        function enable() { Dock.setOption("enabled", true) }
+        function disable() { Dock.setOption("enabled", false) }
+        function autohide(mode: string) { Dock.setOption("autohide", mode) }
+        function position(side: string) { Dock.setOption("position", side) }
     }
 
     IpcHandler {

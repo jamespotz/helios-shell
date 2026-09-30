@@ -21,10 +21,34 @@ Item {
     readonly property var results: Launcher.results
     readonly property bool emojiMode: Launcher.emojiMode
     readonly property bool searchFocused: searchField.inputActiveFocus
+    readonly property bool gridMode: Launcher.view === "grid" && !root.emojiMode
+    readonly property int gridColumns: 5
+    readonly property Item resultView: root.gridMode ? appGrid : resultList
+    readonly property var contextMenuEntries: {
+        const entry = root.contextMenuEntry;
+        if (!entry) return [];
+        const key = Dock.keyOf(entry);
+        const pinned = Dock.pins.includes(key);
+        return (entry.actions || []).map(action => ({ label: action.name, run: () => root.runAction(action) }))
+            .concat([{ label: pinned ? "Remove from Dock" : "Add to Dock", run: () => pinned ? Dock.unpin(key) : Dock.pin(key) }]);
+    }
 
     function refresh() {
         Launcher.search(searchField.text);
-        resultList.currentIndex = results.length > 0 ? Math.min(resultList.currentIndex, results.length - 1) : 0;
+        root.resultView.currentIndex = results.length > 0 ? Math.min(root.resultView.currentIndex, results.length - 1) : 0;
+    }
+    function moveSelection(delta) {
+        if (results.length === 0) return;
+        root.resultView.currentIndex = Math.max(0, Math.min(root.resultView.currentIndex + delta, results.length - 1));
+    }
+    function closeContextMenu() {
+        root.contextMenuEntry = null;
+        searchField.focusInput();
+    }
+    function openContextMenu(entry, pos) {
+        root.contextMenuPos = pos;
+        root.contextMenuEntry = entry;
+        contextMenu.forceActiveFocus();
     }
     function refreshWindows() { Launcher.refreshWindows(); }
     function focusSearch() { searchField.focusInput(); }
@@ -72,21 +96,39 @@ Item {
 
             SearchField {
                 id: searchField
-                width: parent.width - emojiButton.width - parent.spacing
+                width: parent.width - emojiButton.width - allAppsButton.width - parent.spacing * 2
                 placeholder: "Search apps, windows, settings…"
                 inputPixelSize: Config.fontSize + 2
 
                 onTextChanged: root.refresh()
                 onEscapePressed: {
-                    if (root.contextMenuEntry) root.contextMenuEntry = null;
+                    if (root.contextMenuEntry) root.closeContextMenu();
                     else IslandNavigation.close();
                 }
-                onDownPressed: resultList.currentIndex = Math.min(resultList.currentIndex + 1, results.length - 1)
-                onUpPressed: resultList.currentIndex = Math.max(resultList.currentIndex - 1, 0)
+                captureHorizontal: root.gridMode
+                onDownPressed: root.moveSelection(root.gridMode ? root.gridColumns : 1)
+                onUpPressed: root.moveSelection(root.gridMode ? -root.gridColumns : -1)
+                onLeftPressed: root.moveSelection(-1)
+                onRightPressed: root.moveSelection(1)
                 onAccepted: {
                     if (results.length === 0) return;
-                    const result = results[resultList.currentIndex];
+                    const result = results[root.resultView.currentIndex];
                     root.activateResult(result);
+                }
+            }
+
+            IconButton {
+                id: allAppsButton
+                icon: "apps"
+                iconSize: 18
+                label: "All Applications"
+                anchors.verticalCenter: parent.verticalCenter
+                active: root.gridMode
+                onClicked: {
+                    if (root.emojiMode) searchField.text = "";
+                    Launcher.setView(root.gridMode ? "list" : "grid");
+                    root.resultView.currentIndex = 0;
+                    searchField.focusInput();
                 }
             }
 
@@ -113,9 +155,9 @@ Item {
             ListView {
                 id: resultList
                 anchors.fill: parent
-                visible: results.length > 0
+                visible: results.length > 0 && !root.gridMode
                 clip: true
-                model: results
+                model: root.gridMode ? [] : results
                 spacing: 2
                 currentIndex: 0
                 boundsBehavior: Flickable.StopAtBounds
@@ -244,14 +286,91 @@ Item {
                         cursorShape: Qt.PointingHandCursor
                         onClicked: mouse => {
                             if (mouse.button === Qt.RightButton) {
-                                if (resultRow.kind !== "app" || !resultRow.entry.actions || resultRow.entry.actions.length === 0) return;
-                                const pos = resultMouseArea.mapToItem(root, mouse.x, mouse.y);
-                                root.contextMenuPos = pos;
-                                root.contextMenuEntry = resultRow.entry;
+                                if (resultRow.kind === "app") root.openContextMenu(resultRow.entry, resultMouseArea.mapToItem(root, mouse.x, mouse.y));
                                 return;
                             }
                             if (resultRow.kind === "emoji") root.copyEmoji(resultRow.entry);
                             else root.activateResult(resultRow.modelData);
+                        }
+                    }
+                }
+            }
+
+            // All applications — icon grid, same selection colors as the list.
+            GridView {
+                id: appGrid
+                anchors.fill: parent
+                visible: results.length > 0 && root.gridMode
+                clip: true
+                model: root.gridMode ? results : []
+                cellWidth: width / root.gridColumns
+                cellHeight: 100
+                currentIndex: 0
+                boundsBehavior: Flickable.StopAtBounds
+
+                delegate: Item {
+                    id: appCell
+                    required property var modelData
+                    required property int index
+                    readonly property bool current: index === appGrid.currentIndex
+
+                    width: appGrid.cellWidth
+                    height: appGrid.cellHeight
+
+                    Rectangle {
+                        anchors.fill: parent
+                        anchors.margins: 3
+                        radius: 12
+                        color: appCell.current ? Colors.accent
+                            : cellMouse.containsMouse ? Colors.surfaceHigh : "transparent"
+                        Behavior on color { ColorAnimation { duration: Config.animFast } }
+                    }
+
+                    Column {
+                        anchors.centerIn: parent
+                        width: parent.width - 16
+                        spacing: 6
+
+                        Item {
+                            width: 48
+                            height: 48
+                            anchors.horizontalCenter: parent.horizontalCenter
+
+                            MaterialIcon {
+                                anchors.centerIn: parent
+                                visible: cellIcon.source.toString() === ""
+                                icon: "deployed_code"
+                                font.pixelSize: 36
+                                color: appCell.current ? Colors.accentText : Colors.subtext
+                            }
+                            Image {
+                                id: cellIcon
+                                anchors.fill: parent
+                                source: Quickshell.iconPath(appCell.modelData.entry.icon, true)
+                                sourceSize: Qt.size(96, 96)
+                                fillMode: Image.PreserveAspectFit
+                                asynchronous: true
+                            }
+                        }
+                        StyledText {
+                            width: parent.width
+                            horizontalAlignment: Text.AlignHCenter
+                            text: appCell.modelData.title
+                            font.pixelSize: Config.fontSize - 1
+                            color: appCell.current ? Colors.accentText : Colors.text
+                            elide: Text.ElideRight
+                        }
+                    }
+
+                    MouseArea {
+                        id: cellMouse
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        acceptedButtons: Qt.LeftButton | Qt.RightButton
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: mouse => {
+                            if (mouse.button === Qt.RightButton) root.openContextMenu(appCell.modelData.entry, cellMouse.mapToItem(root, mouse.x, mouse.y));
+                            else root.activateResult(appCell.modelData);
                         }
                     }
                 }
@@ -282,64 +401,18 @@ Item {
     Scrim {
         active: root.contextMenuEntry !== null
         dimOpacity: 0
-        onDismissed: root.contextMenuEntry = null
+        onDismissed: root.closeContextMenu()
     }
 
-    Item {
+    MenuList {
         id: contextMenu
         visible: root.contextMenuEntry !== null
-        readonly property var actions: root.contextMenuEntry ? root.contextMenuEntry.actions : []
-        width: 200
-        height: visible ? menuColumn.implicitHeight + 8 : 0
+        entries: root.contextMenuEntries
+        maxHeight: root.height - 16
         // Clamp so the menu never renders past the launcher's own edge.
         x: Math.min(root.contextMenuPos.x, root.width - width - 8)
         y: Math.min(root.contextMenuPos.y, root.height - height - 8)
-
-        PanelBackground {
-            anchors.fill: parent
-        }
-
-        Column {
-            id: menuColumn
-            anchors.left: parent.left
-            anchors.right: parent.right
-            anchors.top: parent.top
-            anchors.margins: 4
-            spacing: 2
-
-            Repeater {
-                model: contextMenu.actions
-
-                delegate: Rectangle {
-                    required property var modelData
-
-                    width: menuColumn.width
-                    height: 32
-                    radius: 8
-                    color: actionHover.hovered ? Colors.surfaceHigh : "transparent"
-
-                    HoverHandler { id: actionHover }
-
-                    StyledText {
-                        anchors.left: parent.left
-                        anchors.right: parent.right
-                        anchors.leftMargin: 10
-                        anchors.rightMargin: 10
-                        anchors.verticalCenter: parent.verticalCenter
-                        text: modelData.name
-                        elide: Text.ElideRight
-                    }
-
-                    MouseArea {
-                        anchors.fill: parent
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: {
-                            root.runAction(modelData);
-                            root.contextMenuEntry = null;
-                        }
-                    }
-                }
-            }
-        }
+        onTriggered: root.closeContextMenu()
+        onDismissed: root.closeContextMenu()
     }
 }

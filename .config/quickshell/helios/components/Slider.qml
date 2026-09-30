@@ -11,6 +11,8 @@ Item {
     property real maxValue: 1
     property real markerAt: -1
     property color fillColor: Colors.accent
+    // Set when the slider sits on a surfaceHigh card, so the track shows.
+    property color trackColor: Colors.surfaceHigh
     property real trackHeight: 8
     property bool thumbHoverOnly: false
     // Spoken name for assistive tech.
@@ -32,7 +34,7 @@ Item {
         width: parent.width
         height: root.trackHeight
         radius: height / 2
-        color: Colors.surfaceHigh
+        color: root.trackColor
 
         // Fill
         Rectangle {

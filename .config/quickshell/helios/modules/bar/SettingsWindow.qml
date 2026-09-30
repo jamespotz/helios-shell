@@ -5,6 +5,7 @@ import Quickshell.Hyprland
 import "../../services"
 import "../../services/Utils.js" as Utils
 import "../../components"
+import "../dock"
 
 // Dedicated settings app — separate from the Dynamic Island, which stays
 // reserved for quick controls (volume, wifi, bluetooth, power profile,
@@ -37,6 +38,8 @@ PanelWindow {
           keywords: ["wallpaper", "background", "transition", "folder"] },
         { id: "helios", label: "Helios", icon: "auto_awesome", group: "Personalization",
           keywords: ["island", "idle bump", "widgets", "workspace indicator", "workspace icons", "clock format", "weather location", "liquid glass", "spring", "morph", "collapse delay"] },
+        { id: "dock", label: "Dock", icon: "dock_to_bottom", group: "Personalization",
+          keywords: ["dock", "taskbar", "pinned apps", "autohide", "magnification", "icon size", "window previews", "badges", "recent apps", "scroll", "liquid glass", "trash", "separator"] },
         { id: "displays", label: "Displays", icon: "monitor", group: "Hardware",
           keywords: ["resolution", "refresh rate", "scale", "vrr", "adaptive sync", "night light", "blue light", "warmth", "color temperature"] },
         { id: "sound", label: "Sound", icon: "volume_up", group: "Hardware",
@@ -347,6 +350,7 @@ PanelWindow {
                     : settingsWindow.selectedPage === "automation" ? automationPage
                     : settingsWindow.selectedPage === "defaultapps" ? defaultAppsPage
                     : settingsWindow.selectedPage === "helios" ? heliosPage
+                    : settingsWindow.selectedPage === "dock" ? dockPage
                     : appearancePage
 
                 opacity: 0
@@ -414,4 +418,5 @@ PanelWindow {
     Component { id: automationPage; AutomationIsland {} }
     Component { id: defaultAppsPage; DefaultAppsIsland {} }
     Component { id: heliosPage; IslandSettings {} }
+    Component { id: dockPage; DockSettings {} }
 }

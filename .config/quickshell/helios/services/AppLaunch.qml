@@ -30,11 +30,15 @@ QtObject {
         return addr ? `hl.dsp.focus({ window = "address:0x${addr}" })` : "";
     }
 
+    function focusAddress(address) {
+        const request = root._focusRequest(address);
+        if (request) Hyprland.dispatch(request);
+    }
+
     function focusWindow(desktopEntry, appName) {
         const address = root.windowAddress(desktopEntry, appName);
         if (!address) return false;
-        const request = root._focusRequest(address);
-        if (request) Hyprland.dispatch(request);
+        root.focusAddress(address);
         return true;
     }
 
@@ -70,7 +74,11 @@ QtObject {
         const name = appName || "";
         const target = (desktop && DesktopEntries.heuristicLookup(desktop))
             || (name && DesktopEntries.heuristicLookup(name));
-        return (target && !target.noDisplay) ? target : null;
+        if (!target || !target.noDisplay) return target || null;
+        // A NoDisplay hit is usually a helper (e.g. an AppImage's URL
+        // handler) that owns the window class; the real app is the visible
+        // entry with the same name.
+        return DesktopEntries.applications.values.find(entry => !entry.noDisplay && entry.name === target.name) || null;
     }
 
     // Under a UWSM session, apps go through `uwsm app` so each gets its own

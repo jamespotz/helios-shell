@@ -10,6 +10,7 @@ singleton Bridge 1.0 Bridge.qml
 singleton IslandNavigation 1.0 IslandNavigation.qml
 singleton AppLaunch 1.0 AppLaunch.qml
 singleton Launcher 1.0 Launcher.qml
+singleton Dock 1.0 Dock.qml
 singleton Notifications 1.0 Notifications.qml
 NotificationCore 1.0 NotificationCore.qml
 singleton Weather 1.0 Weather.qml

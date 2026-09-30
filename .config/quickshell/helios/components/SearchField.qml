@@ -13,11 +13,16 @@ Rectangle {
     property string icon: "search"
     property int inputPixelSize: Config.fontSize
     readonly property bool inputActiveFocus: input.activeFocus
+    // Routes Left/Right to leftPressed/rightPressed instead of the text
+    // cursor, for fields driving a grid.
+    property bool captureHorizontal: false
 
     signal accepted()
     signal escapePressed()
     signal upPressed()
     signal downPressed()
+    signal leftPressed()
+    signal rightPressed()
 
     function focusInput() { input.forceActiveFocus(); }
 
@@ -53,6 +58,8 @@ Rectangle {
             Keys.onReturnPressed: root.accepted()
             Keys.onUpPressed: root.upPressed()
             Keys.onDownPressed: root.downPressed()
+            Keys.onLeftPressed: event => { if (root.captureHorizontal) root.leftPressed(); else event.accepted = false; }
+            Keys.onRightPressed: event => { if (root.captureHorizontal) root.rightPressed(); else event.accepted = false; }
 
             StyledText {
                 visible: input.text.length === 0

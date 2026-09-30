@@ -11,6 +11,8 @@ QtObject {
     property var windows: []
     property var launchCounts: ({})
     property string activationError: ""
+    // "list" = ranked results; "grid" = every application, alphabetical.
+    property string view: "list"
     readonly property bool emojiMode: /^\/em(?:oji)?(?:\s+.*)?$/i.test(root.query.trim())
 
     readonly property var actions: [
@@ -86,6 +88,13 @@ QtObject {
             return root.results;
         }
         const needle = raw.toLowerCase();
+        if (root.view === "grid") {
+            root.results = root.applications
+                .filter(entry => !needle || root._score({ title: entry.name, subtitle: entry.genericName, keywords: entry.keywords }, needle) > 0)
+                .sort((a, b) => a.name.localeCompare(b.name))
+                .map(entry => root._normalized("app", entry, 0));
+            return root.results;
+        }
         if (!needle) {
             root.results = root.applications.slice().sort((a, b) => root._count(b.name) - root._count(a.name) || a.name.localeCompare(b.name))
                 .slice(0, 9).map(entry => root._normalized("app", entry, 0));
@@ -101,6 +110,15 @@ QtObject {
         return root.results;
     }
 
+    function setView(view) {
+        root.view = view;
+        root.search(root.query);
+    }
+    // Opens the Launcher on screenName showing all applications.
+    function showApps(screenName) {
+        if (IslandNavigation.show(screenName, "launcher")) root.setView("grid");
+    }
+
     function refreshWindows() { windowsProcess.running = false; windowsProcess.running = true; }
     function activate(result) {
         if (!result || !result.activation) return { accepted: false, close: false };
@@ -111,8 +129,7 @@ QtObject {
             focusProcess.command = ["hyprctl", "dispatch", "focuswindow", "address:" + activation.address];
             focusProcess.running = false; focusProcess.running = true;
         } else if (activation.kind === "app") {
-            root.launchCounts = Object.assign({}, root.launchCounts, { [result.title]: root._count(result.title) + 1 });
-            usageFile.setText(JSON.stringify(root.launchCounts));
+            root.recordLaunch(result.title);
             AppLaunch.launch(result.entry);
         } else if (activation.kind === "emoji") {
             emojiCopy.command = ["sh", "-c", "printf '%s' \"$1\" | wl-copy", "_", activation.value];
@@ -124,11 +141,15 @@ QtObject {
         if (!accepted) root.activationError = "Action could not be completed";
         return { accepted: accepted, close: close };
     }
+    // Counts a launch toward the empty-query "most used" ranking. Called for
+    // launches from anywhere (Launcher, Dock), keyed by app name.
+    function recordLaunch(appName) {
+        if (!appName) return;
+        root.launchCounts = Object.assign({}, root.launchCounts, { [appName]: root._count(appName) + 1 });
+        usageFile.setText(JSON.stringify(root.launchCounts));
+    }
     function runDesktopAction(action, appName) {
-        if (appName) {
-            root.launchCounts = Object.assign({}, root.launchCounts, { [appName]: root._count(appName) + 1 });
-            usageFile.setText(JSON.stringify(root.launchCounts));
-        }
+        if (appName) root.recordLaunch(appName);
         const command = action.command || [];
         if (command.length) AppLaunch.exec(command);
         else {
@@ -154,6 +175,15 @@ QtObject {
     property FileView usageFile: FileView {
         path: Quickshell.statePath("launcher-app-usage.json"); printErrors: false; atomicWrites: true; preload: true; blockLoading: true
         onLoaded: { try { const parsed = JSON.parse(usageFile.text()); if (parsed && typeof parsed === "object") root.launchCounts = parsed; } catch (error) {} }
+    }
+    // Every other way into the Launcher starts from the ranked list.
+    property Connections navigationChanges: Connections {
+        target: IslandNavigation
+        function onOpenChanged() { root._resetView(); }
+        function onDestinationIdChanged() { root._resetView(); }
+    }
+    function _resetView() {
+        if (!(IslandNavigation.open && IslandNavigation.destinationId === "launcher")) root.view = "list";
     }
     property Connections appChanges: Connections { target: DesktopEntries; function onApplicationsChanged() { root.search(root.query); } }
     property Connections extraChanges: Connections { target: ExtraApps; function onListChanged() { root.search(root.query); } }

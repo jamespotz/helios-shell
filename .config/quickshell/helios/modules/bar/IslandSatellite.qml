@@ -130,6 +130,7 @@ Item {
     IslandShape {
         id: islandShape
         anchors.fill: parent
+        liquidGlassEnabled: Bridge.liquidGlassEnabled
         fillColor: root.fillColor
         shadowEnabled: root.shadowEnabled
         shadowGlowRadius: root.shadowGlowRadius

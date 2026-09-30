@@ -16,6 +16,10 @@ _Avoid_: Tab, page
 The searchable collection of applications, open windows, shell actions, and emoji results.
 _Avoid_: Command palette, app search
 
+**Dock**:
+The row of pinned and running applications along one screen edge (bottom, left, or right) of each screen. By default it hides while a window would cover it.
+_Avoid_: Taskbar, app bar
+
 **Calendar**:
 The merged view of events from local and subscribed calendar sources, including source-specific refresh errors.
 _Avoid_: Calendar feed, calendar process
