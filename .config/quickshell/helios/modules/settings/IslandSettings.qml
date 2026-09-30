@@ -10,6 +10,7 @@ Item {
     id: root
 
     readonly property var widgetMeta: ({
+        launcher: { icon: "apps", label: "Launcher" },
         media: { icon: "music_note", label: "Now-playing cover" },
         clock: { icon: "schedule", label: "Clock" },
         weather: { icon: "cloud", label: "Weather" },
@@ -80,6 +81,38 @@ Item {
         }
 
         IslandPreview {}
+
+        Column {
+            width: parent.width
+            spacing: 10
+            SectionTitle { title: qsTr("Launcher button"); subtitle: qsTr("Enable and position Launcher in the Idle or Expanded widget list below.") }
+            SettingsCard {
+                ConfigChoice {
+                    option: "launcherIconMode"
+                    icon: "image"
+                    label: qsTr("Icon")
+                    choices: [{ value: "os", label: qsTr("OS logo") }, { value: "custom", label: qsTr("Custom image") }]
+                    last: true
+                }
+            }
+            PrimaryButton {
+                width: parent.width
+                visible: Config.launcherIconMode === "custom"
+                icon: "folder_open"
+                text: qsTr("Choose icon image")
+                enabled: !LauncherIcon.picking
+                onClicked: LauncherIcon.chooseImage()
+            }
+            StyledText {
+                width: parent.width
+                visible: Config.launcherIconMode === "custom"
+                text: Config.launcherIconPath || qsTr("No image selected. Using the OS logo.")
+                elide: Text.ElideMiddle
+                color: Colors.subtext
+                font.pixelSize: Config.fontSize - 2
+            }
+            ResetChip { keys: ["launcherIconMode", "launcherIconPath"] }
+        }
 
         // --- Idle ----------------------------------------------------------
         Column {

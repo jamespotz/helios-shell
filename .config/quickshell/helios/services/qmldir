@@ -12,6 +12,7 @@ singleton IslandGestures 1.0 IslandGestures.qml
 singleton AlertSounds 1.0 AlertSounds.qml
 singleton AppLaunch 1.0 AppLaunch.qml
 singleton Launcher 1.0 Launcher.qml
+singleton LauncherIcon 1.0 LauncherIcon.qml
 singleton Dock 1.0 Dock.qml
 singleton Notifications 1.0 Notifications.qml
 NotificationCore 1.0 NotificationCore.qml

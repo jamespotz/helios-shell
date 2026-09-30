@@ -614,15 +614,23 @@ PanelWindow {
                         Behavior on scale { NumberAnimation { duration: 90; easing.type: Easing.OutCubic } }
 
                         MaterialIcon {
+                            id: buttonIcon
+                            readonly property bool trash: dockButton.modelData.slot === 2
                             anchors.centerIn: parent
                             icon: dockButton.modelData.icon
                             // Trash fills when it has something in it.
-                            filled: dockButton.modelData.slot === 2 && Dock.trashFull
-                            font.pixelSize: dock.iconSize * 0.55
+                            filled: buttonIcon.trash && Dock.trashFull
+                            font.pixelSize: Math.round(dock.iconSize * 0.55)
                             color: Colors.text
-                            // Scaled by magnification: distance-field text
-                            // stays sharp, native glyphs pixelate.
-                            renderType: Text.QtRendering
+                            // Native rasterization preserves the Trash glyph's thin
+                            // strokes. Supersample its layer for smooth magnification.
+                            renderType: buttonIcon.trash ? Text.NativeRendering : Text.QtRendering
+                            layer.enabled: buttonIcon.trash
+                            layer.smooth: true
+                            layer.mipmap: true
+                            layer.textureSize: Qt.size(
+                                Math.ceil(width * dock.magnifyScale * (dock.modelData.devicePixelRatio || 1)),
+                                Math.ceil(height * dock.magnifyScale * (dock.modelData.devicePixelRatio || 1)))
                         }
 
                         MouseArea {

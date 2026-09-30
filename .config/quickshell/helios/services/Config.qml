@@ -201,6 +201,10 @@ QtObject {
     readonly property bool showTray: settingsAdapter.showTray
     readonly property bool showStatusIndicators: settingsAdapter.showStatusIndicators
     readonly property bool showClipboard: settingsAdapter.showClipboard
+    readonly property bool showLauncher: settingsAdapter.showLauncher
+    readonly property bool showIdleLauncher: settingsAdapter.showIdleLauncher
+    readonly property string launcherIconMode: settingsAdapter.launcherIconMode
+    readonly property string launcherIconPath: settingsAdapter.launcherIconPath
 
     // Same idea, but for the collapsed idle bump — the small pill shown when
     // nothing else is active, before it morphs open into the peek/expanded
@@ -222,8 +226,8 @@ QtObject {
     // on the left, after it on the right. Whether a widget shows is still
     // its show*/showIdle* toggle above. Set from Settings > Island.
     readonly property var widgetKeys: ({
-        idle: ["workspaces", "tiledLayout", "activeWindow", "media", "clock", "weather", "tray", "clipboard", "statusIndicators"],
-        peek: ["workspaces", "tiledLayout", "activeWindow", "clock", "weather", "tray", "clipboard", "statusIndicators"]
+        idle: ["workspaces", "tiledLayout", "activeWindow", "media", "clock", "weather", "tray", "clipboard", "statusIndicators", "launcher"],
+        peek: ["workspaces", "tiledLayout", "activeWindow", "clock", "weather", "tray", "clipboard", "statusIndicators", "launcher"]
     })
     readonly property var idleWidgetLayout: root._sanitizeLayout("idle", settingsAdapter.idleLayout)
     readonly property var peekWidgetLayout: root._sanitizeLayout("peek", settingsAdapter.peekLayout)
@@ -334,6 +338,10 @@ QtObject {
         showTray: { value: true },
         showStatusIndicators: { value: true },
         showClipboard: { value: false },
+        showLauncher: { value: false },
+        showIdleLauncher: { value: false },
+        launcherIconMode: { value: "os", choices: ["os", "custom"] },
+        launcherIconPath: { value: "" },
 
         showIdleMedia: { value: true },
         showIdleClock: { value: true },
@@ -426,7 +434,8 @@ QtObject {
     function _applyIslandPreset(text) {
         let preset;
         try { preset = JSON.parse(text); } catch (e) { return -1; }
-        if (!preset || preset.helios !== "island" || preset.version !== 1 || typeof preset.options !== "object") return -1;
+        if (!preset || preset.helios !== "island" || preset.version !== 1 || !preset.options
+                || typeof preset.options !== "object" || Array.isArray(preset.options)) return -1;
         let applied = 0;
         for (const key of root.islandKeys) {
             if (!(key in preset.options)) continue;
@@ -503,6 +512,10 @@ QtObject {
             property bool showTray: root.options.showTray.value
             property bool showStatusIndicators: root.options.showStatusIndicators.value
             property bool showClipboard: root.options.showClipboard.value
+            property bool showLauncher: root.options.showLauncher.value
+            property bool showIdleLauncher: root.options.showIdleLauncher.value
+            property string launcherIconMode: root.options.launcherIconMode.value
+            property string launcherIconPath: root.options.launcherIconPath.value
             property bool showIdleMedia: root.options.showIdleMedia.value
             property bool showIdleClock: root.options.showIdleClock.value
             property bool showIdleWeather: root.options.showIdleWeather.value

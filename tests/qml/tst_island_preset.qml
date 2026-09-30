@@ -31,6 +31,8 @@ ShellRoot {
             root.verify(Config.idleBumpWidth === 222 && Config.idleWidgetLayout[0] === "clock" && Config.destinationHidden("weather"), "round trip");
 
             root.verify(Config._applyIslandPreset("hello") === -1, "non-JSON rejected");
+            root.verify(Config._applyIslandPreset(JSON.stringify({ helios: "island", version: 1, options: null })) === -1, "null options rejected");
+            root.verify(Config._applyIslandPreset(JSON.stringify({ helios: "island", version: 1, options: [] })) === -1, "array options rejected");
             root.verify(Config._applyIslandPreset(JSON.stringify({ helios: "dock", version: 1, options: {} })) === -1, "wrong header rejected");
             const n = Config._applyIslandPreset(JSON.stringify({ helios: "island", version: 1,
                 options: { bogus: 1, idleBumpWidth: "wide", hiddenDestinations: "all", notifyWidth: 5000, fontFamily: "Comic" } }));

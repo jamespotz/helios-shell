@@ -20,6 +20,7 @@ QtObject {
     // Overlay-layer surface always renders above it, so it'd be unclickable
     // underneath. SettingsWindow hides itself while this is true.
     property bool avatarPickerOpen: false
+    property bool launcherIconPickerOpen: false
 
     function openSettings(screenName, page) {
         settingsScreen = screenName;

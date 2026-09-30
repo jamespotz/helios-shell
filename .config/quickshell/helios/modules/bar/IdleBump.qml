@@ -46,7 +46,7 @@ Item {
     readonly property var widgets: ({
         workspaces: workspacesWidget, tiledLayout: tiledLayoutWidget, activeWindow: activeWindowWidget,
         media: mediaWidget, clock: clockWidget, weather: weatherWidget, tray: trayWidget,
-        clipboard: clipboardWidget, statusIndicators: statusWidget
+        clipboard: clipboardWidget, statusIndicators: statusWidget, launcher: launcherWidget
     })
 
     // Inline components can't reach this file's ids, so the pill is passed in.
@@ -89,6 +89,7 @@ Item {
         id: workspacesWidget
         Workspaces { targetScreen: root.targetScreen }
     }
+    Component { id: launcherWidget; LauncherWidget { targetScreen: root.targetScreen; height: Math.min(30, Config.idleBumpHeight) } }
 
     Component {
         id: tiledLayoutWidget

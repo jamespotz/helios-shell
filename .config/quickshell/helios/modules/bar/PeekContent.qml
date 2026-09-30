@@ -29,7 +29,7 @@ Item {
     readonly property var widgets: ({
         workspaces: workspacesWidget, tiledLayout: tiledLayoutWidget, activeWindow: activeWindowWidget,
         clock: clockWidget, weather: weatherWidget, tray: trayWidget,
-        clipboard: clipboardWidget, statusIndicators: statusWidget
+        clipboard: clipboardWidget, statusIndicators: statusWidget, launcher: launcherWidget
     })
 
     // Inline components can't reach this file's ids, so the row is passed in.
@@ -92,6 +92,7 @@ Item {
         id: workspacesWidget
         Workspaces { targetScreen: root.targetScreen }
     }
+    Component { id: launcherWidget; LauncherWidget { targetScreen: root.targetScreen } }
 
     Component {
         id: tiledLayoutWidget

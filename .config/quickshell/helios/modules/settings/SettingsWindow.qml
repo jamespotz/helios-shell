@@ -18,7 +18,7 @@ import "../bar"
 PanelWindow {
     id: settingsWindow
 
-    visible: Bridge.settingsOpen && !Bridge.avatarPickerOpen
+    visible: Bridge.settingsOpen && !Bridge.avatarPickerOpen && !Bridge.launcherIconPickerOpen
     screen: Utils.screenForMonitor(Quickshell.screens, Hyprland.focusedMonitor) || Quickshell.screens[0]
 
     WlrLayershell.layer: WlrLayer.Overlay
