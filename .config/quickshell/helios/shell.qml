@@ -90,6 +90,22 @@ ShellRoot {
         ]
     }
 
+    // Qt reads the icon theme once at startup (QS_ICON_THEME, which
+    // helios-reload.sh takes from GTK's setting), so a theme picked later in
+    // nwg-look needs a relaunch to show. `gsettings monitor` only prints on
+    // a change, so this idles until then.
+    Process {
+        running: true
+        command: ["gsettings", "monitor", "org.gnome.desktop.interface", "icon-theme"]
+        stdout: SplitParser {
+            onRead: line => {
+                const theme = line.replace(/^icon-theme:\s*/, "").replace(/'/g, "").trim();
+                if (theme && theme !== Quickshell.env("QS_ICON_THEME"))
+                    Quickshell.execDetached(["sh", Quickshell.env("HOME") + "/.config/hypr/helios-reload.sh"]);
+            }
+        }
+    }
+
     IpcHandler {
         target: "launcher"
         function toggle() {

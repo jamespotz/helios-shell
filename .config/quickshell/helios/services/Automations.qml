@@ -73,19 +73,44 @@ QtObject {
     }
 
     // ─── Rule: Bluetooth audio connects → make it default output ─────
+    // Keyed on the BlueZ connection, not the audio node: switching between
+    // music (A2DP) and call (HFP) — WirePlumber does this whenever an app
+    // like Zoom opens the mic — tears the sink down and recreates it. Routing
+    // on that looked like a fresh connect and re-set the default output
+    // mid-switch, while the old and new sinks briefly shared a name.
+    readonly property var connectedBluetoothIds: Bluetooth.state.devices
+        .filter(device => device.connected)
+        .map(device => device.id)
     readonly property var connectedBluetoothAudio: Bluetooth.state.devices
         .filter(device => device.connected && device.audio && device.audio.nodeName)
         .map(device => ({ id: device.id, nodeName: device.audio.nodeName }))
-    property var _prevBluetoothAudioIds: []
+    property var _bluetoothAudioState: ({ connected: [], pending: [] })
     property bool _bluetoothAudioReady: false
 
-    onConnectedBluetoothAudioChanged: {
-        const ids = root.connectedBluetoothAudio.map(device => device.id);
-        if (!root._bluetoothAudioReady) { root._prevBluetoothAudioIds = ids; return; }
-        const added = root.connectedBluetoothAudio.find(device => !root._prevBluetoothAudioIds.includes(device.id));
-        root._prevBluetoothAudioIds = ids;
-        if (added && root.bluetoothAudioRule) Audio.setOutput(added.nodeName);
+    // A device that connects waits in `pending` until its audio node shows
+    // up (a moment after the connect), is routed once, and isn't routed
+    // again until it disconnects and reconnects. Returns the next state and
+    // the node name to route to ("" for none).
+    function _bluetoothAudioStep(state, connectedIds, audioDevices) {
+        const added = connectedIds.filter(id => !state.connected.includes(id));
+        let pending = state.pending.filter(id => connectedIds.includes(id)).concat(added);
+        const ready = audioDevices.find(device => pending.includes(device.id));
+        if (ready) pending = pending.filter(id => id !== ready.id);
+        return { state: { connected: connectedIds, pending: pending }, route: ready ? ready.nodeName : "" };
     }
+
+    function _updateBluetoothAudio() {
+        if (!root._bluetoothAudioReady) {
+            root._bluetoothAudioState = { connected: root.connectedBluetoothIds, pending: [] };
+            return;
+        }
+        const step = root._bluetoothAudioStep(root._bluetoothAudioState, root.connectedBluetoothIds, root.connectedBluetoothAudio);
+        root._bluetoothAudioState = step.state;
+        if (step.route && root.bluetoothAudioRule) Audio.setOutput(step.route);
+    }
+
+    onConnectedBluetoothIdsChanged: root._updateBluetoothAudio()
+    onConnectedBluetoothAudioChanged: root._updateBluetoothAudio()
 
     // ─── Rule: external monitor connects → restore its last layout ───────
     // Snapshots resolution/scale/transform/VRR per monitor name on every
