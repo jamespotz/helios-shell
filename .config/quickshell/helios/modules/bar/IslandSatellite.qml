@@ -30,8 +30,8 @@ Item {
     property bool shadowEnabled: true
     // Small enough that the blur doesn't reach past restGap into the
     // island's own shadow — keeps a visible shadow without the two merging
-    // into a bridge across the gap. User-tunable from IslandSettings'
-    // "Satellite" section.
+    // into a bridge across the gap. User-tunable from Settings >
+    // Island.
     property real shadowGlowRadius: Config.satelliteShadowGlowRadius
     property real shadowSpread: Config.satelliteShadowSpread
 
@@ -93,7 +93,7 @@ Item {
     }
 
     // gap is driven imperatively (for the slide-in), so a Rest gap change
-    // from IslandSettings has to be pushed through by hand to apply live.
+    // from Settings > Island has to be pushed through by hand to apply live.
     onRestGapChanged: {
         if (root.active && !liquidSlideIn.running) root.gap = root.restGap;
     }

@@ -166,7 +166,7 @@ Item {
                     required property string modelData
                     active: Config.wallpaperTransitionStyle === modelData
                     text: modelData.charAt(0).toUpperCase() + modelData.slice(1)
-                    onClicked: Config.setWallpaperTransitionStyle(modelData)
+                    onClicked: Config.setOption("wallpaperTransitionStyle", modelData)
                 }
             }
         }

@@ -15,6 +15,9 @@ PanelWindow {
 
     required property var modelData
     screen: modelData
+    // Turned off per screen in Settings > Island; a panel or satellite
+    // opened here anyway (keybind/IPC) still shows until it closes.
+    visible: Config.islandShownOn(modelData.name) || panelOpen || satelliteOpen
 
     readonly property bool panelOpen: IslandNavigation.panelOpenFor(modelData.name)
     property bool hovering: false
@@ -31,7 +34,7 @@ PanelWindow {
         return players.some(p => p.isPlaying);
     }
 
-    // User-tunable from IslandSettings' "Expanded" section — idle mode
+    // User-tunable from Settings > Island — idle mode
     // still forces 0 regardless of the configured value.
     readonly property int padH: mode === "idle" ? 0 : Config.islandContentPadH
     readonly property int padV: mode === "idle" ? 0 : Config.islandContentPadV
@@ -238,7 +241,8 @@ PanelWindow {
             onHoveredChanged: {
                 if (hoverTracker.hovered) {
                     hoverCollapseTimer.stop();
-                    hoverExpandTimer.restart();
+                    if (Config.hoverExpand)
+                        hoverExpandTimer.restart();
                 } else {
                     hoverExpandTimer.stop();
                     hoverCollapseTimer.restart();
@@ -255,8 +259,15 @@ PanelWindow {
         // counts as intent to peek.
         Timer {
             id: hoverExpandTimer
-            interval: 80
+            interval: Config.hoverExpandDelay
             onTriggered: bar.hovering = true
+        }
+
+        // With "Open on hover" off, a click on the idle bump opens the peek
+        // row instead; leaving still collapses it as usual.
+        TapHandler {
+            enabled: !Config.hoverExpand && bar.mode === "idle"
+            onTapped: bar.hovering = true
         }
 
         Item {

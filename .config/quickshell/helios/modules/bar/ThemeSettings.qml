@@ -413,7 +413,7 @@ Item {
                 id: reduceMotionToggle
                 anchors.verticalCenter: parent.verticalCenter
                 checked: Config.reducedMotion
-                onToggled: v => Config.setReducedMotion(v)
+                onToggled: v => Config.setOption("reducedMotion", v)
             }
         }
     }

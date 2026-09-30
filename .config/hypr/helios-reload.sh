@@ -21,4 +21,9 @@ export LD_PRELOAD=/lib64/libjemalloc.so.2
 # Third-party .desktop files with non-spec escapes (swappy's Exec) log a
 # warning on every entry rescan — thousands per session, none actionable.
 export QT_LOGGING_RULES="${QT_LOGGING_RULES:+$QT_LOGGING_RULES;}quickshell.desktopentry.warning=false"
+# App icons resolve through Qt's icon theme, which the session's Qt platform
+# theme may not set. Follow the GTK icon theme (what nwg-look writes) so
+# helios matches the rest of the desktop; picked up on each relaunch.
+icon_theme=$(gsettings get org.gnome.desktop.interface icon-theme 2>/dev/null | tr -d "'")
+[ -n "$icon_theme" ] && export QS_ICON_THEME="$icon_theme"
 exec quickshell -c helios -d

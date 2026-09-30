@@ -20,7 +20,7 @@ Item {
     // bridge. Satellites pass their own smaller blur/spread (see
     // Config.satelliteShadowGlowRadius/Spread) so the shadow stays legible
     // without touching the island's. Defaults are user-tunable from
-    // IslandSettings' "Behavior" section.
+    // Settings > Island.
     property real shadowGlowRadius: Config.islandShadowGlowRadius
     property real shadowSpread: Config.islandShadowSpread
 

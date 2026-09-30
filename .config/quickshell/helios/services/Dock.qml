@@ -183,7 +183,8 @@ QtObject {
         const coerced = root._coerce(key, value);
         if (coerced === undefined) return;
         root[key] = coerced;
-        root._save();
+        // Debounced: a slider drag calls this every frame.
+        root._saveTimer.restart();
     }
     function resetOptions() {
         for (const key in root.options) root[key] = root.options[key].value;
@@ -221,6 +222,10 @@ QtObject {
     function _setPins(next) {
         root.pins = next;
         root._save();
+    }
+    property Timer _saveTimer: Timer {
+        interval: 300
+        onTriggered: root._save()
     }
     function _save() {
         const data = { pins: root.pins, hiddenScreens: root.hiddenScreens, recents: root.recents };

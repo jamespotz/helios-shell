@@ -30,7 +30,7 @@ Item {
     // nothing ticks down while an open panel covers them.
     Timer {
         id: autoDismissTimer
-        interval: 5000
+        interval: Config.notifyDuration
         onTriggered: {
             if (root.hovering) { autoDismissTimer.restart(); return; }
             if (root.count === 1) Notifications.dismiss(root.list[0].id);

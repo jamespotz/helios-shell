@@ -106,8 +106,8 @@ Item {
                 // updatePreset() replaces the whole presets array, which
                 // rebuilds every delegate here (plain-array Repeater has no
                 // incremental diffing), so a live-commit field would lose
-                // input focus after every character. See IslandSettings.qml's
-                // weatherDraft for the same tradeoff on the same kind of field.
+                // input focus after every character. See WeatherSettings.qml's
+                // draft for the same tradeoff on the same kind of field.
                 Column {
                     id: editor
                     width: parent.width

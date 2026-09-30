@@ -5,7 +5,7 @@ import Quickshell.Hyprland
 import "../../services"
 import "../../services/Utils.js" as Utils
 import "../../components"
-import "../dock"
+import "../bar"
 
 // Dedicated settings app — separate from the Dynamic Island, which stays
 // reserved for quick controls (volume, wifi, bluetooth, power profile,
@@ -31,40 +31,48 @@ PanelWindow {
 
     mask: Region { item: card }
 
+    // Sidebar entries, in order. `component` is what the content Loader
+    // shows for the page; adding a page is one entry here.
     readonly property var pages: [
-        { id: "appearance", label: "Appearance", icon: "palette", group: "Personalization",
-          keywords: ["theme", "dark mode", "color", "palette", "scheme", "wallpaper colors"] },
-        { id: "wallpaper", label: "Wallpaper", icon: "wallpaper", group: "Personalization",
+        { id: "appearance", label: "Appearance", icon: "palette", group: "Personalization", component: appearancePage,
+          keywords: ["theme", "dark mode", "color", "palette", "scheme", "wallpaper colors", "font", "typeface", "text size", "reduce motion"] },
+        { id: "wallpaper", label: "Wallpaper", icon: "wallpaper", group: "Personalization", component: wallpaperPage,
           keywords: ["wallpaper", "background", "transition", "folder"] },
-        { id: "helios", label: "Helios", icon: "auto_awesome", group: "Personalization",
-          keywords: ["island", "idle bump", "widgets", "workspace indicator", "workspace icons", "clock format", "weather location", "liquid glass", "spring", "morph", "collapse delay"] },
-        { id: "dock", label: "Dock", icon: "dock_to_bottom", group: "Personalization",
+        { id: "island", label: "Island", icon: "auto_awesome", group: "Personalization", component: islandPage,
+          keywords: ["island", "idle bump", "widgets", "expanded", "padding", "liquid glass", "spring", "morph", "collapse delay", "shadow", "satellite", "badge"] },
+        { id: "workspaces", label: "Workspaces", icon: "grid_view", group: "Personalization", component: workspacesPage,
+          keywords: ["workspace indicator", "workspace icons", "dots", "numbers"] },
+        { id: "dock", label: "Dock", icon: "dock_to_bottom", group: "Personalization", component: dockPage,
           keywords: ["dock", "taskbar", "pinned apps", "autohide", "magnification", "icon size", "window previews", "badges", "recent apps", "scroll", "liquid glass", "trash", "separator"] },
-        { id: "displays", label: "Displays", icon: "monitor", group: "Hardware",
+        { id: "displays", label: "Displays", icon: "monitor", group: "Hardware", component: displaysPage,
           keywords: ["resolution", "refresh rate", "scale", "vrr", "adaptive sync", "night light", "blue light", "warmth", "color temperature"] },
-        { id: "sound", label: "Sound", icon: "volume_up", group: "Hardware",
+        { id: "sound", label: "Sound", icon: "volume_up", group: "Hardware", component: soundPage,
           keywords: ["volume", "mixer", "output", "input", "audio", "device"] },
-        { id: "bluetooth", label: "Bluetooth", icon: "bluetooth", group: "Hardware",
+        { id: "bluetooth", label: "Bluetooth", icon: "bluetooth", group: "Hardware", component: bluetoothPage,
           keywords: ["pair", "device", "audio profile", "discoverable"] },
-        { id: "wifi", label: "Wi-Fi", icon: "wifi", group: "Connectivity",
+        { id: "wifi", label: "Wi-Fi", icon: "wifi", group: "Connectivity", component: wifiPage,
           keywords: ["network", "wireless", "connect", "password"] },
-        { id: "notifications", label: "Notifications", icon: "notifications", group: "Attention",
+        { id: "notifications", label: "Notifications", icon: "notifications", group: "Attention", component: notificationsPage,
           keywords: ["history", "do not disturb", "dnd", "alerts"] },
-        { id: "focus", label: "Focus", icon: "do_not_disturb_on", group: "Attention",
+        { id: "focus", label: "Focus", icon: "do_not_disturb_on", group: "Attention", component: focusPage,
           keywords: ["focus mode", "silence", "automation"] },
-        { id: "privacy", label: "Privacy", icon: "privacy_tip", group: "Attention",
+        { id: "privacy", label: "Privacy", icon: "privacy_tip", group: "Attention", component: privacyPage,
           keywords: ["microphone", "camera", "indicator", "clipboard"] },
-        { id: "lockscreen", label: "Lock screen", icon: "bedtime", group: "System",
+        { id: "datetime", label: "Date & time", icon: "schedule", group: "System", component: dateTimePage,
+          keywords: ["clock", "clock format", "24-hour", "am/pm", "time"] },
+        { id: "weather", label: "Weather", icon: "partly_cloudy_day", group: "System", component: weatherPage,
+          keywords: ["weather location", "city", "latitude", "longitude", "forecast"] },
+        { id: "lockscreen", label: "Lock screen", icon: "bedtime", group: "System", component: lockscreenPage,
           keywords: ["auto-lock", "caffeine mode", "dim screen", "turn off display", "idle"] },
-        { id: "power", label: "Power", icon: "bolt", group: "System",
+        { id: "power", label: "Power", icon: "bolt", group: "System", component: powerPage,
           keywords: ["power profile", "battery", "performance", "balanced", "power saver"] },
-        { id: "keyboard", label: "Keyboard", icon: "keyboard", group: "System",
+        { id: "keyboard", label: "Keyboard", icon: "keyboard", group: "System", component: keyboardPage,
           keywords: ["shortcuts", "keybinds", "cheatsheet"] },
-        { id: "systemmonitor", label: "System monitor", icon: "memory", group: "System",
+        { id: "systemmonitor", label: "System monitor", icon: "memory", group: "System", component: systemMonitorPage,
           keywords: ["cpu", "gpu", "ram", "memory", "processes", "disk", "network usage"] },
-        { id: "automation", label: "Automation", icon: "settings_suggest", group: "System",
+        { id: "automation", label: "Automation", icon: "settings_suggest", group: "System", component: automationPage,
           keywords: ["device rules", "headphones", "trigger", "action", "connect"] },
-        { id: "defaultapps", label: "Default Apps", icon: "apps", group: "System",
+        { id: "defaultapps", label: "Default Apps", icon: "apps", group: "System", component: defaultAppsPage,
           keywords: ["browser", "file manager", "text editor", "xdg-mime", "association"] }
     ]
 
@@ -335,23 +343,7 @@ PanelWindow {
                 // spring...) would still be sitting there next time the
                 // window opens instead of resyncing to the real Config value.
                 active: settingsWindow.visible
-                sourceComponent: settingsWindow.selectedPage === "wallpaper" ? wallpaperPage
-                    : settingsWindow.selectedPage === "displays" ? displaysPage
-                    : settingsWindow.selectedPage === "sound" ? soundPage
-                    : settingsWindow.selectedPage === "bluetooth" ? bluetoothPage
-                    : settingsWindow.selectedPage === "wifi" ? wifiPage
-                    : settingsWindow.selectedPage === "notifications" ? notificationsPage
-                    : settingsWindow.selectedPage === "focus" ? focusPage
-                    : settingsWindow.selectedPage === "privacy" ? privacyPage
-                    : settingsWindow.selectedPage === "lockscreen" ? lockscreenPage
-                    : settingsWindow.selectedPage === "power" ? powerPage
-                    : settingsWindow.selectedPage === "keyboard" ? keyboardPage
-                    : settingsWindow.selectedPage === "systemmonitor" ? systemMonitorPage
-                    : settingsWindow.selectedPage === "automation" ? automationPage
-                    : settingsWindow.selectedPage === "defaultapps" ? defaultAppsPage
-                    : settingsWindow.selectedPage === "helios" ? heliosPage
-                    : settingsWindow.selectedPage === "dock" ? dockPage
-                    : appearancePage
+                sourceComponent: (settingsWindow.pages.find(p => p.id === settingsWindow.selectedPage) || settingsWindow.pages[0]).component
 
                 opacity: 0
                 Behavior on opacity {
@@ -367,7 +359,23 @@ PanelWindow {
         ScrollIndicator { target: contentFlick }
     }
 
-    Component { id: appearancePage; ThemeSettings {} }
+    // Fonts stacked below the theme — both are how the shell looks.
+    Component {
+        id: appearancePage
+        Item {
+            implicitWidth: appearanceCol.width
+            implicitHeight: appearanceCol.implicitHeight
+
+            Column {
+                id: appearanceCol
+                width: parent.width
+                spacing: 24
+
+                ThemeSettings { width: parent.width }
+                FontSettings { width: parent.width }
+            }
+        }
+    }
     Component { id: wallpaperPage; WallpaperSettings {} }
     // Night Light stacked below the monitor list — same physical-hardware
     // grouping as Sound (VolumeIsland + AudioMixerIsland) below.
@@ -417,6 +425,9 @@ PanelWindow {
     Component { id: systemMonitorPage; SystemMonitorIsland {} }
     Component { id: automationPage; AutomationIsland {} }
     Component { id: defaultAppsPage; DefaultAppsIsland {} }
-    Component { id: heliosPage; IslandSettings {} }
+    Component { id: islandPage; IslandSettings {} }
+    Component { id: workspacesPage; WorkspaceSettings {} }
+    Component { id: dateTimePage; DateTimeSettings {} }
+    Component { id: weatherPage; WeatherSettings {} }
     Component { id: dockPage; DockSettings {} }
 }

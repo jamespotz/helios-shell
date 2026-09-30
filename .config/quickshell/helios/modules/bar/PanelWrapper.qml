@@ -23,7 +23,7 @@ Item {
     readonly property int marginSize: 8
 
     // A tab's implicitHeight has to stay bound to its TRUE full content
-    // height (see e.g. IslandSettings.qml's `implicitHeight: col.implicitHeight`)
+    // height (see e.g. DockSettings.qml's `implicitHeight: col.implicitHeight`)
     // because that same number also drives the Flickable's contentHeight
     // below — shrink it and the tab doesn't get shorter, it just loses the
     // ability to scroll to whatever content that number no longer accounts

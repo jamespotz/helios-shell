@@ -9,21 +9,11 @@ QtObject {
     // Apple uses SF Pro — on Linux, Inter is the closest match with its
     // tight metrics, open apertures, and tabular figures. JetBrains Mono
     // for monospace (geometric, clear at small sizes like SF Mono). Body
-    // font is user-tunable from Settings' "Fonts" card; icon/mono fonts
+    // font is user-tunable from Settings > Appearance; icon/mono fonts
     // stay fixed since Material Symbols relies on ligatures.
     readonly property string fontFamily: settingsAdapter.fontFamily
     readonly property string monoFontFamily: "JetBrains Mono"
     readonly property string iconFontFamily: "Material Symbols Rounded"
-
-    function setFont(family, size) {
-        settingsAdapter.fontFamily = family;
-        settingsAdapter.fontSize = size;
-        root.settingsFile.writeAdapter();
-    }
-
-    function resetFont() {
-        root.setFont("Inter", 13);
-    }
 
     readonly property string terminal: "ghostty"
     readonly property string pamService: "system-auth"
@@ -39,16 +29,16 @@ QtObject {
 
     // Dynamic island — Apple-style: slightly taller idle bump for better
     // readability, more breathing room from the screen edge. These are the
-    // shipped defaults; user-tunable from IslandSettings.
+    // shipped defaults; user-tunable from Settings > Island.
     readonly property int fontSize: settingsAdapter.fontSize
     readonly property int idleBumpWidth: settingsAdapter.idleBumpWidth
     readonly property int idleBumpHeight: settingsAdapter.idleBumpHeight
     readonly property int islandTopGap: settingsAdapter.islandTopGap
     // Spacing between widgets in the collapsed idle bump — user-tunable
-    // from IslandSettings' "Idle" section.
+    // from Settings > Island.
     readonly property int idleWidgetSpacing: settingsAdapter.idleWidgetSpacing
     // Padding around the expanded/peek island's content — user-tunable
-    // from IslandSettings' "Expanded" section. Idle mode still forces 0
+    // from Settings > Island. Idle mode still forces 0
     // (see Bar.qml), only expanded/peek content uses these.
     readonly property int islandContentPadH: settingsAdapter.islandContentPadH
     readonly property int islandContentPadV: settingsAdapter.islandContentPadV
@@ -68,9 +58,13 @@ QtObject {
     readonly property int islandExclusiveZone: islandTopGap + idleBumpHeight
     // Apple's peek/hover state is slightly taller for better touch/click
     // targets and more breathing room around text.
-    readonly property int peekHeight: 44
+    readonly property int peekHeight: settingsAdapter.peekHeight
     readonly property int mediaWidth: 360
-    readonly property int notifyWidth: 380
+    // Width of every alert card the island shows (notification, task,
+    // meeting, battery) and how long a notification stays before it
+    // dismisses itself — user-tunable from Settings > Island.
+    readonly property int notifyWidth: settingsAdapter.notifyWidth
+    readonly property int notifyDuration: settingsAdapter.notifyDuration
 
     // The island's real layer-shell surface stays this size the whole time —
     // only an inner item animates (see Bar.qml) — so the morph is plain GPU
@@ -86,61 +80,47 @@ QtObject {
 
     // Apple-style spring: critically damped (no overshoot) with moderate
     // stiffness for a smooth, decisive morph. Both axes must share params
-    // or they desync mid-animation. User-tunable from IslandSettings'
-    // "Behavior" section.
+    // or they desync mid-animation. User-tunable from Settings >
+    // Island.
     readonly property real islandSpringStiffness: settingsAdapter.islandSpringStiffness
     readonly property real islandSpringDamping: settingsAdapter.islandSpringDamping
 
     // How long the island stays expanded after the cursor leaves before it
-    // collapses back to the idle bump — user-tunable from IslandSettings'
-    // "Behavior" section.
+    // collapses back to the idle bump — user-tunable from Settings >
+    // Island.
     readonly property int hoverCollapseDelay: settingsAdapter.hoverCollapseDelay
+    // Whether hovering the idle bump opens the peek row, and how long the
+    // pointer has to rest there first. With hover off, clicking the idle
+    // bump opens it instead (see Bar.qml).
+    readonly property bool hoverExpand: settingsAdapter.hoverExpand
+    readonly property int hoverExpandDelay: settingsAdapter.hoverExpandDelay
+
+    // Screen names the island is turned off on. An island panel opened on
+    // one of them (keybind/IPC) still shows until it closes.
+    readonly property var islandHiddenScreens: settingsAdapter.islandHiddenScreens
+
+    // Falls back to every screen if all connected ones are hidden (e.g. the
+    // only shown monitor was unplugged), so alerts always have somewhere to go.
+    function islandShownOn(screenName) {
+        const hidden = root.islandHiddenScreens;
+        return !hidden.includes(screenName) || Quickshell.screens.every(s => hidden.includes(s.name));
+    }
+
+    function setIslandShownOn(screenName, shown) {
+        settingsAdapter.islandHiddenScreens = root.islandHiddenScreens.filter(name => name !== screenName)
+            .concat(shown ? [] : [screenName]);
+        root._save();
+    }
 
     // Idle and expanded share one IslandShape instance (it morphs between
     // sizes rather than swapping shapes), so its shadow is one shared knob
-    // rather than per-mode — user-tunable from IslandSettings' "Behavior"
-    // section. Satellites use their own separate shadow values below.
+    // rather than per-mode — user-tunable from Settings > Island. Satellites use their own separate shadow values below.
     readonly property real islandShadowGlowRadius: settingsAdapter.islandShadowGlowRadius
     readonly property real islandShadowSpread: settingsAdapter.islandShadowSpread
 
-    function setIslandBehavior(delay, stiffness, damping, shadowGlowRadius, shadowSpread) {
-        settingsAdapter.hoverCollapseDelay = delay;
-        settingsAdapter.islandSpringStiffness = stiffness;
-        settingsAdapter.islandSpringDamping = damping;
-        settingsAdapter.islandShadowGlowRadius = shadowGlowRadius;
-        settingsAdapter.islandShadowSpread = shadowSpread;
-        root.settingsFile.writeAdapter();
-    }
-
-    function resetIslandBehavior() {
-        root.setIslandBehavior(260, 4.0, 1.0, 14, 0.08);
-    }
-
-    function setIslandAppearance(width, height, gap, widgetSpacing) {
-        settingsAdapter.idleBumpWidth = width;
-        settingsAdapter.idleBumpHeight = height;
-        settingsAdapter.islandTopGap = gap;
-        settingsAdapter.idleWidgetSpacing = widgetSpacing;
-        root.settingsFile.writeAdapter();
-    }
-
-    function resetIslandAppearance() {
-        root.setIslandAppearance(140, 32, 10, 8);
-    }
-
-    function setExpandedAppearance(padH, padV) {
-        settingsAdapter.islandContentPadH = padH;
-        settingsAdapter.islandContentPadV = padV;
-        root.settingsFile.writeAdapter();
-    }
-
-    function resetExpandedAppearance() {
-        root.setExpandedAppearance(18, 10);
-    }
-
     // Satellite badges (recording/maintenance) — visually and motion-wise
-    // independent from the main island; user-tunable from IslandSettings'
-    // "Satellite" section.
+    // independent from the main island; user-tunable from Settings >
+    // Island.
     readonly property int satelliteBadgeSize: settingsAdapter.satelliteBadgeSize
     readonly property int satelliteRestGap: settingsAdapter.satelliteRestGap
     readonly property int satellitePadH: settingsAdapter.satellitePadH
@@ -149,30 +129,6 @@ QtObject {
     readonly property real satelliteShadowSpread: settingsAdapter.satelliteShadowSpread
     readonly property real satelliteSpringStiffness: settingsAdapter.satelliteSpringStiffness
     readonly property real satelliteSpringDamping: settingsAdapter.satelliteSpringDamping
-
-    function setSatelliteAppearance(badgeSize, restGap, padH, padV, shadowGlowRadius, shadowSpread) {
-        settingsAdapter.satelliteBadgeSize = badgeSize;
-        settingsAdapter.satelliteRestGap = restGap;
-        settingsAdapter.satellitePadH = padH;
-        settingsAdapter.satellitePadV = padV;
-        settingsAdapter.satelliteShadowGlowRadius = shadowGlowRadius;
-        settingsAdapter.satelliteShadowSpread = shadowSpread;
-        root.settingsFile.writeAdapter();
-    }
-
-    function resetSatelliteAppearance() {
-        root.setSatelliteAppearance(32, 6, 10, 10, 5, 0);
-    }
-
-    function setSatelliteBehavior(stiffness, damping) {
-        settingsAdapter.satelliteSpringStiffness = stiffness;
-        settingsAdapter.satelliteSpringDamping = damping;
-        root.settingsFile.writeAdapter();
-    }
-
-    function resetSatelliteBehavior() {
-        root.setSatelliteBehavior(4.0, 1.0);
-    }
 
     // Which widgets the expanded/peek island shows — user-tunable from the
     // "Island" settings tab's Widgets section. Keyed by settingsAdapter
@@ -204,17 +160,12 @@ QtObject {
     // Workspace indicator look — "dots" (pill for the focused workspace),
     // "numbers" (Material Symbols counter_N glyphs), or "custom" (a
     // user-picked Material Symbol per workspace, counter_N when unset).
-    // Set from IslandSettings.
+    // Set from Settings > Workspaces.
     readonly property string workspaceIndicatorStyle: settingsAdapter.workspaceIndicatorStyle
     // Workspace id (as a string key) → Material Symbol name.
     readonly property var workspaceIcons: settingsAdapter.workspaceIcons
     // false = only the monitor's active workspace is shown.
     readonly property bool showAllWorkspaces: settingsAdapter.showAllWorkspaces
-
-    function setWorkspaceIndicatorStyle(style) {
-        settingsAdapter.workspaceIndicatorStyle = style;
-        root.settingsFile.writeAdapter();
-    }
 
     // Empty icon clears the override. Reassigns a copy so bindings update.
     function setWorkspaceIcon(id, icon) {
@@ -224,16 +175,11 @@ QtObject {
         else
             delete icons[id];
         settingsAdapter.workspaceIcons = icons;
-        root.settingsFile.writeAdapter();
+        root._save();
     }
 
-    function setWidgetVisible(key, value) {
-        settingsAdapter[key] = value;
-        root.settingsFile.writeAdapter();
-    }
-
-    // Clock format — user-tunable from IslandSettings' "Clock format"
-    // section. clockAmPmUppercase only matters in 12-hour mode; every clock
+    // Clock format — user-tunable from Settings > Date &
+    // time. clockAmPmUppercase only matters in 12-hour mode; every clock
     // in the shell (Clock, IdleBump, WeatherPanel, Lock) reads timeFormat
     // rather than each hardcoding its own format string, so they always
     // agree with each other and with this setting.
@@ -246,19 +192,112 @@ QtObject {
     // transitions — user-tunable from Settings > Appearance.
     readonly property bool reducedMotion: settingsAdapter.reducedMotion
 
-    function setReducedMotion(value) {
-        settingsAdapter.reducedMotion = value;
-        root.settingsFile.writeAdapter();
-    }
-
     // Transition awww plays when the wallpaper changes (its own
     // --transition-type values — see WallpaperPlayback.qml.
     readonly property string wallpaperTransitionStyle: settingsAdapter.wallpaperTransitionStyle
     readonly property var wallpaperTransitionStyles: ["simple", "center", "outer", "left", "right", "top", "bottom", "any", "random"]
 
-    function setWallpaperTransitionStyle(style) {
-        settingsAdapter.wallpaperTransitionStyle = style;
-        root.settingsFile.writeAdapter();
+    // Every user option in island-appearance.json (workspaceIcons and
+    // islandHiddenScreens aside):
+    // default, plus [min, max] (and step) for numbers or the allowed values
+    // for choices. setOption() clamps/validates against this, and the
+    // adapter below takes its defaults from it — same shape as Dock.options.
+    readonly property var options: ({
+        fontFamily: { value: "Inter" },
+        fontSize: { value: 13, range: [9, 22] },
+
+        idleBumpWidth: { value: 140, range: [80, 400] },
+        idleBumpHeight: { value: 32, range: [18, 60] },
+        islandTopGap: { value: 10, range: [0, 40] },
+        idleWidgetSpacing: { value: 8, range: [0, 40] },
+        islandContentPadH: { value: 18, range: [0, 60] },
+        islandContentPadV: { value: 10, range: [0, 40] },
+        peekHeight: { value: 44, range: [32, 72] },
+        notifyWidth: { value: 380, range: [300, 600] },
+        notifyDuration: { value: 5000, range: [1000, 30000], step: 500 },
+
+        showWorkspaces: { value: true },
+        showTiledLayout: { value: false },
+        showActiveWindow: { value: true },
+        showClock: { value: true },
+        showWeather: { value: true },
+        showTray: { value: true },
+        showStatusIndicators: { value: true },
+        showClipboard: { value: false },
+
+        showIdleMedia: { value: true },
+        showIdleClock: { value: true },
+        showIdleWeather: { value: true },
+        showIdleTiledLayout: { value: false },
+        showIdleWorkspaces: { value: false },
+        showIdleActiveWindow: { value: false },
+        showIdleTray: { value: false },
+        showIdleStatusIndicators: { value: false },
+        showIdleClipboard: { value: false },
+
+        workspaceIndicatorStyle: { value: "dots", choices: ["dots", "numbers", "custom"] },
+        showAllWorkspaces: { value: true },
+
+        wallpaperTransitionStyle: { value: "any", choices: root.wallpaperTransitionStyles },
+
+        use24HourClock: { value: false },
+        clockAmPmUppercase: { value: true },
+
+        reducedMotion: { value: false },
+
+        // Spring minimums stay above 0: a zero stiffness never moves and
+        // zero damping never settles.
+        hoverCollapseDelay: { value: 260, range: [0, 2000], step: 10 },
+        hoverExpand: { value: true },
+        hoverExpandDelay: { value: 80, range: [0, 1000], step: 10 },
+        islandSpringStiffness: { value: 4.0, range: [0.5, 12], step: 0.1 },
+        islandSpringDamping: { value: 1.0, range: [0.1, 8], step: 0.1 },
+        islandShadowGlowRadius: { value: 14, range: [0, 32], step: 0.5 },
+        islandShadowSpread: { value: 0.08, range: [0, 0.5], step: 0.01 },
+
+        satelliteBadgeSize: { value: 32, range: [20, 60] },
+        satelliteRestGap: { value: 10, range: [0, 24] },
+        satellitePadH: { value: 10, range: [0, 40] },
+        satellitePadV: { value: 10, range: [0, 40] },
+        satelliteShadowGlowRadius: { value: 5, range: [0, 20], step: 0.5 },
+        satelliteShadowSpread: { value: 0, range: [0, 0.5], step: 0.01 },
+        satelliteSpringStiffness: { value: 4.0, range: [0.5, 12], step: 0.1 },
+        satelliteSpringDamping: { value: 1.0, range: [0.1, 8], step: 0.1 }
+    })
+
+    function range(key) { return root.options[key].range; }
+
+    // Returns the stored value: clamped and stepped for numbers, undefined
+    // for an unknown key, an unknown choice, or a wrongly-typed value.
+    function _coerce(key, value) {
+        const option = root.options[key];
+        if (!option || typeof value !== typeof option.value) return undefined;
+        if (option.choices) return option.choices.includes(value) ? value : undefined;
+        if (!option.range) return value;
+        const step = option.step || 1;
+        const clamped = Math.max(option.range[0], Math.min(option.range[1], value));
+        return Number((Math.round(clamped / step) * step).toFixed(4));
+    }
+
+    // Applies immediately; the file write is debounced so dragging a
+    // slider doesn't rewrite the JSON every frame.
+    function setOption(key, value) {
+        const coerced = root._coerce(key, value);
+        if (coerced === undefined) return;
+        settingsAdapter[key] = coerced;
+        root._save();
+    }
+
+    function resetOptions(keys) {
+        for (const key of keys) settingsAdapter[key] = root.options[key].value;
+        root._save();
+    }
+
+    function _save() { root._saveTimer.restart(); }
+
+    property Timer _saveTimer: Timer {
+        interval: 300
+        onTriggered: root.settingsFile.writeAdapter()
     }
 
     property FileView settingsFile: FileView {
@@ -269,59 +308,57 @@ QtObject {
 
         JsonAdapter {
             id: settingsAdapter
-            property string fontFamily: "Inter"
-            property int fontSize: 13
-            property int idleBumpWidth: 140
-            property int idleBumpHeight: 32
-            property int islandTopGap: 10
-            property int idleWidgetSpacing: 8
-            property int islandContentPadH: 18
-            property int islandContentPadV: 10
-
-            property bool showWorkspaces: true
-            property bool showTiledLayout: false
-            property bool showActiveWindow: true
-            property bool showClock: true
-            property bool showWeather: true
-            property bool showTray: true
-            property bool showStatusIndicators: true
-            property bool showClipboard: false
-
-            property bool showIdleMedia: true
-            property bool showIdleClock: true
-            property bool showIdleWeather: true
-            property bool showIdleTiledLayout: false
-            property bool showIdleWorkspaces: false
-            property bool showIdleActiveWindow: false
-            property bool showIdleTray: false
-            property bool showIdleStatusIndicators: false
-            property bool showIdleClipboard: false
-
-            property string workspaceIndicatorStyle: "dots"
-            property bool showAllWorkspaces: true
+            property string fontFamily: root.options.fontFamily.value
+            property int fontSize: root.options.fontSize.value
+            property int idleBumpWidth: root.options.idleBumpWidth.value
+            property int idleBumpHeight: root.options.idleBumpHeight.value
+            property int islandTopGap: root.options.islandTopGap.value
+            property int idleWidgetSpacing: root.options.idleWidgetSpacing.value
+            property int islandContentPadH: root.options.islandContentPadH.value
+            property int islandContentPadV: root.options.islandContentPadV.value
+            property int peekHeight: root.options.peekHeight.value
+            property int notifyWidth: root.options.notifyWidth.value
+            property int notifyDuration: root.options.notifyDuration.value
+            property bool showWorkspaces: root.options.showWorkspaces.value
+            property bool showTiledLayout: root.options.showTiledLayout.value
+            property bool showActiveWindow: root.options.showActiveWindow.value
+            property bool showClock: root.options.showClock.value
+            property bool showWeather: root.options.showWeather.value
+            property bool showTray: root.options.showTray.value
+            property bool showStatusIndicators: root.options.showStatusIndicators.value
+            property bool showClipboard: root.options.showClipboard.value
+            property bool showIdleMedia: root.options.showIdleMedia.value
+            property bool showIdleClock: root.options.showIdleClock.value
+            property bool showIdleWeather: root.options.showIdleWeather.value
+            property bool showIdleTiledLayout: root.options.showIdleTiledLayout.value
+            property bool showIdleWorkspaces: root.options.showIdleWorkspaces.value
+            property bool showIdleActiveWindow: root.options.showIdleActiveWindow.value
+            property bool showIdleTray: root.options.showIdleTray.value
+            property bool showIdleStatusIndicators: root.options.showIdleStatusIndicators.value
+            property bool showIdleClipboard: root.options.showIdleClipboard.value
+            property string workspaceIndicatorStyle: root.options.workspaceIndicatorStyle.value
+            property bool showAllWorkspaces: root.options.showAllWorkspaces.value
             property var workspaceIcons: ({})
-
-            property string wallpaperTransitionStyle: "any"
-
-            property bool use24HourClock: false
-            property bool clockAmPmUppercase: true
-
-            property bool reducedMotion: false
-
-            property int hoverCollapseDelay: 260
-            property real islandSpringStiffness: 4.0
-            property real islandSpringDamping: 1.0
-            property real islandShadowGlowRadius: 14
-            property real islandShadowSpread: 0.08
-
-            property int satelliteBadgeSize: 32
-            property int satelliteRestGap: 10
-            property int satellitePadH: 10
-            property int satellitePadV: 10
-            property real satelliteShadowGlowRadius: 5
-            property real satelliteShadowSpread: 0
-            property real satelliteSpringStiffness: 4.0
-            property real satelliteSpringDamping: 1.0
+            property string wallpaperTransitionStyle: root.options.wallpaperTransitionStyle.value
+            property bool use24HourClock: root.options.use24HourClock.value
+            property bool clockAmPmUppercase: root.options.clockAmPmUppercase.value
+            property bool reducedMotion: root.options.reducedMotion.value
+            property int hoverCollapseDelay: root.options.hoverCollapseDelay.value
+            property bool hoverExpand: root.options.hoverExpand.value
+            property int hoverExpandDelay: root.options.hoverExpandDelay.value
+            property var islandHiddenScreens: []
+            property real islandSpringStiffness: root.options.islandSpringStiffness.value
+            property real islandSpringDamping: root.options.islandSpringDamping.value
+            property real islandShadowGlowRadius: root.options.islandShadowGlowRadius.value
+            property real islandShadowSpread: root.options.islandShadowSpread.value
+            property int satelliteBadgeSize: root.options.satelliteBadgeSize.value
+            property int satelliteRestGap: root.options.satelliteRestGap.value
+            property int satellitePadH: root.options.satellitePadH.value
+            property int satellitePadV: root.options.satellitePadV.value
+            property real satelliteShadowGlowRadius: root.options.satelliteShadowGlowRadius.value
+            property real satelliteShadowSpread: root.options.satelliteShadowSpread.value
+            property real satelliteSpringStiffness: root.options.satelliteSpringStiffness.value
+            property real satelliteSpringDamping: root.options.satelliteSpringDamping.value
         }
     }
 }

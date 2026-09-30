@@ -19,6 +19,7 @@ import "./modules/lock"
 import "./modules/polkit"
 import "./modules/annotate"
 import "./modules/dock"
+import "./modules/settings"
 
 ShellRoot {
     id: shellRoot
@@ -124,10 +125,16 @@ ShellRoot {
         function close() { IslandNavigation.close() }
         function liquidGlass(enabled: bool) { Bridge.liquidGlassEnabled = enabled }
         function appearance(width: int, height: int, gap: int, widgetSpacing: int) {
-            Config.setIslandAppearance(width, height, gap, widgetSpacing);
+            Config.setOption("idleBumpWidth", width);
+            Config.setOption("idleBumpHeight", height);
+            Config.setOption("islandTopGap", gap);
+            Config.setOption("idleWidgetSpacing", widgetSpacing);
         }
-        function resetAppearance() { Config.resetIslandAppearance() }
-        function font(family: string, size: int) { Config.setFont(family, size) }
+        function resetAppearance() { Config.resetOptions(["idleBumpWidth", "idleBumpHeight", "islandTopGap", "idleWidgetSpacing"]) }
+        function font(family: string, size: int) {
+            Config.setOption("fontFamily", family);
+            Config.setOption("fontSize", size);
+        }
     }
 
     IpcHandler {

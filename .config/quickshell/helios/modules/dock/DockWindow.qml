@@ -450,6 +450,9 @@ PanelWindow {
                                 visible: appIcon.source.toString() === ""
                                 icon: "deployed_code"
                                 font.pixelSize: dock.iconSize - 12
+                                // Scaled by magnification: distance-field
+                                // text stays sharp, native glyphs pixelate.
+                                renderType: Text.QtRendering
                                 color: Colors.subtext
                             }
 
@@ -616,6 +619,9 @@ PanelWindow {
                             filled: dockButton.modelData.slot === 2 && Dock.trashFull
                             font.pixelSize: dock.iconSize * 0.55
                             color: Colors.text
+                            // Scaled by magnification: distance-field text
+                            // stays sharp, native glyphs pixelate.
+                            renderType: Text.QtRendering
                         }
 
                         MouseArea {
