@@ -4,8 +4,9 @@ import "../../components"
 
 // Settings > Island — one surface's widgets ("idle" or "peek") as a
 // reorderable card: drag a row or use the arrows to move it, the toggle to
-// show it. The "|" marker row splits the left side from the right. Drag
-// behaves like the Dock's pinned apps list (DockPinnedApps.qml).
+// show it. The "|" marker reads as a "Right side" heading under a fixed
+// "Left side" one; dragging it moves widgets between sides. Drag behaves
+// like the Dock's pinned apps list (DockPinnedApps.qml).
 Rectangle {
     id: root
 
@@ -25,9 +26,28 @@ Rectangle {
     radius: Colors.radiusLarge
     color: Colors.surfaceHigh
 
+    component SideHeading: StyledText {
+        font.pixelSize: Config.fontSize - 1
+        font.weight: Font.DemiBold
+        color: Colors.subtext
+    }
+
     Column {
         id: column
         width: parent.width
+
+        Item {
+            width: column.width
+            height: 32
+
+            SideHeading {
+                anchors.left: parent.left
+                anchors.leftMargin: 34
+                anchors.bottom: parent.bottom
+                anchors.bottomMargin: 4
+                text: "Left side"
+            }
+        }
 
         Repeater {
             model: root.layout
@@ -99,6 +119,8 @@ Rectangle {
                     spacing: 10
 
                     MaterialIcon {
+                        // Fixed width so "Left side" (leftMargin 34) lines up.
+                        width: 16
                         icon: "drag_indicator"
                         font.pixelSize: 16
                         color: Colors.subtext
@@ -106,15 +128,20 @@ Rectangle {
                         anchors.verticalCenter: parent.verticalCenter
                     }
                     MaterialIcon {
-                        icon: widgetRow.marker ? "vertical_split" : widgetRow.info.icon
+                        visible: !widgetRow.marker
+                        icon: widgetRow.info.icon
                         font.pixelSize: 16
-                        color: widgetRow.marker ? Colors.accent : Colors.text
-                        opacity: widgetRow.marker ? 1 : 0.8
+                        opacity: 0.8
                         anchors.verticalCenter: parent.verticalCenter
                     }
                     StyledText {
-                        text: widgetRow.marker ? "Left ↑ · Right ↓" : widgetRow.info.label
-                        color: widgetRow.marker ? Colors.accent : Colors.text
+                        visible: !widgetRow.marker
+                        text: widgetRow.info.label
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+                    SideHeading {
+                        visible: widgetRow.marker
+                        text: "Right side"
                         anchors.verticalCenter: parent.verticalCenter
                     }
                 }

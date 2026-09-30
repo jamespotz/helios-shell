@@ -390,6 +390,7 @@ QtObject {
     function _coerce(key, value) {
         const option = root.options[key];
         if (!option || typeof value !== typeof option.value) return undefined;
+        if (Array.isArray(option.value) !== Array.isArray(value)) return undefined;
         if (option.choices) return option.choices.includes(value) ? value : undefined;
         if (!option.range) return value;
         const step = option.step || 1;
@@ -404,6 +405,63 @@ QtObject {
         if (coerced === undefined) return;
         settingsAdapter[key] = coerced;
         root._save();
+    }
+
+    // Island presets: every option on Settings > Island (everything here but
+    // the global font, clock, workspace, wallpaper and motion options) as
+    // JSON, copied and pasted through the clipboard.
+    readonly property var islandKeys: Object.keys(root.options).filter(key => ![
+        "fontFamily", "fontSize", "workspaceIndicatorStyle", "showAllWorkspaces",
+        "wallpaperTransitionStyle", "use24HourClock", "clockAmPmUppercase", "reducedMotion"
+    ].includes(key))
+
+    function _islandPreset() {
+        const options = {};
+        for (const key of root.islandKeys) options[key] = settingsAdapter[key];
+        return JSON.stringify({ helios: "island", version: 1, options: options }, null, 2);
+    }
+
+    // Returns how many settings were applied, or -1 when the text isn't an
+    // Island preset. Unknown keys and invalid values are skipped.
+    function _applyIslandPreset(text) {
+        let preset;
+        try { preset = JSON.parse(text); } catch (e) { return -1; }
+        if (!preset || preset.helios !== "island" || preset.version !== 1 || typeof preset.options !== "object") return -1;
+        let applied = 0;
+        for (const key of root.islandKeys) {
+            if (!(key in preset.options)) continue;
+            const coerced = root._coerce(key, preset.options[key]);
+            if (coerced === undefined) continue;
+            settingsAdapter[key] = coerced;
+            applied++;
+        }
+        root._save();
+        return applied;
+    }
+
+    // Short result note after a copy or paste; clears itself.
+    property string presetStatus: ""
+    onPresetStatusChanged: if (root.presetStatus) root._presetStatusClear.restart()
+    property Timer _presetStatusClear: Timer { interval: 4000; onTriggered: root.presetStatus = "" }
+
+    function copyIslandPreset() {
+        root._presetCopy.command = ["wl-copy", root._islandPreset()];
+        root._presetCopy.running = true;
+        root.presetStatus = "Copied Island settings";
+    }
+
+    function pasteIslandPreset() { root._presetPaste.running = true; }
+
+    property Process _presetCopy: Process {}
+    property Process _presetPaste: Process {
+        command: ["wl-paste", "--no-newline"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                const applied = root._applyIslandPreset(this.text);
+                root.presetStatus = applied < 0 ? "Clipboard doesn't hold Island settings"
+                    : "Applied " + applied + " settings";
+            }
+        }
     }
 
     function resetOptions(keys) {

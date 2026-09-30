@@ -79,6 +79,8 @@ Item {
             StyledText { text: "Island"; font.weight: Font.DemiBold; font.pixelSize: Config.fontSize + 2; anchors.verticalCenter: parent.verticalCenter }
         }
 
+        IslandPreview {}
+
         // --- Idle ----------------------------------------------------------
         Column {
             width: parent.width
@@ -86,7 +88,7 @@ Item {
 
             SectionTitle {
                 title: "Idle"
-                subtitle: "The small collapsed pill. Drag to reorder; widgets below the divider sit on the right. Width and height are its resting size — the island still grows past them."
+                subtitle: "The small collapsed pill. Drag to reorder, or drag Right side to move widgets between sides. With widgets on both sides, each hugs its edge and the middle opens up. Width and height are its resting size."
             }
 
             WidgetLayoutList { surface: "idle"; meta: root.widgetMeta }
@@ -110,7 +112,7 @@ Item {
 
             SectionTitle {
                 title: "Expanded"
-                subtitle: "The hover row. Drag to reorder; the divider splits the left and right groups."
+                subtitle: "The hover row. Drag to reorder; a thin line separates the left and right groups."
             }
 
             WidgetLayoutList { surface: "peek"; meta: root.widgetMeta }
@@ -412,6 +414,31 @@ Item {
             }
 
             ResetChip { keys: ["alertScreen"] }
+        }
+
+        // --- Presets -------------------------------------------------------
+        Column {
+            width: parent.width
+            spacing: 10
+
+            SectionTitle {
+                title: "Presets"
+                subtitle: "Copy every Island setting to the clipboard as text, or paste one back. Screen choices stay per machine."
+            }
+
+            Row {
+                spacing: 8
+                Chip { text: "Copy settings"; inactiveTint: Colors.surfaceHigh; onClicked: Config.copyIslandPreset() }
+                Chip { text: "Paste settings"; inactiveTint: Colors.surfaceHigh; onClicked: Config.pasteIslandPreset() }
+                Chip { text: "Reset all"; inactiveTint: Colors.surfaceHigh; onClicked: Config.resetOptions(Config.islandKeys) }
+            }
+
+            StyledText {
+                visible: Config.presetStatus !== ""
+                text: Config.presetStatus
+                font.pixelSize: Config.fontSize - 1
+                color: Colors.subtext
+            }
         }
     }
 }
