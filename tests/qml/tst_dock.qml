@@ -133,7 +133,17 @@ ShellRoot {
             root.verify(Dock.position === "bottom", "unsupported position ignored");
             Dock.setOption("position", "left");
             root.verify(Dock.position === "left", "position set");
+            Dock.setOption("alignment", "start");
+            root.verify(Dock.alignment === "start", "alignment set");
+            root.verify(Dock.alignmentOffset(600, 200) === 0, "start alignment uses leading edge");
+            Dock.setOption("alignment", "center");
+            root.verify(Dock.alignmentOffset(600, 200) === 200, "center alignment uses available midpoint");
+            Dock.setOption("alignment", "end");
+            root.verify(Dock.alignmentOffset(600, 200) === 400, "end alignment uses trailing edge");
+            Dock.setOption("alignment", "outside");
+            root.verify(Dock.alignment === "end", "unsupported alignment ignored");
             Dock.resetOptions();
+            root.verify(Dock.alignment === "center", "reset restores centered alignment");
 
             console.warn("DOCK_TEST_PASS");
         } catch (error) {

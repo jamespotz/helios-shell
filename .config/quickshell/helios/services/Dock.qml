@@ -27,6 +27,7 @@ QtObject {
     readonly property var options: ({
         enabled: { value: true },
         position: { value: "bottom", choices: ["bottom", "left", "right"] },
+        alignment: { value: "center", choices: ["start", "center", "end"] },
         // What clicking an app that already has focus does.
         focusedClick: { value: "cycle", choices: ["cycle", "minimize", "none"] },
         middleClick: { value: "new", choices: ["new", "close"] },
@@ -69,6 +70,7 @@ QtObject {
 
     property bool enabled: root.options.enabled.value
     property string position: root.options.position.value
+    property string alignment: root.options.alignment.value
     property string focusedClick: root.options.focusedClick.value
     property string middleClick: root.options.middleClick.value
     property string runningScope: root.options.runningScope.value
@@ -168,6 +170,10 @@ QtObject {
     }
 
     function range(key) { return root.options[key].range; }
+    function alignmentOffset(availableLength, contentLength) {
+        const remaining = Math.max(0, availableLength - contentLength);
+        return root.alignment === "start" ? 0 : root.alignment === "end" ? remaining : remaining / 2;
+    }
     // Returns the stored value: clamped and stepped for numbers, ignored
     // (unchanged) for an unknown choice or a wrongly-typed value.
     function _coerce(key, value) {

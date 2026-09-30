@@ -108,9 +108,10 @@ PanelWindow {
         const s = dock.modelData;
         const w = dock.vertical ? dock.bodyThickness : dock.bodyLength;
         const h = dock.vertical ? dock.bodyLength : dock.bodyThickness;
-        if (dock.position === "left") return Qt.rect(s.x + dock.edgeGap, s.y + (s.height - h) / 2, w, h);
-        if (dock.position === "right") return Qt.rect(s.x + s.width - dock.edgeGap - w, s.y + (s.height - h) / 2, w, h);
-        return Qt.rect(s.x + (s.width - w) / 2, s.y + s.height - dock.edgeGap - h, w, h);
+        const along = Dock.alignmentOffset(dock.vertical ? s.height : s.width, dock.vertical ? h : w);
+        if (dock.position === "left") return Qt.rect(s.x + dock.edgeGap, s.y + along, w, h);
+        if (dock.position === "right") return Qt.rect(s.x + s.width - dock.edgeGap - w, s.y + along, w, h);
+        return Qt.rect(s.x + along, s.y + s.height - dock.edgeGap - h, w, h);
     }
     readonly property bool overlapped: Dock.autohide === "intellihide" && Dock.overlaps(dock.modelData.name, dock.revealedRect)
     property bool hoverHold: false
@@ -275,8 +276,8 @@ PanelWindow {
         readonly property real depth: dock.bodyThickness + dock.edgeGap + dock.magnifyRoom
         width: dock.vertical ? dockArea.depth : dock.bodyLength
         height: dock.vertical ? dock.bodyLength : dockArea.depth
-        x: dock.position === "left" ? 0 : dock.position === "right" ? dock.width - width : (dock.width - width) / 2
-        y: dock.vertical ? (dock.height - height) / 2 : dock.height - height
+        x: dock.position === "left" ? 0 : dock.position === "right" ? dock.width - width : Dock.alignmentOffset(dock.width, width)
+        y: dock.vertical ? Dock.alignmentOffset(dock.height, height) : dock.height - height
 
         HoverHandler {
             id: hitHover

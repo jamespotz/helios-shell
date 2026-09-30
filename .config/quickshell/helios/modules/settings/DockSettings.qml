@@ -56,6 +56,16 @@ Item {
                     ]
                 }
                 DockChoice {
+                    icon: "align_horizontal_center"
+                    label: "Alignment"
+                    option: "alignment"
+                    choices: [
+                        { value: "start", label: "Start" },
+                        { value: "center", label: "Center" },
+                        { value: "end", label: "End" }
+                    ]
+                }
+                DockChoice {
                     icon: "visibility_off"
                     label: "Hide"
                     option: "autohide"
