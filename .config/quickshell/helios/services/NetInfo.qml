@@ -1,9 +1,8 @@
 pragma Singleton
 import QtQuick
 import Quickshell.Io
-import Quickshell.Networking
 
-// Ethernet status, VPN connections, and bandwidth — the nmcli-backed
+// Ethernet status and VPN connections — the nmcli-backed
 // counterparts to WifiNetworks.qml, which only covers wifi. Same
 // terse-nmcli-output parsing style, kept in a separate service since it's a
 // different device class, not different logic.
@@ -14,9 +13,6 @@ QtObject {
     property string ethernetDevice: ""
 
     property var vpnConnections: []
-
-    property real rxRate: 0
-    property real txRate: 0
 
     function parseTerseLine(line) {
         const fields = [];
@@ -90,61 +86,6 @@ QtObject {
     }
 
     property Process vpnActionProc: Process { onExited: root.refreshVpn() }
-
-    // Bandwidth: sum rx/tx byte counters across whichever real interfaces
-    // (wifi or ethernet) are currently connected, diffed against the last
-    // sample. No new interface-discovery logic — reuses WifiNetworks' device
-    // and ethernetDevice above.
-    property var _lastBytes: null
-    property double _lastTime: 0
-
-    function _activeInterfaces() {
-        const ifaces = [];
-        if (WifiNetworks.wifiDevice && WifiNetworks.wifiDevice.name) ifaces.push(WifiNetworks.wifiDevice.name);
-        if (root.ethernetConnected && root.ethernetDevice) ifaces.push(root.ethernetDevice);
-        return ifaces;
-    }
-
-    // Idle while offline — there's no traffic to sample.
-    readonly property bool _online: root.ethernetConnected
-        || [NetworkConnectivity.Full, NetworkConnectivity.Portal, NetworkConnectivity.Limited].includes(Networking.connectivity)
-
-    property Timer bandwidthTimer: Timer {
-        interval: 2000
-        running: root._online
-        repeat: true
-        onTriggered: root._pollBandwidth()
-        onRunningChanged: if (!running) { root.rxRate = 0; root.txRate = 0; root._lastBytes = null; }
-    }
-
-    // One in-process read of /proc/net/dev per tick instead of spawning a
-    // shell. Each row is "iface: rx_bytes <7 more rx fields> tx_bytes ...".
-    function _pollBandwidth() {
-        const ifaces = root._activeInterfaces();
-        if (!ifaces.length) { root.rxRate = 0; root.txRate = 0; root._lastBytes = null; return; }
-        netDev.reload();
-        let rx = 0, tx = 0;
-        for (const line of netDev.text().split("\n")) {
-            const sep = line.indexOf(":");
-            if (sep < 0 || !ifaces.includes(line.slice(0, sep).trim())) continue;
-            const fields = line.slice(sep + 1).trim().split(/\s+/).map(Number);
-            rx += fields[0];
-            tx += fields[8];
-        }
-        const now = Date.now();
-        if (root._lastBytes) {
-            const dt = Math.max(0.5, (now - root._lastTime) / 1000);
-            root.rxRate = Math.max(0, (rx - root._lastBytes.rx) / dt);
-            root.txRate = Math.max(0, (tx - root._lastBytes.tx) / dt);
-        }
-        root._lastBytes = { rx, tx };
-        root._lastTime = now;
-    }
-
-    property FileView netDev: FileView {
-        path: "/proc/net/dev"
-        blockLoading: true
-    }
 
     Component.onCompleted: { root.refreshEthernet(); root.refreshVpn(); }
 }
