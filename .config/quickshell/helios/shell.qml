@@ -140,6 +140,11 @@ ShellRoot {
             IslandNavigation.toggle(screen.name, tab && tab.length > 0 ? tab : "volume");
         }
         function close() { IslandNavigation.close() }
+        function satellite(id: string) {
+            const screen = Utils.focusedScreen(Quickshell.screens, Hyprland.focusedMonitor);
+            IslandNavigation.toggleSatellite(screen.name, id);
+        }
+        function closeSatellite() { IslandNavigation.closeSatellite() }
         function liquidGlass(enabled: bool) { Bridge.liquidGlassEnabled = enabled }
         function appearance(width: int, height: int, gap: int, widgetSpacing: int) {
             Config.setOption("idleBumpWidth", width);

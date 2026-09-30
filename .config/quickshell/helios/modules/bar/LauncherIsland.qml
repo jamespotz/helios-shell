@@ -103,7 +103,7 @@ Item {
                 onTextChanged: root.refresh()
                 onEscapePressed: {
                     if (root.contextMenuEntry) root.closeContextMenu();
-                    else IslandNavigation.close();
+                    else IslandNavigation.closeMain();
                 }
                 captureHorizontal: root.gridMode
                 onDownPressed: root.moveSelection(root.gridMode ? root.gridColumns : 1)

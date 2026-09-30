@@ -9,17 +9,14 @@ import "../../components"
 Item {
     id: root
 
-    // Empty (the default) follows whatever the main island currently has
-    // open — right for the main island's own panelComp. A satellite reusing
-    // this wrapper to pre-warm one fixed destination (e.g. "maintenance")
-    // needs to pin it here instead: IslandNavigation.current is a single
-    // global value, so left at the default it would follow the main
-    // island's destination too and instantiate the wrong panel (and its
-    // side effects — Processes, canvas bindings, etc.) behind the badge.
-    property string destinationId: ""
-    readonly property var destination: root.destinationId ? IslandNavigation.resolve(root.destinationId) : IslandNavigation.current
+    property string destinationId: IslandNavigation.destinationId
+    property string targetScreen: IslandNavigation.screen
+    readonly property var destination: IslandNavigation.resolve(root.destinationId)
+    property int maxContentWidth: Config.islandMaxWidth
+    property int maxContentHeight: Config.islandMaxHeight - 120
+    signal closeRequested()
+    onCloseRequested: IslandNavigation.closeMain(root.targetScreen)
 
-    readonly property int maxContentHeight: Config.islandMaxHeight - 120
     readonly property int marginSize: 8
 
     // A tab's implicitHeight has to stay bound to its TRUE full content
@@ -38,7 +35,7 @@ Item {
     ColumnLayout {
         id: pane
         // Floor is a defensive minimum, well below any real tab's implicitWidth.
-        width: Math.max(220, panelLoader.implicitWidth) + (marginSize * 2)
+        width: Math.min(root.maxContentWidth, Math.max(220, panelLoader.implicitWidth) + (marginSize * 2))
         spacing: 14
 
         // ─── Scrollable content area ─────────────────────────────────────
@@ -63,7 +60,12 @@ Item {
                     width: flick.width
                     source: root.destination ? root.destination.source : ""
                     opacity: 0
-                    onLoaded: panelFadeIn.restart()
+                    onLoaded: {
+                        if ("targetScreen" in panelLoader.item)
+                            panelLoader.item.targetScreen = Qt.binding(() => root.targetScreen);
+                        if (Config.reducedMotion) panelLoader.opacity = 1;
+                        else panelFadeIn.restart();
+                    }
 
                     NumberAnimation {
                         id: panelFadeIn
@@ -71,7 +73,7 @@ Item {
                         property: "opacity"
                         from: 0
                         to: 1
-                        duration: 550
+                        duration: Config.animMedium
                         easing.type: Easing.BezierSpline
                     }
                 }

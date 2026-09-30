@@ -27,7 +27,7 @@ PanelWindow {
     readonly property bool taskMode: mode === "task"
     readonly property bool meetingMode: mode === "meeting"
     readonly property bool batteryMode: mode === "battery"
-    readonly property bool satelliteOpen: IslandNavigation.satelliteOpenFor(modelData.name, "maintenance")
+    readonly property bool satelliteOpen: IslandNavigation.satelliteOpenFor(modelData.name)
     readonly property var hyprMonitor: Hyprland.monitorFor(modelData)
     readonly property bool hasFullscreen: !!hyprMonitor && !!hyprMonitor.activeWorkspace && hyprMonitor.activeWorkspace.hasFullscreen
 
@@ -54,7 +54,7 @@ PanelWindow {
     // Annotate mode moves the bar above the drawing surface. The overlay uses
     // Top, so this Overlay-layer toolbar receives its own pointer events.
     // A fullscreen window covers Top too; see IslandGestures.overFullscreen.
-    WlrLayershell.layer: bar.mode === "annotate" || IslandGestures.overFullscreen(Config.islandOverFullscreen, bar.hasFullscreen, bar.mode)
+    WlrLayershell.layer: bar.mode === "annotate" || (bar.satelliteOpen && bar.hasFullscreen && Config.islandOverFullscreen === "alerts") || IslandGestures.overFullscreen(Config.islandOverFullscreen, bar.hasFullscreen, bar.mode)
         ? WlrLayer.Overlay : WlrLayer.Top
     WlrLayershell.namespace: "helios:bar"
     // IPC-opened panel content needs immediate keyboard focus for search
@@ -80,15 +80,15 @@ PanelWindow {
     // round-trip); a fixed window with an animated child item is pure GPU
     // compositing, which stays smooth. `mask` keeps the rest of this window
     // click-through so it doesn't eat input outside the visible pill.
-    implicitWidth: Config.islandMaxWidth
-    implicitHeight: Config.islandMaxHeight
+    implicitWidth: bar.screen ? bar.screen.width : Config.islandMaxWidth
+    implicitHeight: Math.min(Config.islandMaxHeight, bar.screen ? bar.screen.height - Config.islandTopGap : Config.islandMaxHeight)
     mask: Region {
         item: hitArea
         Region {
-            item: rightSatellite
+            item: bar.rightSatellite && bar.rightSatellite.visible ? bar.rightSatellite : null
         }
         Region {
-            item: leftSatellite
+            item: bar.leftSatellite && bar.leftSatellite.visible ? bar.leftSatellite : null
         }
     }
 
@@ -132,25 +132,29 @@ PanelWindow {
             focusGrab.active = false;
         }
     }
-    onPanelOpenChanged: bar._syncFocusGrab()
-    onSatelliteOpenChanged: bar._syncFocusGrab()
+    onPanelOpenChanged: {
+        bar._syncFocusGrab();
+        if (bar.panelOpen) Qt.callLater(() => { if (bar.panelOpen) hitArea.forceActiveFocus(); });
+    }
+    onSatelliteOpenChanged: {
+        bar._syncFocusGrab();
+        if (!bar.satelliteOpen && bar.panelOpen) hitArea.forceActiveFocus();
+    }
 
     HyprlandFocusGrab {
         id: focusGrab
         windows: [bar]
         active: false
         onCleared: {
-            if (bar.suppressFocusDismiss)
-                return;
-            if (bar.panelOpen || bar.satelliteOpen)
-                IslandNavigation.close();
+            if (Bridge.trayMenuOpen) return;
+            IslandNavigation.dismissOutside(bar.modelData.name);
         }
     }
 
     onSuppressFocusDismissChanged: {
         focusGrabDelay.stop();
         focusGrab.active = false;
-        if (!suppressFocusDismiss && panelOpen) {
+        if (!suppressFocusDismiss && (panelOpen || satelliteOpen)) {
             focusGrabDelay.restart();
         }
     }
@@ -167,11 +171,11 @@ PanelWindow {
 
     Binding on visualTargetWidth {
         when: content.item !== null
-        value: Math.min(content.item ? content.item.implicitWidth + bar.padH * 2 : 0, Config.islandMaxWidth)
+        value: Math.min(content.item ? content.item.implicitWidth + bar.padH * 2 : 0, Math.min(Config.islandMaxWidth, bar.width))
     }
     Binding on visualTargetHeight {
         when: content.item !== null
-        value: Math.min(content.item ? content.item.implicitHeight + bar.padV * 2 : 0, Config.islandMaxHeight)
+        value: Math.min(content.item ? content.item.implicitHeight + bar.padV * 2 : 0, Math.min(Config.islandMaxHeight, bar.height))
     }
     Binding on visualTargetWidth {
         when: content.item === null && !bar.expanded
@@ -194,11 +198,16 @@ PanelWindow {
     // feedback loop that reads as the whole bar/icons flickering. Keeping
     // the hit area stable from the first frame of a mode change avoids that
     // entirely; only the paint layer animates.
-    Item {
+    FocusScope {
         id: hitArea
         anchors.top: parent.top
         anchors.horizontalCenter: parent.horizontalCenter
         focus: bar.expanded
+        TapHandler {
+            onPressedChanged: {
+                if (pressed && !hitArea.activeFocus) hitArea.forceActiveFocus();
+            }
+        }
         // Has to live here, not on some deeper wrapper — key events bubble
         // up the visual *parent* chain from whatever grabbed active focus
         // (e.g. a tab's own ListView/TextField), and this is the shallowest
@@ -231,8 +240,8 @@ PanelWindow {
         // would get hard-cut by the surface edge itself: square, no
         // rounding, past the mask entirely. Clamping keeps overflow inside
         // the visual's own rounded-corner clip below instead.
-        width: content.item ? Math.min(content.item.implicitWidth + bar.padH * 2, Config.islandMaxWidth) : bar.expanded ? Config.islandMaxWidth : Config.idleBumpWidth
-        height: content.item ? Math.min(content.item.implicitHeight + bar.padV * 2, Config.islandMaxHeight) : bar.expanded ? Config.islandMaxHeight : Config.idleBumpHeight
+        width: content.item ? Math.min(content.item.implicitWidth + bar.padH * 2, Math.min(Config.islandMaxWidth, bar.width)) : bar.expanded ? Math.min(Config.islandMaxWidth, bar.width) : Math.min(Config.idleBumpWidth, bar.width)
+        height: content.item ? Math.min(content.item.implicitHeight + bar.padV * 2, Math.min(Config.islandMaxHeight, bar.height)) : bar.expanded ? Math.min(Config.islandMaxHeight, bar.height) : Math.min(Config.idleBumpHeight, bar.height)
 
         // A plain MouseArea here would lose hover the instant the cursor moves
         // onto a nested IconButton's own MouseArea (overlapping MouseAreas
@@ -372,68 +381,26 @@ PanelWindow {
         }
     }
 
-    // Recording status lives here, outside the content Loader, so it stays
-    // visible across every mode (idle, peek, notify, panel) instead of
-    // disappearing whenever the island's content switches. Annotate and
-    // color picker used to be satellite-hosted here too, but now route
-    // through the main island like every other destination (see
-    // IslandNavigation's "annotate"/"colorpicker" entries and bar.mode's
-    // Overlay-layer bump above) — this badge is recording-only again.
-    IslandSatellite {
-        id: leftSatellite
-        anchorItem: hitArea
-        onRight: false
-        active: ScreenRecorder.recording
-        fillColor: bar.mode === "idle" ? Colors.background : Colors.surface
-        badge: Component {
-            RecordingDot {}
+    property Item leftSatellite: null
+    property Item rightSatellite: null
+    Repeater {
+        id: satellites
+        model: IslandNavigation.satellites
+        delegate: SatelliteHost {
+            required property var modelData
+            definition: modelData
+            targetScreen: bar.modelData.name
+            anchorItem: hitArea
+            fillColor: bar.mode === "idle" ? Colors.background : Colors.surface
         }
-    }
-
-    // Same satellite treatment as leftSatellite, mirrored to the right of
-    // the island — package updates, reboot-required, firmware, and failed
-    // systemd units all collapse into one quiet badge instead of four.
-    // Clicking it expands the badge itself into the maintenance panel
-    // (IslandNavigation treats "maintenance" as satellite-hosted, so this
-    // never drives the main island's own mode/expanded state).
-    IslandSatellite {
-        id: rightSatellite
-        anchorItem: hitArea
-        onRight: true
-        interactive: true
-        active: Maintenance.hasAlert
-        fillColor: bar.mode === "idle" ? Colors.background : Colors.surface
-        expanded: IslandNavigation.satelliteOpenFor(bar.screen.name, "maintenance")
-        onClicked: IslandNavigation.toggle(bar.screen.name, "maintenance")
-
-        badge: Component {
-            MaterialIcon {
-                // Text's implicit box follows the font's line-height metrics
-                // (ascent + descent), which for this icon font leaves unused
-                // space below the glyph — centering that box in the parent
-                // visibly pushed the glyph above center. Pinning width/height
-                // to the glyph's own em-square instead makes the centered box
-                // match what's actually drawn.
-                width: font.pixelSize
-                height: font.pixelSize
-                font.pixelSize: 16
-                icon: Maintenance.rebootRequired || Maintenance.failedUnits.length > 0 ? "error" : "download"
-                color: Maintenance.rebootRequired || Maintenance.failedUnits.length > 0 ? Colors.danger : Colors.accent
-            }
+        onItemAdded: (index, item) => {
+            if (index === 0) bar.leftSatellite = item;
+            else bar.rightSatellite = item;
         }
-
-        // Reuses the very same panel chrome (close button + scrolling) the
-        // main island uses for every other destination — see panelComp
-        // below — instead of a second copy of that wrapper. Pinned to
-        // "maintenance" specifically (see maintenancePanelComp) rather than
-        // sharing panelComp's IslandNavigation.current-tracking default:
-        // this satellite's Loader is pre-warmed eagerly (see IslandSatellite's
-        // expandedLoader), so left unpinned it would instantiate whatever
-        // the main island currently has open instead of "maintenance" —
-        // a second, hidden copy of that destination's panel (with its own
-        // side effects: Processes, canvas bindings, etc.) every time the
-        // main island's destination changed.
-        expandedContent: maintenancePanelComp
+        onItemRemoved: (index, item) => {
+            if (bar.leftSatellite === item) bar.leftSatellite = null;
+            if (bar.rightSatellite === item) bar.rightSatellite = null;
+        }
     }
 
     Component {
@@ -467,12 +434,14 @@ PanelWindow {
     }
     Component {
         id: panelComp
-        PanelWrapper {}
-    }
-    Component {
-        id: maintenancePanelComp
         PanelWrapper {
-            destinationId: "maintenance"
+            destinationId: IslandNavigation.destinationId
+            targetScreen: bar.modelData.name
+            maxContentWidth: Math.max(0, Math.min(Config.islandMaxWidth, bar.width) - bar.padH * 2)
+            maxContentHeight: Math.max(0, bar.height - bar.padV * 2 - 60
+                - ((bar.leftSatellite && bar.leftSatellite.expanded && bar.leftSatellite.below)
+                    || (bar.rightSatellite && bar.rightSatellite.expanded && bar.rightSatellite.below)
+                    ? bar.height / 2 + Config.satelliteRestGap : 0))
         }
     }
 }

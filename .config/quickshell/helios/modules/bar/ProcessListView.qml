@@ -75,7 +75,7 @@ Item {
                 width: 270; height: 36; inputPixelSize: Config.fontSize - 2
                 placeholder: "Filter by name, PID, or command"
                 onTextChanged: root.searchText = text
-                onEscapePressed: IslandNavigation.close()
+                onEscapePressed: IslandNavigation.closeMain()
             }
             SegmentedControl {
                 anchors.left: search.right; anchors.leftMargin: 10; anchors.right: parent.right

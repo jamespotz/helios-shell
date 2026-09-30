@@ -6,7 +6,7 @@ import Quickshell.Hyprland
 QtObject {
     id: root
 
-    readonly property var destinations: [root._destination("volume", "Volume", "VolumeIsland.qml"), root._destination("mixer", "Audio Mixer", "AudioMixerIsland.qml"), root._destination("bluetooth", "Bluetooth", "BluetoothIsland.qml"), root._destination("wifi", "Wi-Fi", "WifiIsland.qml"), root._destination("focus", "Focus Modes", "FocusIsland.qml"), root._destination("privacy", "Privacy", "PrivacyIsland.qml"), root._destination("automation", "Automations", "AutomationIsland.qml"), root._destination("media", "Media", "MediaIsland.qml"), root._destination("clipboard", "Clipboard", "ClipboardIsland.qml"), root._destination("recorder", "Screen Recorder", "ScreenRecorderIsland.qml"), root._destination("screenshot", "Screenshot", "ScreenshotIsland.qml"), root._destination("weather", "Weather", "WeatherIsland.qml"), root._destination("calendar", "Calendar", "CalendarIsland.qml"), root._destination("system", "System Monitor", "SystemMonitorIsland.qml"), root._destination("notifications", "Notifications", "NotificationHistoryIsland.qml"), root._destination("nightlight", "Night Light", "NightLightIsland.qml"), root._destination("display", "Displays", "DisplayIsland.qml"), root._destination("idlelock", "Idle & Lock", "IdleIsland.qml"), root._destination("wallpaper", "Wallpaper", "WallpaperSettings.qml"), root._destination("theme", "Theme", "ThemeSettings.qml"), root._destination("power", "Power", "PowerIsland.qml"), root._destination("powermenu", "Power", "PowerMenuIsland.qml"), root._destination("keybinds", "Keybinds", "KeybindsIsland.qml"), root._destination("maintenance", "Maintenance", "MaintenanceIsland.qml", 0, "maintenance"), root._destination("annotate", "Annotate", "AnnotateToolbarIsland.qml", 0, "", true), root._destination("colorpicker", "Color Picker", "ColorPickerIsland.qml", 0, "", true), root._destination("launcher", "Launcher", "LauncherIsland.qml")]
+    readonly property var destinations: [root._destination("volume", "Volume", "VolumeIsland.qml"), root._destination("mixer", "Audio Mixer", "AudioMixerIsland.qml"), root._destination("bluetooth", "Bluetooth", "BluetoothIsland.qml"), root._destination("wifi", "Wi-Fi", "WifiIsland.qml"), root._destination("focus", "Focus Modes", "FocusIsland.qml"), root._destination("privacy", "Privacy", "PrivacyIsland.qml"), root._destination("automation", "Automations", "AutomationIsland.qml"), root._destination("media", "Media", "MediaIsland.qml"), root._destination("clipboard", "Clipboard", "ClipboardIsland.qml"), root._destination("recorder", "Screen Recorder", "ScreenRecorderIsland.qml"), root._destination("screenshot", "Screenshot", "ScreenshotIsland.qml"), root._destination("weather", "Weather", "WeatherIsland.qml"), root._destination("calendar", "Calendar", "CalendarIsland.qml"), root._destination("system", "System Monitor", "SystemMonitorIsland.qml"), root._destination("notifications", "Notifications", "NotificationHistoryIsland.qml"), root._destination("nightlight", "Night Light", "NightLightIsland.qml"), root._destination("display", "Displays", "DisplayIsland.qml"), root._destination("idlelock", "Idle & Lock", "IdleIsland.qml"), root._destination("wallpaper", "Wallpaper", "WallpaperSettings.qml"), root._destination("theme", "Theme", "ThemeSettings.qml"), root._destination("power", "Power", "PowerIsland.qml"), root._destination("powermenu", "Power", "PowerMenuIsland.qml"), root._destination("keybinds", "Keybinds", "KeybindsIsland.qml"), root._destination("maintenance", "Maintenance", "MaintenanceIsland.qml", 0, "maintenance"), root._destination("recording", "Recording", "RecordingSatellite.qml", 0, "recording"), root._destination("annotate", "Annotate", "AnnotateToolbarIsland.qml", 0, "", true), root._destination("colorpicker", "Color Picker", "ColorPickerIsland.qml", 0, "", true), root._destination("launcher", "Launcher", "LauncherIsland.qml")]
 
     property bool _open: false
     property string _screen: ""
@@ -17,6 +17,19 @@ QtObject {
     readonly property string destinationId: root._destinationId
     readonly property var current: root.resolve(root._destinationId)
 
+    // Main and satellite selections are independent; only one satellite expands.
+    property bool _satelliteOpen: false
+    property string _satelliteScreen: ""
+    property string _satelliteId: ""
+    readonly property bool satelliteOpen: root._satelliteOpen
+    readonly property string satelliteScreen: root._satelliteScreen
+    readonly property string satelliteId: root._satelliteId
+
+    readonly property var satellites: [
+        { id: "recording", label: "Recording", onRight: false, active: () => ScreenRecorder.recording },
+        { id: "maintenance", label: "Maintenance", onRight: true, active: () => Maintenance.hasAlert }
+    ]
+
     signal rejected(string destinationId)
 
     function panelOpenFor(screenName) {
@@ -24,14 +37,44 @@ QtObject {
         return root.open && root.screen === screenName && !(dest && dest.satelliteId);
     }
 
-    // True when the currently-open destination renders inside a satellite
-    // badge (see Bar.qml's IslandSatellite) rather than the main island —
-    // panelOpenFor above deliberately excludes those, so the main island's
-    // mode/expanded state stays untouched while a satellite-hosted panel is
-    // open.
     function satelliteOpenFor(screenName, satelliteId) {
-        const dest = root.resolve(root._destinationId);
-        return root.open && root.screen === screenName && !!dest && dest.satelliteId === satelliteId;
+        return root.satelliteOpen && root.satelliteScreen === screenName
+            && (!satelliteId || root.satelliteId === satelliteId);
+    }
+
+    function showSatellite(screenName, satelliteId) {
+        const destination = root.resolve(satelliteId);
+        if (!destination || !destination.available || !destination.satelliteId) {
+            root.rejected(satelliteId);
+            return false;
+        }
+        // Two focus grabs on different screens would compete for input.
+        if (root.open && root.screen !== screenName) root.closeMain();
+        root._satelliteScreen = screenName;
+        root._satelliteId = satelliteId;
+        root._satelliteOpen = true;
+        return true;
+    }
+
+    function toggleSatellite(screenName, satelliteId) {
+        if (root.satelliteOpenFor(screenName, satelliteId)) {
+            root.closeSatellite(screenName);
+            return true;
+        }
+        return root.showSatellite(screenName, satelliteId);
+    }
+
+    function closeSatellite(screenName) {
+        if (!screenName || root.satelliteScreen === screenName) root._satelliteOpen = false;
+    }
+
+    function closeMain(screenName) {
+        if (!screenName || root.screen === screenName) root._open = false;
+    }
+
+    function dismissOutside(screenName) {
+        root.closeSatellite(screenName);
+        if (root.dismissesOnFocusLoss(screenName)) root.closeMain(screenName);
     }
 
     // Alert priority, highest first: the first entry whose active() is true
@@ -91,7 +134,7 @@ QtObject {
 
     function dismiss(screenName, mode) {
         if (root.panelOpenFor(screenName)) {
-            root.close();
+            root.closeMain(screenName);
             return;
         }
         const alert = root._alerts.find(a => a.mode === mode);
@@ -121,6 +164,8 @@ QtObject {
             root.rejected(destinationId);
             return false;
         }
+        if (destination.satelliteId) return root.showSatellite(screenName, destination.id);
+        if (root.satelliteOpen && root.satelliteScreen !== screenName) root.closeSatellite();
         root._screen = screenName;
         root._destinationId = destination.id;
         root._open = true;
@@ -128,8 +173,10 @@ QtObject {
     }
 
     function toggle(screenName, destinationId) {
+        const destination = root.resolve(destinationId);
+        if (destination && destination.satelliteId) return root.toggleSatellite(screenName, destinationId);
         if (root._open && root._screen === screenName && root._destinationId === destinationId) {
-            root.close();
+            root.closeMain(screenName);
             return true;
         }
         return root.show(screenName, destinationId);
@@ -141,11 +188,17 @@ QtObject {
             root.rejected(destinationId);
             return false;
         }
+        if (destination.satelliteId) {
+            if (!root.showSatellite(root.screen, destination.id)) return false;
+            root.closeMain();
+            return true;
+        }
         root._destinationId = destination.id;
         return true;
     }
 
     function close() {
-        root._open = false;
+        root.closeMain();
+        root.closeSatellite();
     }
 }

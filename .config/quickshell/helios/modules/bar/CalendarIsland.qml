@@ -122,7 +122,7 @@ Item {
                         icon: "link"
                         placeholder: "webcal:// or https:// link to an .ics feed"
                         onAccepted: connectButton.clicked()
-                        onEscapePressed: IslandNavigation.close()
+                        onEscapePressed: IslandNavigation.closeMain()
                     }
                     PrimaryButton {
                         id: connectButton

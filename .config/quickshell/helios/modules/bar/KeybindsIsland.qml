@@ -142,7 +142,7 @@ Item {
             id: searchField
             width: parent.width
             placeholder: "Filter shortcuts…"
-            onEscapePressed: IslandNavigation.close()
+            onEscapePressed: IslandNavigation.closeMain()
             onUpPressed: root.moveSelection(-1)
             onDownPressed: root.moveSelection(1)
         }
