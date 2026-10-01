@@ -345,7 +345,6 @@ PanelWindow {
                 id: islandShape
                 anchors.fill: parent
                 expanded: bar.mode !== "idle"
-                liquidGlassEnabled: Bridge.liquidGlassEnabled
                 fillColor: bar.mode === "idle" ? Colors.background : Colors.surface
             }
 

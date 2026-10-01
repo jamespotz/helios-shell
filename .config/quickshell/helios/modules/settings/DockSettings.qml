@@ -75,6 +75,15 @@ Item {
                         { value: "never", label: "Never" }
                     ]
                 }
+                DockChoice {
+                    icon: "fullscreen"
+                    label: "Over fullscreen"
+                    option: "overFullscreen"
+                    choices: [
+                        { value: "hidden", label: "Hidden" },
+                        { value: "reveal", label: "On hover" }
+                    ]
+                }
                 DockSlider {
                     visible: Dock.autohide !== "never"
                     icon: "timer"
@@ -157,6 +166,17 @@ Item {
 
             SettingsCard {
                 DockToggle { icon: "fiber_manual_record"; label: "Running indicators"; option: "showIndicators" }
+                DockChoice {
+                    visible: Dock.showIndicators
+                    icon: "more_horiz"
+                    label: "Indicator style"
+                    option: "indicatorStyle"
+                    choices: [
+                        { value: "dot", label: "Dot" },
+                        { value: "line", label: "Line" },
+                        { value: "windows", label: "Per window" }
+                    ]
+                }
                 DockToggle { icon: "notifications"; label: "Notification badges"; option: "showBadges" }
                 DockToggle { icon: "grid_view"; label: "All Applications button"; option: "showAppsButton" }
                 DockToggle { icon: "settings"; label: "Settings button"; option: "showSettingsButton" }
@@ -199,6 +219,21 @@ Item {
                 }
                 DockSlider { icon: "opacity"; label: "Background"; option: "backgroundOpacity"; format: v => Math.round(v * 100) + "%" }
                 DockSlider { icon: "rounded_corner"; label: "Corner radius"; option: "cornerRadius" }
+                DockToggle { icon: "border_style"; label: "Border"; option: "border" }
+                DockSlider { visible: Dock.border; icon: "line_weight"; label: "Border width"; option: "borderWidth"; format: v => v.toFixed(1) + " px" }
+                DockChoice {
+                    visible: Dock.border
+                    icon: "palette"
+                    label: "Border color"
+                    option: "borderColor"
+                    choices: [
+                        { value: "outline", label: "Outline" },
+                        { value: "accent", label: "Accent" }
+                    ]
+                }
+                DockSlider { visible: Dock.border; icon: "opacity"; label: "Border opacity"; option: "borderOpacity"; format: v => Math.round(v * 100) + "%" }
+                DockSlider { visible: !Dock.glassActive; icon: "blur_circular"; label: "Shadow glow"; option: "shadowGlowRadius"; format: v => v.toFixed(1) + " px" }
+                DockSlider { visible: !Dock.glassActive; icon: "gradient"; label: "Shadow spread"; option: "shadowSpread"; format: v => v.toFixed(2) }
                 DockSlider { icon: "vertical_align_bottom"; label: "Screen gap"; option: "edgeGap" }
                 DockSlider { icon: "swipe_up"; label: "Reveal area"; option: "revealStrip"; last: true }
             }
@@ -232,6 +267,26 @@ Item {
                         }
                     }
                 }
+            }
+
+            Item { width: 1; height: 4 }
+
+            SectionTitle {
+                title: "Presets"
+                subtitle: "Copy every Dock setting to the clipboard as text, or paste one back. Pinned apps and screen choices stay per machine."
+            }
+
+            Row {
+                spacing: 8
+                Chip { text: "Copy settings"; inactiveTint: Colors.surfaceHigh; onClicked: Dock.copyPreset() }
+                Chip { text: "Paste settings"; inactiveTint: Colors.surfaceHigh; onClicked: Dock.pastePreset() }
+            }
+
+            StyledText {
+                visible: Dock.presetStatus !== ""
+                text: Dock.presetStatus
+                font.pixelSize: Config.fontSize - 1
+                color: Colors.subtext
             }
 
             Item { width: 1; height: 4 }

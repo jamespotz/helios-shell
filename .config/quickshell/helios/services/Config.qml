@@ -75,7 +75,7 @@ QtObject {
     // window title (ActiveWindow.qml) can push the idle/peek row wider than
     // usual — the surface is transparent and click-through outside the
     // visible pill (see Bar.qml's `mask`), so extra headroom here is free.
-    readonly property int islandMaxWidth: 1300
+    readonly property int islandMaxWidth: settingsAdapter.islandMaxWidth
     readonly property int islandMaxHeight: 820
 
     // Apple-style spring: critically damped (no overshoot) with moderate
@@ -179,6 +179,17 @@ QtObject {
     readonly property real islandExpandedCornerRadius: settingsAdapter.islandExpandedCornerRadius
     readonly property real islandShadowGlowRadius: settingsAdapter.islandShadowGlowRadius
     readonly property real islandShadowSpread: settingsAdapter.islandShadowSpread
+    // Outline around the island; satellites have their own toggle and
+    // width but share its color and opacity.
+    readonly property bool islandBorder: settingsAdapter.islandBorder
+    readonly property real islandBorderWidth: settingsAdapter.islandBorderWidth
+    readonly property string islandBorderColor: settingsAdapter.islandBorderColor
+    readonly property real islandBorderOpacity: settingsAdapter.islandBorderOpacity
+    readonly property real islandBackgroundOpacity: settingsAdapter.islandBackgroundOpacity
+    // Liquid Glass for the island and satellites: "follow" the shell-wide
+    // toggle, or force it "on"/"off" — same as Dock.glass.
+    readonly property string islandGlass: settingsAdapter.islandGlass
+    readonly property bool islandGlassActive: root.islandGlass === "follow" ? Bridge.liquidGlassEnabled : root.islandGlass === "on"
 
     // Satellite badges (recording/maintenance) — visually and motion-wise
     // independent from the main island; user-tunable from Settings >
@@ -189,6 +200,8 @@ QtObject {
     readonly property int satellitePadV: settingsAdapter.satellitePadV
     readonly property real satelliteShadowGlowRadius: settingsAdapter.satelliteShadowGlowRadius
     readonly property real satelliteShadowSpread: settingsAdapter.satelliteShadowSpread
+    readonly property bool satelliteBorder: settingsAdapter.satelliteBorder
+    readonly property real satelliteBorderWidth: settingsAdapter.satelliteBorderWidth
     readonly property real satelliteSpringStiffness: settingsAdapter.satelliteSpringStiffness
     readonly property real satelliteSpringDamping: settingsAdapter.satelliteSpringDamping
 
@@ -384,6 +397,13 @@ QtObject {
         islandExpandedCornerRadius: { value: 18, range: [0, 48] },
         islandShadowGlowRadius: { value: 14, range: [0, 32], step: 0.5 },
         islandShadowSpread: { value: 0.08, range: [0, 0.5], step: 0.01 },
+        islandBorder: { value: false },
+        islandBorderWidth: { value: 1, range: [0.5, 4], step: 0.5 },
+        islandBorderColor: { value: "outline", choices: ["outline", "accent"] },
+        islandBorderOpacity: { value: 0.5, range: [0.1, 1], step: 0.05 },
+        islandBackgroundOpacity: { value: 1, range: [0, 1], step: 0.01 },
+        islandGlass: { value: "follow", choices: ["follow", "on", "off"] },
+        islandMaxWidth: { value: 1300, range: [600, 2000], step: 10 },
 
         satelliteBadgeSize: { value: 32, range: [20, 60] },
         satelliteRestGap: { value: 10, range: [0, 24] },
@@ -391,6 +411,8 @@ QtObject {
         satellitePadV: { value: 10, range: [0, 40] },
         satelliteShadowGlowRadius: { value: 5, range: [0, 20], step: 0.5 },
         satelliteShadowSpread: { value: 0, range: [0, 0.5], step: 0.01 },
+        satelliteBorder: { value: false },
+        satelliteBorderWidth: { value: 1, range: [0.5, 4], step: 0.5 },
         satelliteSpringStiffness: { value: 4.0, range: [0.5, 12], step: 0.1 },
         satelliteSpringDamping: { value: 1.0, range: [0.1, 8], step: 0.1 }
     })
@@ -567,12 +589,21 @@ QtObject {
             property real islandExpandedCornerRadius: islandCornerRadius
             property real islandShadowGlowRadius: root.options.islandShadowGlowRadius.value
             property real islandShadowSpread: root.options.islandShadowSpread.value
+            property bool islandBorder: root.options.islandBorder.value
+            property real islandBorderWidth: root.options.islandBorderWidth.value
+            property string islandBorderColor: root.options.islandBorderColor.value
+            property real islandBorderOpacity: root.options.islandBorderOpacity.value
+            property real islandBackgroundOpacity: root.options.islandBackgroundOpacity.value
+            property string islandGlass: root.options.islandGlass.value
+            property int islandMaxWidth: root.options.islandMaxWidth.value
             property int satelliteBadgeSize: root.options.satelliteBadgeSize.value
             property int satelliteRestGap: root.options.satelliteRestGap.value
             property int satellitePadH: root.options.satellitePadH.value
             property int satellitePadV: root.options.satellitePadV.value
             property real satelliteShadowGlowRadius: root.options.satelliteShadowGlowRadius.value
             property real satelliteShadowSpread: root.options.satelliteShadowSpread.value
+            property bool satelliteBorder: root.options.satelliteBorder.value
+            property real satelliteBorderWidth: root.options.satelliteBorderWidth.value
             property real satelliteSpringStiffness: root.options.satelliteSpringStiffness.value
             property real satelliteSpringDamping: root.options.satelliteSpringDamping.value
         }

@@ -52,6 +52,9 @@ QtObject {
         // force it "on"/"off".
         glass: { value: "follow", choices: ["follow", "on", "off"] },
         showIndicators: { value: true },
+        // "dot" grows longer for several windows, "line" is a wide bar,
+        // "windows" shows one dot per window (up to 3).
+        indicatorStyle: { value: "dot", choices: ["dot", "line", "windows"] },
         showBadges: { value: true },
         showAppsButton: { value: true },
         showSettingsButton: { value: true },
@@ -65,6 +68,15 @@ QtObject {
         edgeGap: { value: 8, range: [0, 32] },
         cornerRadius: { value: 20, range: [0, 32] },
         backgroundOpacity: { value: 0.82, range: [0, 1], step: 0.01 },
+        border: { value: true },
+        borderWidth: { value: 0.5, range: [0.5, 4], step: 0.5 },
+        borderColor: { value: "outline", choices: ["outline", "accent"] },
+        borderOpacity: { value: 0.5, range: [0.1, 1], step: 0.05 },
+        shadowGlowRadius: { value: 14, range: [0, 32], step: 0.5 },
+        shadowSpread: { value: 0.08, range: [0, 0.5], step: 0.01 },
+        // Fullscreen windows cover the Top layer: "hidden" leaves the Dock
+        // under them, "reveal" lifts it above them on screen-edge hover.
+        overFullscreen: { value: "hidden", choices: ["hidden", "reveal"] },
         revealStrip: { value: 3, range: [1, 12] }
     })
 
@@ -86,6 +98,7 @@ QtObject {
     property string glass: root.options.glass.value
     readonly property bool glassActive: root.glass === "follow" ? Bridge.liquidGlassEnabled : root.glass === "on"
     property bool showIndicators: root.options.showIndicators.value
+    property string indicatorStyle: root.options.indicatorStyle.value
     property bool showBadges: root.options.showBadges.value
     property bool showAppsButton: root.options.showAppsButton.value
     property bool showSettingsButton: root.options.showSettingsButton.value
@@ -99,6 +112,13 @@ QtObject {
     property int edgeGap: root.options.edgeGap.value
     property int cornerRadius: root.options.cornerRadius.value
     property real backgroundOpacity: root.options.backgroundOpacity.value
+    property bool border: root.options.border.value
+    property real borderWidth: root.options.borderWidth.value
+    property string borderColor: root.options.borderColor.value
+    property real borderOpacity: root.options.borderOpacity.value
+    property real shadowGlowRadius: root.options.shadowGlowRadius.value
+    property real shadowSpread: root.options.shadowSpread.value
+    property string overFullscreen: root.options.overFullscreen.value
     property int revealStrip: root.options.revealStrip.value
 
     readonly property var windows: Hyprland.toplevels.values.map(top => root._window(top)).filter(window => window !== null)
@@ -183,7 +203,7 @@ QtObject {
         if (!option.range) return value;
         const step = option.step || 1;
         const clamped = Math.max(option.range[0], Math.min(option.range[1], value));
-        return Math.round(clamped / step) * step;
+        return Number((Math.round(clamped / step) * step).toFixed(4));
     }
     function setOption(key, value) {
         const coerced = root._coerce(key, value);
@@ -195,6 +215,52 @@ QtObject {
     function resetOptions() {
         for (const key in root.options) root[key] = root.options[key].value;
         root._save();
+    }
+    // Presets: every option above as JSON, copied and pasted through the
+    // clipboard. Pins and screen choices stay per machine.
+    function _preset() {
+        const options = {};
+        for (const key in root.options) options[key] = root[key];
+        return JSON.stringify({ helios: "dock", version: 1, options: options }, null, 2);
+    }
+    // Returns how many settings were applied, or -1 when the text isn't a
+    // Dock preset. Unknown keys and invalid values are skipped.
+    function _applyPreset(text) {
+        let preset;
+        try { preset = JSON.parse(text); } catch (e) { return -1; }
+        if (!preset || preset.helios !== "dock" || preset.version !== 1 || !preset.options
+                || typeof preset.options !== "object" || Array.isArray(preset.options)) return -1;
+        let applied = 0;
+        for (const key in root.options) {
+            if (!(key in preset.options)) continue;
+            const coerced = root._coerce(key, preset.options[key]);
+            if (coerced === undefined) continue;
+            root[key] = coerced;
+            applied++;
+        }
+        root._save();
+        return applied;
+    }
+    // Short result note after a copy or paste; clears itself.
+    property string presetStatus: ""
+    onPresetStatusChanged: if (root.presetStatus) root._presetStatusClear.restart()
+    property Timer _presetStatusClear: Timer { interval: 4000; onTriggered: root.presetStatus = "" }
+    function copyPreset() {
+        root._presetCopy.command = ["wl-copy", root._preset()];
+        root._presetCopy.running = true;
+        root.presetStatus = "Copied Dock settings";
+    }
+    function pastePreset() { root._presetPaste.running = true; }
+    property Process _presetCopy: Process {}
+    property Process _presetPaste: Process {
+        command: ["wl-paste", "--no-newline"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                const applied = root._applyPreset(this.text);
+                root.presetStatus = applied < 0 ? "Clipboard doesn't hold Dock settings"
+                    : "Applied " + applied + " settings";
+            }
+        }
     }
     function shownOn(screenName) { return root.enabled && !root.hiddenScreens.includes(screenName); }
     function setShownOn(screenName, shown) {

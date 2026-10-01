@@ -49,7 +49,7 @@ Row {
                             // horizontally-centered layer-shell surface.
                             const posInWindow = trayItem.mapToItem(null, mouse.x, mouse.y);
                             const screenW = QsWindow.window.screen.width;
-                            const barSurfaceW = Config.islandMaxWidth;
+                            const barSurfaceW = QsWindow.window.width;
                             const offsetX = (screenW - barSurfaceW) / 2;
                             Bridge.openTrayMenu(
                                 trayItem.modelData.menu,

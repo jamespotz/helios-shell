@@ -114,9 +114,13 @@ PanelWindow {
         return Qt.rect(s.x + along, s.y + s.height - dock.edgeGap - h, w, h);
     }
     readonly property bool overlapped: Dock.autohide === "intellihide" && Dock.overlaps(dock.modelData.name, dock.revealedRect)
+    readonly property var hyprMonitor: Hyprland.monitorFor(dock.modelData)
+    readonly property bool hasFullscreen: !!dock.hyprMonitor && !!dock.hyprMonitor.activeWorkspace && dock.hyprMonitor.activeWorkspace.hasFullscreen
+    // Over a fullscreen window the Dock only shows on screen-edge hover.
+    readonly property bool overFullscreen: dock.hasFullscreen && Dock.overFullscreen === "reveal"
     property bool hoverHold: false
-    readonly property bool revealed: Dock.autohide === "never"
-        || (Dock.autohide === "intellihide" && !dock.overlapped)
+    readonly property bool revealed: (!dock.hasFullscreen && (Dock.autohide === "never"
+        || (Dock.autohide === "intellihide" && !dock.overlapped)))
         || dock.hoverHold || dock.menuItem !== null || dock.dragIndex >= 0 || dock.previewItem !== null
     readonly property bool magnifying: Dock.magnify && !Config.reducedMotion && hitHover.hovered && dock.dragIndex < 0
     // Extra room a magnified icon grows away from the edge.
@@ -135,7 +139,8 @@ PanelWindow {
     exclusiveZone: Dock.autohide === "never" ? dock.bodyThickness + dock.edgeGap : 0
     exclusionMode: Dock.autohide === "never" ? ExclusionMode.Normal : ExclusionMode.Ignore
     color: "transparent"
-    WlrLayershell.layer: WlrLayer.Top
+    // A fullscreen window covers Top; Overlay lifts the Dock above it.
+    WlrLayershell.layer: dock.overFullscreen ? WlrLayer.Overlay : WlrLayer.Top
     WlrLayershell.namespace: "helios:dock"
     WlrLayershell.keyboardFocus: dock.menuItem ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
 
@@ -330,8 +335,6 @@ PanelWindow {
                 radius: Math.min(Dock.cornerRadius, Math.min(width, height) / 2)
                 opacity: Dock.backgroundOpacity
                 color: "transparent"
-                border.width: 0.5
-                border.color: Qt.rgba(Colors.outline.r, Colors.outline.g, Colors.outline.b, 0.5)
 
                 // The shadow would darken the translucent glass tint.
                 SurfaceShadow {
@@ -339,6 +342,8 @@ PanelWindow {
                     z: -1
                     cornerRadius: bodyBackground.radius
                     visible: !Dock.glassActive
+                    glowRadius: Dock.shadowGlowRadius
+                    spread: Dock.shadowSpread
                 }
 
                 LiquidGlassSurface {
@@ -348,6 +353,15 @@ PanelWindow {
                     cornerRadius: bodyBackground.radius
                     fallbackColor: Qt.alpha(Colors.surface, Colors.panelOpacity)
                 }
+            }
+
+            SurfaceBorder {
+                anchors.fill: parent
+                visible: Dock.border
+                radius: bodyBackground.radius
+                border.width: Dock.borderWidth
+                tint: Dock.borderColor
+                tintOpacity: Dock.borderOpacity
             }
 
             Grid {
@@ -494,22 +508,34 @@ PanelWindow {
                             }
                         }
 
-                        // Running indicator on the screen-edge side — longer
-                        // for several windows, accent for the focused app,
+                        // Running indicator on the screen-edge side, styled by
+                        // Dock.indicatorStyle — accent for the focused app,
                         // hollow when every window is minimized.
-                        Rectangle {
-                            readonly property real length: iconCell.modelData.windows.length > 1 ? 10 : 4
-                            visible: iconCell.modelData.windows.length > 0 && Dock.showIndicators
-                            width: dock.vertical ? 4 : length
-                            height: dock.vertical ? length : 4
-                            radius: 2
+                        Grid {
+                            id: indicator
+                            readonly property int windowCount: iconCell.modelData.windows.length
+                            visible: indicator.windowCount > 0 && Dock.showIndicators
+                            columns: dock.vertical ? 1 : 3
+                            spacing: 3
                             x: dock.position === "left" ? -width - 1 : dock.position === "right" ? parent.width + 1 : (parent.width - width) / 2
                             y: dock.vertical ? (parent.height - height) / 2 : parent.height + 1
-                            color: iconCell.minimized ? "transparent" : iconCell.focusedApp ? Colors.accent : Colors.subtext
-                            border.width: iconCell.minimized ? 1 : 0
-                            border.color: Colors.subtext
-                            Behavior on width { NumberAnimation { duration: Config.animFast } }
-                            Behavior on height { NumberAnimation { duration: Config.animFast } }
+
+                            Repeater {
+                                model: Dock.indicatorStyle === "windows" ? Math.min(3, indicator.windowCount) : 1
+
+                                Rectangle {
+                                    readonly property real length: Dock.indicatorStyle === "line" ? Math.round(dock.iconSize * 0.4)
+                                        : Dock.indicatorStyle === "dot" && indicator.windowCount > 1 ? 10 : 4
+                                    width: dock.vertical ? 4 : length
+                                    height: dock.vertical ? length : 4
+                                    radius: 2
+                                    color: iconCell.minimized ? "transparent" : iconCell.focusedApp ? Colors.accent : Colors.subtext
+                                    border.width: iconCell.minimized ? 1 : 0
+                                    border.color: Colors.subtext
+                                    Behavior on width { NumberAnimation { duration: Config.animFast } }
+                                    Behavior on height { NumberAnimation { duration: Config.animFast } }
+                                }
+                            }
                         }
 
                         MouseArea {

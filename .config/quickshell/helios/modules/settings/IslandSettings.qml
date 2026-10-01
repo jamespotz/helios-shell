@@ -155,11 +155,12 @@ Item {
                 ConfigSlider { option: "islandContentPadH"; icon: "padding"; label: "Side padding" }
                 ConfigSlider { option: "islandContentPadV"; icon: "padding"; label: "Vertical padding" }
                 ConfigSlider { option: "islandExpandedCornerRadius"; icon: "rounded_corner"; label: "Corner radius"; format: v => Math.round(v) + " px" }
-                ConfigSlider { option: "peekHeight"; icon: "height"; label: "Hover row height"; last: true }
+                ConfigSlider { option: "peekHeight"; icon: "height"; label: "Hover row height" }
+                ConfigSlider { option: "islandMaxWidth"; icon: "width"; label: "Max width"; format: v => Math.round(v) + " px"; last: true }
             }
 
             ResetChip {
-                keys: root.peekWidgetKeys.concat(["islandContentPadH", "islandContentPadV", "islandExpandedCornerRadius", "peekHeight"])
+                keys: root.peekWidgetKeys.concat(["islandContentPadH", "islandContentPadV", "islandExpandedCornerRadius", "peekHeight", "islandMaxWidth"])
             }
         }
 
@@ -174,15 +175,6 @@ Item {
             }
 
             SettingsCard {
-                SettingsRow {
-                    icon: "blur_on"
-                    label: "Liquid glass"
-                    Toggle {
-                        label: "Liquid glass"
-                        checked: Bridge.liquidGlassEnabled
-                        onToggled: v => Bridge.liquidGlassEnabled = v
-                    }
-                }
                 ConfigToggle { option: "hoverExpand"; icon: "arrow_selector_tool"; label: "Open on hover" }
                 ConfigSlider {
                     visible: Config.hoverExpand
@@ -210,9 +202,8 @@ Item {
                     icon: "fullscreen"
                     label: "Over fullscreen"
                     choices: [{ value: "hidden", label: "Hidden" }, { value: "alerts", label: "Alerts" }]
+                    last: true
                 }
-                ConfigSlider { option: "islandShadowGlowRadius"; icon: "blur_circular"; label: "Shadow glow"; format: v => v.toFixed(1) + " px" }
-                ConfigSlider { option: "islandShadowSpread"; icon: "gradient"; label: "Shadow spread"; format: v => v.toFixed(2); last: true }
             }
 
             MotionAdvanced {
@@ -222,7 +213,58 @@ Item {
 
             ResetChip {
                 keys: ["hoverExpand", "hoverExpandDelay", "hoverCollapseDelay", "islandSpringStiffness", "islandSpringDamping",
-                    "islandOverFullscreen", "islandShadowGlowRadius", "islandShadowSpread"]
+                    "islandOverFullscreen"]
+            }
+        }
+
+        // --- Appearance (island and satellites) ----------------------------
+        Column {
+            width: parent.width
+            spacing: 10
+
+            SectionTitle {
+                title: "Appearance"
+                subtitle: "Applies to the island and its satellites. Satellites have their own border toggle below."
+            }
+
+            SettingsCard {
+                ConfigChoice {
+                    option: "islandGlass"
+                    icon: "blur_on"
+                    label: "Liquid glass"
+                    choices: [{ value: "follow", label: "Shell" }, { value: "on", label: "On" }, { value: "off", label: "Off" }]
+                }
+                ConfigSlider { option: "islandBackgroundOpacity"; icon: "opacity"; label: "Background"; format: v => Math.round(v * 100) + "%" }
+                ConfigSlider { option: "islandShadowGlowRadius"; icon: "blur_circular"; label: "Shadow glow"; format: v => v.toFixed(1) + " px" }
+                ConfigSlider { option: "islandShadowSpread"; icon: "gradient"; label: "Shadow spread"; format: v => v.toFixed(2) }
+                ConfigToggle { option: "islandBorder"; icon: "border_style"; label: "Border" }
+                ConfigSlider {
+                    visible: Config.islandBorder
+                    option: "islandBorderWidth"
+                    icon: "line_weight"
+                    label: "Border width"
+                    format: v => v.toFixed(1) + " px"
+                }
+                ConfigChoice {
+                    visible: Config.islandBorder || Config.satelliteBorder
+                    option: "islandBorderColor"
+                    icon: "palette"
+                    label: "Border color"
+                    choices: [{ value: "outline", label: "Outline" }, { value: "accent", label: "Accent" }]
+                }
+                ConfigSlider {
+                    visible: Config.islandBorder || Config.satelliteBorder
+                    option: "islandBorderOpacity"
+                    icon: "opacity"
+                    label: "Border opacity"
+                    format: v => Math.round(v * 100) + "%"
+                    last: true
+                }
+            }
+
+            ResetChip {
+                keys: ["islandGlass", "islandBackgroundOpacity", "islandShadowGlowRadius", "islandShadowSpread",
+                    "islandBorder", "islandBorderWidth", "islandBorderColor", "islandBorderOpacity"]
             }
         }
 
@@ -345,7 +387,16 @@ Item {
                 ConfigSlider { option: "satellitePadH"; icon: "padding"; label: "Side padding" }
                 ConfigSlider { option: "satellitePadV"; icon: "padding"; label: "Vertical padding" }
                 ConfigSlider { option: "satelliteShadowGlowRadius"; icon: "blur_circular"; label: "Shadow glow"; format: v => v.toFixed(1) + " px" }
-                ConfigSlider { option: "satelliteShadowSpread"; icon: "gradient"; label: "Shadow spread"; format: v => v.toFixed(2); last: true }
+                ConfigSlider { option: "satelliteShadowSpread"; icon: "gradient"; label: "Shadow spread"; format: v => v.toFixed(2) }
+                ConfigToggle { option: "satelliteBorder"; icon: "border_style"; label: "Border"; last: !Config.satelliteBorder }
+                ConfigSlider {
+                    visible: Config.satelliteBorder
+                    option: "satelliteBorderWidth"
+                    icon: "line_weight"
+                    label: "Border width"
+                    format: v => v.toFixed(1) + " px"
+                    last: true
+                }
             }
 
             MotionAdvanced {
@@ -355,7 +406,8 @@ Item {
 
             ResetChip {
                 keys: ["satelliteBadgeSize", "satelliteRestGap", "satellitePadH", "satellitePadV",
-                    "satelliteShadowGlowRadius", "satelliteShadowSpread", "satelliteSpringStiffness", "satelliteSpringDamping"]
+                    "satelliteShadowGlowRadius", "satelliteShadowSpread", "satelliteSpringStiffness", "satelliteSpringDamping",
+                    "satelliteBorder", "satelliteBorderWidth"]
             }
         }
 
