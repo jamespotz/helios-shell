@@ -84,7 +84,7 @@ Item {
 
                 // Wrapped so ScrollIndicator (anchors to its target's edges)
                 // is a sibling of the Flickable rather than a child inside
-                // it — see NotifyCard.qml's identical reasoning.
+                // it — see NotificationCard.qml's identical reasoning.
                 Item {
                     width: parent.width
                     visible: root.fontPickerOpen

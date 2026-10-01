@@ -3,7 +3,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 
-// Live CPU/memory/GPU/disk/network stats for modules/bar/SystemMonitorIsland.qml,
+// Live CPU/memory/GPU/disk/network stats for modules/island/SystemMonitorDestination.qml,
 // sourced from the user's system-info.py helper (same directory as that tab)
 // which polls psutil + nvidia-smi and prints one JSON snapshot per line.
 // The Python adapter owns sampling, rates, history, and process safety.
@@ -62,7 +62,7 @@ QtObject {
     }
 
     function _processCommand() {
-        const base = ["python3", "-u", Quickshell.env("HOME") + "/.config/quickshell/helios/modules/bar/system-info.py"];
+        const base = ["python3", "-u", Quickshell.env("HOME") + "/.config/quickshell/helios/modules/island/system-info.py"];
         return root.fullProcessMode ? base.concat(["--full"]) : base;
     }
 
@@ -87,7 +87,7 @@ QtObject {
         const process = root.state.processes.find(candidate => candidate.pid === pid);
         if (!process || root.isProcessProtected(process)) return false;
         killProc.targetPid = pid;
-        killProc.command = ["python3", "-u", Quickshell.env("HOME") + "/.config/quickshell/helios/modules/bar/system-info.py", "--signal", String(pid), action === "terminate" ? "terminate" : "forceStop"];
+        killProc.command = ["python3", "-u", Quickshell.env("HOME") + "/.config/quickshell/helios/modules/island/system-info.py", "--signal", String(pid), action === "terminate" ? "terminate" : "forceStop"];
         killProc._errBuf = "";
         killProc.running = true;
         return true;

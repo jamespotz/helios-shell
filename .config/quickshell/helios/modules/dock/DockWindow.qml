@@ -251,7 +251,7 @@ PanelWindow {
     }
 
     // Click-outside closes the menu. The grab starts just after the menu
-    // opens (same as Bar.qml): grabbing before Hyprland has the menu in the
+    // opens (same as Island.qml): grabbing before Hyprland has the menu in the
     // input region clears it immediately.
     HyprlandFocusGrab {
         id: menuGrab
@@ -326,7 +326,7 @@ PanelWindow {
             }
             Behavior on opacity { NumberAnimation { duration: Config.animFast } }
 
-            // PanelBackground's look with the fill swapped for
+            // SurfaceBackground's look with the fill swapped for
             // LiquidGlassSurface, same as the OSD, so the Dock follows the
             // Liquid Glass toggle (or its own override).
             Rectangle {
@@ -671,7 +671,7 @@ PanelWindow {
                             onClicked: {
                                 dock.menuItem = null;
                                 if (dockButton.modelData.slot === 0) Launcher.showApps(dock.modelData.name);
-                                else if (dockButton.modelData.slot === 1) Bridge.toggleSettings(dock.modelData.name);
+                                else if (dockButton.modelData.slot === 1) ShellState.toggleSettings(dock.modelData.name);
                                 else Dock.openTrash();
                             }
                         }

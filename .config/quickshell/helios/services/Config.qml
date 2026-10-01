@@ -39,7 +39,7 @@ QtObject {
     readonly property int idleWidgetSpacing: settingsAdapter.idleWidgetSpacing
     // Padding around the expanded/peek island's content — user-tunable
     // from Settings > Island. Idle mode still forces 0
-    // (see Bar.qml), only expanded/peek content uses these.
+    // (see Island.qml), only expanded/peek content uses these.
     readonly property int islandContentPadH: settingsAdapter.islandContentPadH
     readonly property int islandContentPadV: settingsAdapter.islandContentPadV
 
@@ -52,7 +52,7 @@ QtObject {
     // here stacked on top of that and made the visible gap under the bump
     // noticeably bigger than the gap above it, which is a plain, untouched
     // `margins.top` unaffected by Hyprland's own window-gap logic. This is a
-    // flat constant regardless of mode (see Bar.qml) — expanded states
+    // flat constant regardless of mode (see Island.qml) — expanded states
     // overlap windows rather than growing the reservation, so the gap stays
     // put whether the island is idle or expanded.
     readonly property int islandExclusiveZone: islandTopGap + idleBumpHeight
@@ -67,14 +67,14 @@ QtObject {
     readonly property int notifyDuration: settingsAdapter.notifyDuration
 
     // The island's real layer-shell surface stays this size the whole time —
-    // only an inner item animates (see Bar.qml) — so the morph is plain GPU
+    // only an inner item animates (see Island.qml) — so the morph is plain GPU
     // compositing instead of a real Wayland resize every frame. Must comfortably
     // fit the widest/tallest panel content plus padding, including whatever
     // idleBumpWidth/Height the user dials in above. Sized with real slack
     // beyond typical content (rather than a tight fit) since a long focused-
-    // window title (ActiveWindow.qml) can push the idle/peek row wider than
+    // window title (ActiveWindowWidget.qml) can push the idle/peek row wider than
     // usual — the surface is transparent and click-through outside the
-    // visible pill (see Bar.qml's `mask`), so extra headroom here is free.
+    // visible pill (see Island.qml's `mask`), so extra headroom here is free.
     readonly property int islandMaxWidth: settingsAdapter.islandMaxWidth
     readonly property int islandMaxHeight: 820
 
@@ -119,7 +119,7 @@ QtObject {
     readonly property int hoverCollapseDelay: settingsAdapter.hoverCollapseDelay
     // Whether hovering the idle bump opens the peek row, and how long the
     // pointer has to rest there first. With hover off, clicking the idle
-    // bump opens it instead (see Bar.qml).
+    // bump opens it instead (see Island.qml).
     readonly property bool hoverExpand: settingsAdapter.hoverExpand
     readonly property int hoverExpandDelay: settingsAdapter.hoverExpandDelay
 
@@ -189,7 +189,7 @@ QtObject {
     // Liquid Glass for the island and satellites: "follow" the shell-wide
     // toggle, or force it "on"/"off" — same as Dock.glass.
     readonly property string islandGlass: settingsAdapter.islandGlass
-    readonly property bool islandGlassActive: root.islandGlass === "follow" ? Bridge.liquidGlassEnabled : root.islandGlass === "on"
+    readonly property bool islandGlassActive: root.islandGlass === "follow" ? ShellState.liquidGlassEnabled : root.islandGlass === "on"
 
     // Satellite badges (recording/maintenance) — visually and motion-wise
     // independent from the main island; user-tunable from Settings >
@@ -303,7 +303,7 @@ QtObject {
 
     // Clock format — user-tunable from Settings > Date &
     // time. clockAmPmUppercase only matters in 12-hour mode; every clock
-    // in the shell (Clock, IdleBump, WeatherPanel, Lock) reads timeFormat
+    // in the shell (Clock, IslandIdle, WeatherPanel, Lock) reads timeFormat
     // rather than each hardcoding its own format string, so they always
     // agree with each other and with this setting.
     readonly property bool use24HourClock: settingsAdapter.use24HourClock

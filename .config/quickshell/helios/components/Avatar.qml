@@ -7,7 +7,7 @@ import "../services"
 // Circular user avatar sourced from ~/.face/face.jpg (standard Linux avatar
 // location, e.g. what AccountsService/lightdm greeters use). Falls back to
 // a person icon when no image is present. Uses ClippingRectangle rather
-// than a hidden Image + MultiEffect mask — same primitive MediaCard/IdleBump
+// than a hidden Image + MultiEffect mask — same primitive MediaCard/IslandIdle
 // standardized on after the mask approach rendered an empty texture.
 //
 // The picker shells out to `zenity --file-selection` instead of
@@ -78,9 +78,9 @@ Item {
         onClicked: {
             // Settings is an Overlay-layer surface, always above normal
             // toplevels, so zenity's picker would render behind it and be
-            // unclickable. Bridge.avatarPickerOpen tells it to hide itself
+            // unclickable. ShellState.avatarPickerOpen tells it to hide itself
             // for the picker's lifetime.
-            Bridge.avatarPickerOpen = true;
+            ShellState.avatarPickerOpen = true;
             pickProc.running = true;
         }
     }
@@ -97,7 +97,7 @@ Item {
                 copyProc.running = true;
             }
         }
-        onExited: Bridge.avatarPickerOpen = false;
+        onExited: ShellState.avatarPickerOpen = false;
     }
 
     Process {

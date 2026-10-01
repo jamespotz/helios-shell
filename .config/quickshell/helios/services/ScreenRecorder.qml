@@ -36,7 +36,7 @@ QtObject {
     }
 
     // ponytail: session-only, resets on shell restart. Persist via
-    // Bridge-style JsonAdapter if that's ever needed.
+    // ShellState-style JsonAdapter if that's ever needed.
     property string outputDir: Quickshell.env("HOME") + "/Videos/Recordings"
     readonly property string elapsedLabel: {
         const m = Math.floor(root.elapsedSeconds / 60);
@@ -55,7 +55,7 @@ QtObject {
 
         // The island tab closes itself (IslandNavigation.close()) right before
         // calling this, to hand the pointer/keyboard grab it was holding
-        // (Bar.qml's HyprlandFocusGrab, "click outside closes it") back to
+        // (Island.qml's HyprlandFocusGrab, "click outside closes it") back to
         // Hyprland before slurp/the portal try to claim it — closing the
         // island alone wasn't enough; the release needed a real event-loop
         // turn to actually reach the compositor before the picker spawned,

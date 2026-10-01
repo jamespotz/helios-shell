@@ -5,7 +5,7 @@ import Quickshell.Hyprland
 import Quickshell.Services.Pipewire
 
 // Idle-pill pointer gestures (wheel, middle click, right click) and the
-// fullscreen layer rule. Bar.qml forwards raw input here; which action runs
+// fullscreen layer rule. Island.qml forwards raw input here; which action runs
 // comes from Config (Settings > Island > Gestures).
 QtObject {
     id: root

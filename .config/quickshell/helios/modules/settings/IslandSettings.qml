@@ -336,8 +336,8 @@ Item {
                     label: "Do Not Disturb"
                     Toggle {
                         label: "Do Not Disturb"
-                        checked: Bridge.dndEnabled
-                        onToggled: v => Bridge.dndEnabled = v
+                        checked: ShellState.dndEnabled
+                        onToggled: v => ShellState.dndEnabled = v
                     }
                 }
                 ConfigToggle { option: "showTaskAlerts"; icon: "progress_activity"; label: "Task progress" }

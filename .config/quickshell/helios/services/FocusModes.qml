@@ -7,10 +7,10 @@ import Quickshell.Services.UPower
 // Focus mode presets — each one is a snapshot of DND, caffeine (idle
 // inhibit), power profile, night light, and a set of apps to launch,
 // applied together through the services that already own each of those
-// settings (Bridge, IdleInhibit, PowerProfiles, NightLight, AppLaunch).
-// Persisted the same way LauncherIsland persists launch counts: a plain JSON
+// settings (ShellState, IdleInhibit, PowerProfiles, NightLight, AppLaunch).
+// Persisted the same way LauncherDestination persists launch counts: a plain JSON
 // FileView, since this is a user-editable list rather than a fixed schema
-// (see launchCountsFile in LauncherIsland.qml for the identical pattern).
+// (see launchCountsFile in LauncherDestination.qml for the identical pattern).
 QtObject {
     id: root
 
@@ -69,7 +69,7 @@ QtObject {
     })
 
     function apply(preset) {
-        Bridge.dndEnabled = !!preset.dnd;
+        ShellState.dndEnabled = !!preset.dnd;
         if (IdleInhibit.inhibited !== !!preset.caffeine) IdleInhibit.toggleInhibit();
         NightLight.setEnabled(!!preset.nightLight);
         if (preset.powerProfile && root._profileMap[preset.powerProfile] !== undefined) {
@@ -88,7 +88,7 @@ QtObject {
     // whatever the settings were before, since there's no prior snapshot
     // (same tradeoff a Do Not Disturb or Night Light toggle already makes).
     function deactivate() {
-        Bridge.dndEnabled = false;
+        ShellState.dndEnabled = false;
         if (IdleInhibit.inhibited) IdleInhibit.toggleInhibit();
         NightLight.setEnabled(false);
         PowerProfiles.profile = PowerProfile.Balanced;

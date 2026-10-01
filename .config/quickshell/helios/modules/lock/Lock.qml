@@ -19,10 +19,10 @@ import "../../components"
 Loader {
     id: root
     active: false
-    onActiveChanged: Bridge.locked = active
+    onActiveChanged: ShellState.locked = active
 
     Connections {
-        target: Bridge
+        target: ShellState
         function onLockRequested() { root.active = true }
     }
 
@@ -245,7 +245,7 @@ Loader {
                     }
                 }
 
-                // Power menu — a plain list popover (not PowerMenuIsland's
+                // Power menu — a plain list popover (not PowerMenuDestination's
                 // square cards), same second-tap-to-confirm safety on the
                 // destructive entries, same dispatch commands.
                 Item {
@@ -267,7 +267,7 @@ Loader {
 
                     function run(id) {
                         if (id === "logout")
-                            // See PowerMenuIsland.qml: this Hyprland config wraps
+                            // See PowerMenuDestination.qml: this Hyprland config wraps
                             // dispatch payloads through a Lua plugin, so the
                             // bare "exit" dispatcher name fails silently.
                             Hyprland.dispatch("hl.dsp.exit()");
@@ -277,7 +277,7 @@ Loader {
                             Quickshell.execDetached(["systemctl", "poweroff"]);
                     }
 
-                    PanelBackground {
+                    SurfaceBackground {
                         id: menuCard
                         anchors.right: powerButton.right
                         anchors.bottom: powerButton.top

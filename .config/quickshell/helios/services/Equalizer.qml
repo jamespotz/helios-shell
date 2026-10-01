@@ -5,7 +5,7 @@ import Quickshell.Io
 
 // Equalizer state for MediaCard's EasyEffects-backed EQ widget. Lives in a
 // singleton (not on MediaCard's root Item) so the band values and selected
-// preset survive the island closing and reopening — PanelWrapper's Loader
+// preset survive the island closing and reopening — IslandDestinationHost's Loader
 // destroys and recreates MediaCard every time the island tab is switched
 // away from and back to "media". Deliberately in-memory only (no
 // FileView/JsonAdapter persistence): the EQ is meant to reset to its
@@ -13,7 +13,7 @@ import Quickshell.Io
 QtObject {
     id: root
 
-    readonly property string eqScriptPath: Quickshell.env("HOME") + "/.config/quickshell/helios/modules/bar/easyeffects-eq.py"
+    readonly property string eqScriptPath: Quickshell.env("HOME") + "/.config/quickshell/helios/modules/island/easyeffects-eq.py"
     readonly property var eqBandLabels: ["31", "63", "125", "250", "500", "1k", "2k", "4k", "8k", "16k"]
     readonly property var eqPresets: ({
         flat:    [0.50, 0.50, 0.50, 0.50, 0.50, 0.50, 0.50, 0.50, 0.50, 0.50],

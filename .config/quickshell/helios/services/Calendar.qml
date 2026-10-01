@@ -112,7 +112,7 @@ QtObject {
 
     // ─── Upcoming-meeting alert ─────────────────────────────────────────
     // Surfaces one timed event at a time, starting 5 minutes before it
-    // begins, for the Island to auto-peek (see Bar.qml's meetingMode,
+    // begins, for the Island to auto-peek (see Island.qml's meetingMode,
     // modeled on notifyMode/taskMode) independent of whether the Calendar
     // tab is open. Rather than polling, alertTimer sleeps until the next
     // event's alert time and is rescheduled whenever events change.
@@ -214,7 +214,7 @@ QtObject {
     }
 
     property Process proc: Process {
-        command: ["python3", "-u", Quickshell.env("HOME") + "/.config/quickshell/helios/modules/bar/calendar-info.py"]
+        command: ["python3", "-u", Quickshell.env("HOME") + "/.config/quickshell/helios/modules/island/calendar-info.py"]
         stdout: StdioCollector {
             onStreamFinished: {
                 try {

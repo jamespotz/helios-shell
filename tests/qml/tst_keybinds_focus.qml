@@ -3,7 +3,7 @@ import QtQuick.Window
 import Quickshell
 import Quickshell.Io
 import services
-import "modules/bar" as BarModules
+import "modules/island" as IslandModules
 
 ShellRoot {
     id: root
@@ -15,7 +15,7 @@ ShellRoot {
         width: 600
         height: 520
 
-        BarModules.KeybindsIsland {
+        IslandModules.KeybindsDestination {
             id: keybinds
             anchors.centerIn: parent
         }

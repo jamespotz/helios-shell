@@ -5,7 +5,7 @@ import Quickshell.Hyprland
 import "../../services"
 import "../../services/Utils.js" as Utils
 import "../../components"
-import "../bar"
+import "../island"
 
 // Dedicated settings app — separate from the Dynamic Island, which stays
 // reserved for quick controls (volume, wifi, bluetooth, power profile,
@@ -18,7 +18,7 @@ import "../bar"
 PanelWindow {
     id: settingsWindow
 
-    visible: Bridge.settingsOpen && !Bridge.avatarPickerOpen && !Bridge.launcherIconPickerOpen
+    visible: ShellState.settingsOpen && !ShellState.avatarPickerOpen && !ShellState.launcherIconPickerOpen
     screen: Utils.screenForMonitor(Quickshell.screens, Hyprland.focusedMonitor) || Quickshell.screens[0]
 
     WlrLayershell.layer: WlrLayer.Overlay
@@ -98,11 +98,11 @@ PanelWindow {
         return settingsWindow.groupOrder.filter(g => groups[g]).map(g => ({ name: g, items: groups[g] }));
     }
 
-    readonly property string selectedPage: settingsWindow.filteredPages.some(p => p.id === Bridge.settingsPage)
-        ? Bridge.settingsPage
+    readonly property string selectedPage: settingsWindow.filteredPages.some(p => p.id === ShellState.settingsPage)
+        ? ShellState.settingsPage
         : (settingsWindow.filteredPages.length > 0 ? settingsWindow.filteredPages[0].id : "")
 
-    function selectPage(id) { Bridge.settingsPage = id }
+    function selectPage(id) { ShellState.settingsPage = id }
 
     onVisibleChanged: if (visible) { searchField.text = ""; searchText = ""; searchField.focusInput(); }
 
@@ -110,7 +110,7 @@ PanelWindow {
         id: settingsFocusGrab
         windows: [settingsWindow]
         active: settingsWindow.visible
-        onCleared: Bridge.closeSettings()
+        onCleared: ShellState.closeSettings()
     }
 
     Shortcut {
@@ -125,7 +125,7 @@ PanelWindow {
     Item {
         anchors.fill: parent
         focus: settingsWindow.visible
-        Keys.onEscapePressed: Bridge.closeSettings()
+        Keys.onEscapePressed: ShellState.closeSettings()
     }
 
     SurfaceShadow {
@@ -138,8 +138,8 @@ PanelWindow {
         anchors.centerIn: parent
         // Content is a fixed 560px, positioned 21px right of the sidebar —
         // the remainder past that (past sidebar 220 + 1px divider) is the
-        // page's own right-side breathing room. Reused tabs (BluetoothIsland,
-        // WifiIsland, etc.) size their Column to fill exactly the width the
+        // page's own right-side breathing room. Reused tabs (BluetoothDestination,
+        // WifiDestination, etc.) size their Column to fill exactly the width the
         // Loader gives them and anchor controls to its right edge — in the
         // island that edge IS the panel's edge (the panel always shrinks to
         // the tab's own implicitWidth), but here the card is wider than the
@@ -158,7 +158,7 @@ PanelWindow {
 
         LiquidGlassSurface {
             anchors.fill: parent
-            active: Bridge.liquidGlassEnabled
+            active: ShellState.liquidGlassEnabled
             cornerRadius: card.radius
             fallbackColor: Colors.surface
         }
@@ -180,14 +180,14 @@ PanelWindow {
                 height: 40
                 placeholder: "Search settings"
                 onTextChanged: settingsWindow.searchText = text
-                onEscapePressed: Bridge.closeSettings()
+                onEscapePressed: ShellState.closeSettings()
             }
 
             IconButton {
                 anchors.right: parent.right
                 anchors.verticalCenter: parent.verticalCenter
                 icon: "close"
-                onClicked: Bridge.closeSettings()
+                onClicked: ShellState.closeSettings()
             }
         }
 
@@ -371,14 +371,14 @@ PanelWindow {
                 width: parent.width
                 spacing: 24
 
-                ThemeSettings { width: parent.width }
+                ThemeDestination { width: parent.width }
                 FontSettings { width: parent.width }
             }
         }
     }
-    Component { id: wallpaperPage; WallpaperSettings {} }
+    Component { id: wallpaperPage; WallpaperDestination {} }
     // Night Light stacked below the monitor list — same physical-hardware
-    // grouping as Sound (VolumeIsland + AudioMixerIsland) below.
+    // grouping as Sound (VolumeDestination + AudioMixerDestination) below.
     Component {
         id: displaysPage
         Item {
@@ -390,12 +390,12 @@ PanelWindow {
                 width: parent.width
                 spacing: 24
 
-                DisplayIsland { width: parent.width }
-                NightLightIsland { width: parent.width }
+                DisplayDestination { width: parent.width }
+                NightLightDestination { width: parent.width }
             }
         }
     }
-    // Volume/device controls (VolumeIsland, otherwise only reachable from the
+    // Volume/device controls (VolumeDestination, otherwise only reachable from the
     // island) stacked above the per-app mixer, so Sound covers both without
     // a separate page.
     Component {
@@ -409,22 +409,22 @@ PanelWindow {
                 width: parent.width
                 spacing: 24
 
-                VolumeIsland { width: parent.width }
-                AudioMixerIsland { width: parent.width }
+                VolumeDestination { width: parent.width }
+                AudioMixerDestination { width: parent.width }
             }
         }
     }
-    Component { id: bluetoothPage; BluetoothIsland {} }
-    Component { id: wifiPage; WifiIsland {} }
-    Component { id: notificationsPage; NotificationHistoryIsland {} }
-    Component { id: focusPage; FocusIsland {} }
-    Component { id: privacyPage; PrivacyIsland {} }
-    Component { id: lockscreenPage; IdleIsland {} }
-    Component { id: powerPage; PowerIsland {} }
-    Component { id: keyboardPage; KeybindsIsland {} }
-    Component { id: systemMonitorPage; SystemMonitorIsland {} }
-    Component { id: automationPage; AutomationIsland {} }
-    Component { id: defaultAppsPage; DefaultAppsIsland {} }
+    Component { id: bluetoothPage; BluetoothDestination {} }
+    Component { id: wifiPage; WifiDestination {} }
+    Component { id: notificationsPage; NotificationHistoryDestination {} }
+    Component { id: focusPage; FocusDestination {} }
+    Component { id: privacyPage; PrivacyDestination {} }
+    Component { id: lockscreenPage; IdleDestination {} }
+    Component { id: powerPage; PowerDestination {} }
+    Component { id: keyboardPage; KeybindsDestination {} }
+    Component { id: systemMonitorPage; SystemMonitorDestination {} }
+    Component { id: automationPage; AutomationDestination {} }
+    Component { id: defaultAppsPage; DefaultAppsSettings {} }
     Component { id: islandPage; IslandSettings {} }
     Component { id: workspacesPage; WorkspaceSettings {} }
     Component { id: dateTimePage; DateTimeSettings {} }

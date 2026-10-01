@@ -96,7 +96,7 @@ QtObject {
     property int recentCount: root.options.recentCount.value
     property bool scrollCycle: root.options.scrollCycle.value
     property string glass: root.options.glass.value
-    readonly property bool glassActive: root.glass === "follow" ? Bridge.liquidGlassEnabled : root.glass === "on"
+    readonly property bool glassActive: root.glass === "follow" ? ShellState.liquidGlassEnabled : root.glass === "on"
     property bool showIndicators: root.options.showIndicators.value
     property string indicatorStyle: root.options.indicatorStyle.value
     property bool showBadges: root.options.showBadges.value

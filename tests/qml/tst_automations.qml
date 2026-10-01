@@ -47,20 +47,20 @@ ShellRoot {
             root.verify(routes.length === 0, "non-audio device: " + routes);
 
             // Fullscreen → DND clears only the DND it set itself.
-            Bridge.dndEnabled = false;
+            ShellState.dndEnabled = false;
             Automations.fullscreenRule = true;
             Automations._setFullscreen(true);
-            root.verify(Bridge.dndEnabled, "fullscreen turns on DND");
+            root.verify(ShellState.dndEnabled, "fullscreen turns on DND");
             Automations._setFullscreen(false);
-            root.verify(!Bridge.dndEnabled, "leaving fullscreen clears its DND");
-            Bridge.dndEnabled = true;
+            root.verify(!ShellState.dndEnabled, "leaving fullscreen clears its DND");
+            ShellState.dndEnabled = true;
             Automations._setFullscreen(true);
             Automations._setFullscreen(false);
-            root.verify(Bridge.dndEnabled, "manual DND survives fullscreen");
-            Bridge.dndEnabled = false;
+            root.verify(ShellState.dndEnabled, "manual DND survives fullscreen");
+            ShellState.dndEnabled = false;
             Automations.fullscreenRule = false;
             Automations._setFullscreen(true);
-            root.verify(!Bridge.dndEnabled, "rule off does nothing");
+            root.verify(!ShellState.dndEnabled, "rule off does nothing");
 
             console.warn("AUTOMATIONS_TEST_PASS");
         } catch (error) {

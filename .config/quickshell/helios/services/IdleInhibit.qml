@@ -10,7 +10,7 @@ QtObject {
     id: root
 
     // Aliased straight to the JsonAdapter's own properties (see
-    // services/Bridge.qml's liquidGlassEnabled fix for the full story)
+    // services/ShellState.qml's liquidGlassEnabled fix for the full story)
     // rather than mirrored into plain properties restored in
     // Component.onCompleted — FileView loads asynchronously, so a
     // Component.onCompleted snapshot read the adapter's compiled-in

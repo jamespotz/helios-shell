@@ -21,10 +21,10 @@ QtObject {
         || !Config.destinationHidden(action.id.slice("destination:".length)))
 
     readonly property var _allActions: [
-        root._action("dnd", "Toggle Do Not Disturb", "notifications", "dnd silence", () => { Bridge.toggleDnd(); return true; }),
+        root._action("dnd", "Toggle Do Not Disturb", "notifications", "dnd silence", () => { ShellState.toggleDnd(); return true; }),
         root._action("nightlight", "Toggle Night Light", "eco", "color temperature blue light", () => { NightLight.toggle(); return true; }),
         root._action("idle", "Toggle Caffeine (keep awake)", "bolt", "idle inhibit sleep", () => { IdleInhibit.toggleInhibit(); return true; }),
-        root._action("lock", "Lock Screen", "lock", "session", () => { Bridge.lock(); return true; }),
+        root._action("lock", "Lock Screen", "lock", "session", () => { ShellState.lock(); return true; }),
         root._destinationAction("powermenu", "Power Menu", "power_settings_new", "shutdown restart logout suspend"),
         root._destinationAction("keybinds", "Keybind Cheatsheet", "keyboard", "shortcuts binds"),
         root._action("screenshot-full", "Screenshot — Fullscreen", "crop", "capture screen", () => Screenshot.captureFullscreen()),

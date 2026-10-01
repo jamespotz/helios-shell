@@ -138,7 +138,7 @@ PanelWindow {
         }
     }
 
-    // PanelBackground's look (shadow, translucent surface, hairline border),
+    // SurfaceBackground's look (shadow, translucent surface, hairline border),
     // with the fill swapped for LiquidGlassSurface so the OSD follows the
     // same Liquid Glass toggle as the island.
     Rectangle {
@@ -157,13 +157,13 @@ PanelWindow {
             anchors.fill: parent
             z: -1
             cornerRadius: panel.radius
-            visible: !Bridge.liquidGlassEnabled
+            visible: !ShellState.liquidGlassEnabled
         }
 
         LiquidGlassSurface {
             anchors.fill: parent
             z: -1
-            active: Bridge.liquidGlassEnabled
+            active: ShellState.liquidGlassEnabled
             cornerRadius: panel.radius
             fallbackColor: Qt.alpha(Colors.surface, Colors.panelOpacity)
         }

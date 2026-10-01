@@ -7,7 +7,7 @@ import Quickshell.Services.Pipewire
 QtObject {
     id: root
 
-    // Same sink/source filtering VolumeIsland.qml uses (excludes clock-driver/
+    // Same sink/source filtering VolumeDestination.qml uses (excludes clock-driver/
     // MIDI-bridge nodes PipeWire also reports as neither sink nor stream).
     readonly property var sinks: Pipewire.nodes ? Pipewire.nodes.values.filter(n => n.isSink && !n.isStream && (n.type & PwNodeType.AudioSink) === PwNodeType.AudioSink) : []
     readonly property var sources: Pipewire.nodes ? Pipewire.nodes.values.filter(n => !n.isSink && !n.isStream && (n.type & PwNodeType.AudioSource) === PwNodeType.AudioSource) : []

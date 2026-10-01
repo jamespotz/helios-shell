@@ -463,24 +463,24 @@ QtObject {
         // app's config quirks (missing file, unexpected format) can't stop
         // the others from getting themed.
         const appAdapters = [
-            ["ghostty", () => ThemeGhostty.writeGhosttyTheme(p)],
-            ["kitty", () => ThemeKitty.writeKittyTheme(p)],
-            ["btop", () => ThemeBtop.writeBtopTheme(p)],
-            ["nvim", () => ThemeNvim.writeNvimTheme(p)],
-            ["zed", () => ThemeZed.writeZedTheme(p)],
-            ["bat", () => ThemeBat.writeBatTheme(p)],
-            ["firefox", () => ThemeFirefox.writeFirefoxTheme(p)],
-            ["hyprland", () => ThemeHyprland.writeHyprlandTheme(p)],
-            ["yazi", () => ThemeYazi.writeYaziTheme(p)],
-            ["alacritty", () => ThemeAlacritty.writeAlacrittyTheme(p)],
-            ["wezterm", () => ThemeWezterm.writeWeztermTheme(p)],
-            ["tmux", () => ThemeTmux.writeTmuxTheme(p)],
-            ["vscode", () => ThemeVscode.writeVscodeTheme(p)],
-            ["kiro", () => ThemeKiro.writeKiroTheme(p)],
-            ["rofi", () => ThemeRofi.writeRofiTheme(p)],
-            ["wofi", () => ThemeWofi.writeWofiTheme(p)],
-            ["fuzzel", () => ThemeFuzzel.writeFuzzelTheme(p)],
-            ["fish", () => ThemeFish.writeFishTheme(p)]
+            ["ghostty", () => ThemeExportGhostty.writeGhosttyTheme(p)],
+            ["kitty", () => ThemeExportKitty.writeKittyTheme(p)],
+            ["btop", () => ThemeExportBtop.writeBtopTheme(p)],
+            ["nvim", () => ThemeExportNvim.writeNvimTheme(p)],
+            ["zed", () => ThemeExportZed.writeZedTheme(p)],
+            ["bat", () => ThemeExportBat.writeBatTheme(p)],
+            ["firefox", () => ThemeExportFirefox.writeFirefoxTheme(p)],
+            ["hyprland", () => ThemeExportHyprland.writeHyprlandTheme(p)],
+            ["yazi", () => ThemeExportYazi.writeYaziTheme(p)],
+            ["alacritty", () => ThemeExportAlacritty.writeAlacrittyTheme(p)],
+            ["wezterm", () => ThemeExportWezterm.writeWeztermTheme(p)],
+            ["tmux", () => ThemeExportTmux.writeTmuxTheme(p)],
+            ["vscode", () => ThemeExportVscode.writeVscodeTheme(p)],
+            ["kiro", () => ThemeExportKiro.writeKiroTheme(p)],
+            ["rofi", () => ThemeExportRofi.writeRofiTheme(p)],
+            ["wofi", () => ThemeExportWofi.writeWofiTheme(p)],
+            ["fuzzel", () => ThemeExportFuzzel.writeFuzzelTheme(p)],
+            ["fish", () => ThemeExportFish.writeFishTheme(p)]
         ];
         for (const [name, write] of appAdapters) {
             try { write(); } catch (e) { console.warn("Helios theme: " + name + " failed", e); }

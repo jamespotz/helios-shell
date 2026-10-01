@@ -3,7 +3,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 
-// Recent-color list for the standalone color picker (ColorPickerIsland).
+// Recent-color list for the standalone color picker (ColorPickerDestination).
 // The annotation toolbar went back to fixed swatches, so this no longer
 // needs to track a second, independent list.
 QtObject {

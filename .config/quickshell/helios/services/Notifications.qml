@@ -7,7 +7,7 @@ QtObject {
 
     readonly property NotificationCore _core: NotificationCore {
         applicationAdapter: AppLaunch
-        dndActive: Bridge.dndEnabled
+        dndActive: ShellState.dndEnabled
         onPopupAdded: record => root.popupAdded(record)
     }
     signal popupAdded(var record)

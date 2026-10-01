@@ -5,7 +5,7 @@ import Quickshell.Io
 import Quickshell.Services.UPower
 
 // Rolling battery-percentage history. UPower already tracks battery state
-// live (same UPower.displayDevice API modules/bar/StatusIndicators.qml
+// live (same UPower.displayDevice API modules/island/StatusWidget.qml
 // uses for the status-bar icon) — no need to shell out to psutil for it.
 // Persisted with FileView so history survives a shell restart. On hardware with no
 // battery (a desktop: UPower.displayDevice.isPresent is false), `available`

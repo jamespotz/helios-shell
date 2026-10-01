@@ -34,7 +34,7 @@ Item {
     Keys.onReturnPressed: root._run(root.currentIndex)
     Keys.onEnterPressed: root._run(root.currentIndex)
 
-    PanelBackground {
+    SurfaceBackground {
         anchors.fill: parent
     }
 

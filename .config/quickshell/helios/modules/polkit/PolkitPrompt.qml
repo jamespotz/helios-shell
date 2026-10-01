@@ -51,7 +51,7 @@ PanelWindow {
                 NumberAnimation { target: shake; property: "x"; from: -8; to: 0; duration: 45 }
             }
 
-            PanelBackground {
+            SurfaceBackground {
                 anchors.fill: parent
                 border.color: root.flow.failed || root.flow.supplementaryIsError
                     ? Colors.danger : Qt.rgba(Colors.outline.r, Colors.outline.g, Colors.outline.b, 0.5)

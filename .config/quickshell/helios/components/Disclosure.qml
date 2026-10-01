@@ -3,7 +3,7 @@ import "../services"
 
 // Collapsible "Options" section — chevron + title, collapsed-state summary
 // on the right, expands to reveal `contentChildren`. Same disclosure
-// interaction as ThemeSettings' theme grid, generalized for reuse across
+// interaction as ThemeDestination's theme grid, generalized for reuse across
 // island panels.
 Column {
     id: root

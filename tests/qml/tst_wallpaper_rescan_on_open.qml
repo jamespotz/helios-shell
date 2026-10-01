@@ -3,7 +3,7 @@ import QtQuick.Window
 import Quickshell
 import Quickshell.Io
 import "services" as Services
-import "modules/bar" as BarModules
+import "modules/island" as IslandModules
 
 ShellRoot {
     id: root
@@ -17,7 +17,7 @@ ShellRoot {
         width: 600
         height: 500
 
-        BarModules.WallpaperSettings {
+        IslandModules.WallpaperDestination {
             anchors.centerIn: parent
         }
     }

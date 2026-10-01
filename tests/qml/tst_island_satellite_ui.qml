@@ -3,7 +3,7 @@ import QtTest
 import Quickshell
 import Quickshell.Io
 import "services"
-import "modules/bar" as BarUI
+import "modules/island" as IslandUI
 import "modules/settings" as SettingsUI
 
 ShellRoot {
@@ -60,15 +60,15 @@ ShellRoot {
             width: 1000
             height: 800
             FocusScope { id: anchor; x: 400; width: 200; height: 32 }
-            BarUI.IslandShape { id: mainShape; width: 200; height: 100; visible: false }
+            IslandUI.IslandShape { id: mainShape; width: 200; height: 100; visible: false }
             SettingsUI.IslandSettings { id: settings; width: 700; visible: false }
-            BarUI.SatelliteHost {
+            IslandUI.IslandSatelliteHost {
                 id: recordingHost
                 anchorItem: anchor
                 definition: IslandNavigation.satellites[0]
                 targetScreen: "test-screen"
             }
-            BarUI.IslandSatellite {
+            IslandUI.IslandSatellite {
                 id: satellite
                 anchorItem: anchor
                 expandedContent: Component {

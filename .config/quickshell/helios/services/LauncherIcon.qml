@@ -18,7 +18,7 @@ QtObject {
         stdout: StdioCollector {
             onStreamFinished: { const picked = text.trim(); if (picked) Config.setOption("launcherIconPath", picked); }
         }
-        onRunningChanged: Bridge.launcherIconPickerOpen = running
+        onRunningChanged: ShellState.launcherIconPickerOpen = running
     }
 
     function parse(text) {

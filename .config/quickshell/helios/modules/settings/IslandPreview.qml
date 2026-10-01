@@ -4,10 +4,10 @@ import Quickshell.Hyprland
 import Quickshell.Services.Mpris
 import "../../services"
 import "../../components"
-import "../bar"
+import "../island"
 
 // Settings > Island — static preview of the idle pill and the hover row,
-// built from the real IdleBump/PeekContent so every setting shows as it
+// built from the real IslandIdle/IslandPeek so every setting shows as it
 // changes. Input is off; the hover row shrinks to fit the card. Sits on
 // a card so the dark idle pill reads against the page.
 Rectangle {
@@ -38,7 +38,7 @@ Rectangle {
             height: idle.implicitHeight
             fillColor: Colors.background
 
-            IdleBump {
+            IslandIdle {
                 id: idle
                 anchors.fill: parent
                 targetScreen: root.targetScreen
@@ -77,7 +77,7 @@ Rectangle {
                     width: peekFrame.naturalWidth
                     height: peekFrame.naturalHeight
 
-                    PeekContent {
+                    IslandPeek {
                         id: peek
                         x: Config.islandContentPadH
                         y: Config.islandContentPadV

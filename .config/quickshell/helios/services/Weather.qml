@@ -38,7 +38,7 @@ QtObject {
 
     readonly property string locationOverride: settingsAdapter.locationOverride
 
-    // Shared by WeatherWidget (peek), IdleBump (idle) and WeatherPanel's
+    // Shared by WeatherWidget (peek), IslandIdle (idle) and WeatherPanel's
     // hourly strip so they all agree on which glyph a condition maps to.
     function iconFor(conditionText) {
         const c = (conditionText || "").toLowerCase();

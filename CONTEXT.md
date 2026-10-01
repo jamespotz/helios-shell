@@ -12,6 +12,26 @@ _Avoid_: Panel, popup
 A named place the Island can display, such as volume, calendar, or wallpaper.
 _Avoid_: Tab, page
 
+**Idle**:
+The Island's collapsed state, showing a few widgets.
+_Avoid_: Bump, pill
+
+**Peek**:
+The Island's expanded state on hover, showing more widgets.
+_Avoid_: Hover panel
+
+**Widget**:
+A small piece of live information shown in the Island's idle or peek state, such as the clock, workspaces, or tray.
+_Avoid_: Indicator, item
+
+**Satellite**:
+A small surface beside the Island that shows an Island destination of its own, such as recording or maintenance, while the Island stays free.
+_Avoid_: Bubble, mini island
+
+**Alert card**:
+The Island expanded to show one event that needs attention: a notification, meeting, task, or low battery.
+_Avoid_: Toast, popup
+
 **Launcher**:
 The searchable collection of applications, open windows, shell actions, and emoji results.
 _Avoid_: Command palette, app search

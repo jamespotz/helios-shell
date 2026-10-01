@@ -7,12 +7,12 @@ import Quickshell.Services.UPower
 
 // Simple trigger/action rules — each one watches a state this shell
 // already tracks and calls straight into the service that owns the
-// resulting action (Bridge, DisplaySettings, Audio, PowerProfiles). Not a
+// resulting action (ShellState, DisplaySettings, Audio, PowerProfiles). Not a
 // generic automation DSL: a handful of concrete rules, each off by default since
 // auto-acting on a device/battery event is the kind of thing that should
 // be opt-in. Meeting rule ("meeting starts → DND") is already covered by
 // Calendar.qml's meetingFocusId — that's a Focus Modes concern with its
-// own picker in CalendarIsland.qml, not duplicated here.
+// own picker in CalendarDestination.qml, not duplicated here.
 QtObject {
     id: root
 
@@ -122,7 +122,7 @@ QtObject {
     // Snapshots resolution/scale/transform/VRR per monitor name on every
     // poll; when a name that had disappeared comes back, replays its last
     // snapshot through DisplaySettings' own functions (same ones
-    // DisplayIsland's UI calls) rather than a second implementation.
+    // DisplayDestination's UI calls) rather than a second implementation.
     property var monitorConfigs: ({})
     property var knownScreenNames: []
 
@@ -223,12 +223,12 @@ QtObject {
     property bool _fullscreenDnd: false
 
     function _setFullscreen(fullscreen) {
-        if (fullscreen && root.fullscreenRule && !Bridge.dndEnabled) {
-            Bridge.dndEnabled = true;
+        if (fullscreen && root.fullscreenRule && !ShellState.dndEnabled) {
+            ShellState.dndEnabled = true;
             root._fullscreenDnd = true;
         } else if (!fullscreen && root._fullscreenDnd) {
             root._fullscreenDnd = false;
-            Bridge.dndEnabled = false;
+            ShellState.dndEnabled = false;
         }
     }
 

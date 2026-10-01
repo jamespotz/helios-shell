@@ -24,7 +24,7 @@ QtObject {
     property string extractedText: ""
 
     // ponytail: session-only, resets on shell restart. Persist via
-    // Bridge-style JsonAdapter if that's ever needed.
+    // ShellState-style JsonAdapter if that's ever needed.
     property string outputDir: Quickshell.env("HOME") + "/Pictures/Screenshots"
 
     readonly property string _ocrTextPath: "/tmp/helios-screenshot-ocr.txt"

@@ -83,7 +83,7 @@ Item {
         anchors.rightMargin: -6
         enabled: root.enabled
         // The tab content sits in a vertically-scrolling Flickable
-        // (PanelWrapper.qml) — without this, a vertical drag here gets
+        // (IslandDestinationHost.qml) — without this, a vertical drag here gets
         // stolen by the Flickable's own scroll gesture instead of moving
         // the slider.
         preventStealing: true

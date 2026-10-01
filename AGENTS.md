@@ -8,7 +8,17 @@ Terminology such as **Island**, **Island destination**, and **Launcher** is defi
 
 - `components/` — reusable UI such as buttons, fields, and panels
 - `services/` — system/business logic and QML singletons such as Audio, Bluetooth, and Calendar
-- `modules/` — feature surfaces such as `bar/`, `lock/`, `osd/`, and `polkit/`
+- `modules/` — feature surfaces such as `island/`, `lock/`, `osd/`, and `polkit/`
+
+File names in `modules/island/` say their role, using the `CONTEXT.md` terms:
+
+- `*Destination` — an Island destination (`VolumeDestination.qml`); registered in `services/IslandNavigation.qml`
+- `Island*` — the Island's own structure (`IslandIdle`, `IslandPeek`, `IslandDestinationHost`)
+- `*Widget` — a widget in the idle or peek state
+- `*Card` — an alert card
+- no suffix — a part used inside one destination (`WallpaperCarousel`)
+
+The suffix also keeps type names clear of service singletons (`WeatherWidget` beside `Weather`). Theme exporters in `services/` are `ThemeExport<App>`; Settings window pages in `modules/settings/` are `*Settings`.
 - `data/` — static data such as emoji and themes
 
 ## Project Philosophy

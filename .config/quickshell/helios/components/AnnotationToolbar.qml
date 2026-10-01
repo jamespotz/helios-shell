@@ -4,7 +4,7 @@ import "../services"
 // Pen toolbar — fixed color swatches, undo, close. Reused by the
 // post-capture edit view and the live annotation overlay (the latter
 // hosts this in the main island rather than floating over the canvas —
-// see AnnotateToolbarIsland.qml).
+// see AnnotateDestination.qml).
 Row {
     id: root
 

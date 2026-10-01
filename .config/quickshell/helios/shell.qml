@@ -13,7 +13,7 @@ import Quickshell.Hyprland
 import Quickshell.Services.UPower
 import "./services"
 import "./services/Utils.js" as Utils
-import "./modules/bar"
+import "./modules/island"
 import "./modules/osd"
 import "./modules/lock"
 import "./modules/polkit"
@@ -62,7 +62,7 @@ ShellRoot {
 
     Variants {
         model: Quickshell.screens
-        Bar {}
+        Island {}
     }
 
     Variants {
@@ -145,7 +145,7 @@ ShellRoot {
             IslandNavigation.toggleSatellite(screen.name, id);
         }
         function closeSatellite() { IslandNavigation.closeSatellite() }
-        function liquidGlass(enabled: bool) { Bridge.liquidGlassEnabled = enabled }
+        function liquidGlass(enabled: bool) { ShellState.liquidGlassEnabled = enabled }
         function appearance(width: int, height: int, gap: int, widgetSpacing: int) {
             Config.setOption("idleBumpWidth", width);
             Config.setOption("idleBumpHeight", height);
@@ -202,20 +202,20 @@ ShellRoot {
 
     IpcHandler {
         target: "lock"
-        function lock() { Bridge.lock() }
+        function lock() { ShellState.lock() }
     }
 
     IpcHandler {
         target: "settings"
         function toggle(page: string) {
             const screen = Utils.focusedScreen(Quickshell.screens, Hyprland.focusedMonitor);
-            Bridge.toggleSettings(screen.name, page && page.length > 0 ? page : undefined);
+            ShellState.toggleSettings(screen.name, page && page.length > 0 ? page : undefined);
         }
         function open(page: string) {
             const screen = Utils.focusedScreen(Quickshell.screens, Hyprland.focusedMonitor);
-            Bridge.openSettings(screen.name, page && page.length > 0 ? page : undefined);
+            ShellState.openSettings(screen.name, page && page.length > 0 ? page : undefined);
         }
-        function close() { Bridge.closeSettings() }
+        function close() { ShellState.closeSettings() }
     }
 
     IpcHandler {
@@ -272,9 +272,9 @@ ShellRoot {
 
     IpcHandler {
         target: "dnd"
-        function toggle() { Bridge.toggleDnd() }
-        function on() { Bridge.dndEnabled = true }
-        function off() { Bridge.dndEnabled = false }
+        function toggle() { ShellState.toggleDnd() }
+        function on() { ShellState.dndEnabled = true }
+        function off() { ShellState.dndEnabled = false }
     }
 
     IpcHandler {
@@ -291,8 +291,8 @@ ShellRoot {
         function balanced() { PowerProfiles.profile = PowerProfile.Balanced }
         function powersave() { PowerProfiles.profile = PowerProfile.PowerSaver }
         function performance() { if (PowerProfiles.hasPerformanceProfile) PowerProfiles.profile = PowerProfile.Performance }
-        // Same order PowerIsland.qml renders its segments in. Skips Performance
-        // when the system doesn't expose it (same guard PowerIsland uses).
+        // Same order PowerDestination.qml renders its segments in. Skips Performance
+        // when the system doesn't expose it (same guard PowerDestination uses).
         function cycle() {
             const order = PowerProfiles.hasPerformanceProfile
                 ? [PowerProfile.Balanced, PowerProfile.PowerSaver, PowerProfile.Performance]

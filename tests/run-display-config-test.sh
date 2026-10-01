@@ -31,7 +31,7 @@ EOF
 chmod +x "$test_root/bin/hyprctl"
 
 PATH="$test_root/bin:$PATH" python3 \
-    "$repo_root/.config/quickshell/helios/modules/bar/display-config.py" \
+    "$repo_root/.config/quickshell/helios/modules/island/display-config.py" \
     --config "$test_root/hyprland.lua" \
     --output DP-1 \
     --mode 2560x1440@144.00Hz \
@@ -47,13 +47,13 @@ grep -Fq 'cm = "hdr"' "$test_root/hyprland.lua"
 grep -Fq 'bitdepth = 10' "$test_root/hyprland.lua"
 
 query_output="$(PATH="$test_root/bin:$PATH" python3 \
-    "$repo_root/.config/quickshell/helios/modules/bar/display-config.py" \
+    "$repo_root/.config/quickshell/helios/modules/island/display-config.py" \
     --config "$test_root/hyprland.lua" \
     --query --json --all)"
 python3 -c 'import json, sys; monitor = json.load(sys.stdin)[0]; assert monitor["vrrMode"] == 3; assert monitor["colorManagementPreset"] == "hdr"; assert monitor["configuredBitdepth"] == 10' <<< "$query_output"
 
 if PATH="$test_root/bin:$PATH" python3 \
-    "$repo_root/.config/quickshell/helios/modules/bar/display-config.py" \
+    "$repo_root/.config/quickshell/helios/modules/island/display-config.py" \
     --config "$test_root/hyprland.lua" \
     --output DP-1 --scale 1.3 2>/dev/null; then
     printf 'Invalid scale was accepted\n' >&2

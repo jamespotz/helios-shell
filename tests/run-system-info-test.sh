@@ -6,7 +6,7 @@ set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
-timeout 10s python3 "$repo_root/.config/quickshell/helios/modules/bar/system-info.py" --once | python3 -c '
+timeout 10s python3 "$repo_root/.config/quickshell/helios/modules/island/system-info.py" --once | python3 -c '
 import json, sys
 snapshot = json.loads(sys.stdin.readline())
 number = (int, float)

@@ -109,7 +109,7 @@ exec-once = quickshell -c helios
 
 ## Display settings
 
-Display changes update the active monitor and persist in Hyprland's Lua configuration through `modules/bar/display-config.py`. The helper follows `require()` and `utils.safe_load()` imports, edits the matching `hl.monitor({...})` block, then reloads Hyprland.
+Display changes update the active monitor and persist in Hyprland's Lua configuration through `modules/island/display-config.py`. The helper follows `require()` and `utils.safe_load()` imports, edits the matching `hl.monitor({...})` block, then reloads Hyprland.
 
 - Resolution choices come from the monitor's reported modelines.
 - Scale ranges from `1.00` to `2.00` in `0.01` steps. Only values producing whole-number logical width and height appear.
@@ -172,17 +172,18 @@ Targets: `launcher`, `lock`, `island`, `osd`, `weather`, `wallpaper`, `theme`, `
 ```
 .config/quickshell/helios/
 ├── shell.qml              entry point
-├── services/              singletons (Colors, Config, Bridge, Notifications,
+├── services/              singletons (Colors, Config, ShellState, Notifications,
 │                          Weather, Themes, Wallpaper, WallpaperLibrary, Cava, Clipboard,
 │                          WifiNetworks, ScreenRecorder, MicActivity,
 │                          Screenshot, NightLight, DisplaySettings, IdleInhibit)
 ├── components/            shared UI (IconButton, Slider, Toggle, StyledText, etc.)
 └── modules/
-    ├── bar/               Dynamic Island (per-screen)
-    ├── launcher/          App search
-    ├── osd/               Volume + brightness
-    ├── powermenu/         Power actions
-    ├── keybinds/          Live cheatsheet
+    ├── island/            Island, its destinations, widgets, and alert cards (per-screen)
+    ├── dock/              Pinned and running apps
+    ├── settings/          Settings window
+    ├── osd/               Volume, brightness, and status toasts
+    ├── annotate/          Screen annotation overlay
+    ├── polkit/            Authentication prompts
     └── lock/              Session lock (PAM)
 ```
 

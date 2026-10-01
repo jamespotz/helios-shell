@@ -24,7 +24,7 @@ Item {
 
     HoverHandler { id: previewHover }
 
-    PanelBackground {
+    SurfaceBackground {
         anchors.fill: parent
     }
 
