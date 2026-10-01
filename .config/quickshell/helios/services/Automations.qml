@@ -8,9 +8,9 @@ import Quickshell.Services.UPower
 // Simple trigger/action rules — each one watches a state this shell
 // already tracks and calls straight into the service that owns the
 // resulting action (Bridge, DisplaySettings, Audio, PowerProfiles). Not a
-// generic automation DSL: five concrete rules, each off by default since
+// generic automation DSL: a handful of concrete rules, each off by default since
 // auto-acting on a device/battery event is the kind of thing that should
-// be opt-in. The fifth ("meeting starts → DND") is already covered by
+// be opt-in. Meeting rule ("meeting starts → DND") is already covered by
 // Calendar.qml's meetingFocusId — that's a Focus Modes concern with its
 // own picker in CalendarIsland.qml, not duplicated here.
 QtObject {
@@ -20,14 +20,18 @@ QtObject {
     property bool bluetoothAudioRule: false
     property bool monitorRule: false
     property bool batteryRule: false
+    property bool acRule: false
+    property bool fullscreenRule: false
 
     function setHeadphonesRule(v) { root.headphonesRule = v; root._save(); }
     function setBluetoothAudioRule(v) { root.bluetoothAudioRule = v; root._save(); }
     function setMonitorRule(v) { root.monitorRule = v; root._save(); }
     function setBatteryRule(v) { root.batteryRule = v; root._save(); if (v) root._checkBattery(); }
+    function setAcRule(v) { root.acRule = v; root._save(); }
+    function setFullscreenRule(v) { root.fullscreenRule = v; root._save(); root._setFullscreen(v && root.focusedFullscreen); }
 
     function _save() {
-        settingsFile.setText(JSON.stringify({ headphones: root.headphonesRule, bluetoothAudio: root.bluetoothAudioRule, monitor: root.monitorRule, battery: root.batteryRule }));
+        settingsFile.setText(JSON.stringify({ headphones: root.headphonesRule, bluetoothAudio: root.bluetoothAudioRule, monitor: root.monitorRule, battery: root.batteryRule, ac: root.acRule, fullscreen: root.fullscreenRule }));
     }
 
     property FileView settingsFile: FileView {
@@ -44,6 +48,8 @@ QtObject {
                     root.bluetoothAudioRule = !!parsed.bluetoothAudio;
                     root.monitorRule = !!parsed.monitor;
                     root.batteryRule = !!parsed.battery;
+                    root.acRule = !!parsed.ac;
+                    root.fullscreenRule = !!parsed.fullscreen;
                 }
             } catch (e) {
                 // First run — rules stay off until explicitly enabled.
@@ -200,6 +206,35 @@ QtObject {
     }
 
     onBatteryPercentChanged: root._checkBattery()
+
+    // ─── Rule: AC power → Performance, battery → Balanced ────────────────
+    // Acts on plug/unplug only, so a profile picked by hand sticks until the
+    // next change. Unplugging below 20% is left to the battery rule.
+    readonly property bool onBattery: UPower.onBattery
+    onOnBatteryChanged: {
+        if (!root.acRule || !root._hasBattery) return;
+        if (!root.onBattery) PowerProfiles.profile = PowerProfile.Performance;
+        else if (!root._batteryLow) PowerProfiles.profile = PowerProfile.Balanced;
+    }
+
+    // ─── Rule: fullscreen window → Do Not Disturb ────────────────────────
+    // Only clears DND it set itself, so DND turned on by hand or a Focus
+    // Mode survives leaving fullscreen.
+    property bool _fullscreenDnd: false
+
+    function _setFullscreen(fullscreen) {
+        if (fullscreen && root.fullscreenRule && !Bridge.dndEnabled) {
+            Bridge.dndEnabled = true;
+            root._fullscreenDnd = true;
+        } else if (!fullscreen && root._fullscreenDnd) {
+            root._fullscreenDnd = false;
+            Bridge.dndEnabled = false;
+        }
+    }
+
+    readonly property bool focusedFullscreen: !!Hyprland.focusedMonitor && !!Hyprland.focusedMonitor.activeWorkspace
+        && Hyprland.focusedMonitor.activeWorkspace.hasFullscreen
+    onFocusedFullscreenChanged: root._setFullscreen(root.focusedFullscreen)
 
     Component.onCompleted: {
         root._headphonesReady = true;

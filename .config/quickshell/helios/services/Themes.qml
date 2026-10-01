@@ -478,7 +478,9 @@ QtObject {
             ["vscode", () => ThemeVscode.writeVscodeTheme(p)],
             ["kiro", () => ThemeKiro.writeKiroTheme(p)],
             ["rofi", () => ThemeRofi.writeRofiTheme(p)],
-            ["wofi", () => ThemeWofi.writeWofiTheme(p)]
+            ["wofi", () => ThemeWofi.writeWofiTheme(p)],
+            ["fuzzel", () => ThemeFuzzel.writeFuzzelTheme(p)],
+            ["fish", () => ThemeFish.writeFishTheme(p)]
         ];
         for (const [name, write] of appAdapters) {
             try { write(); } catch (e) { console.warn("Helios theme: " + name + " failed", e); }

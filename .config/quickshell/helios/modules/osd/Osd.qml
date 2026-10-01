@@ -4,6 +4,7 @@ import Quickshell.Io
 import Quickshell.Hyprland
 import Quickshell.Wayland
 import Quickshell.Services.Pipewire
+import Quickshell.Services.UPower
 import "../../services"
 import "../../services/Utils.js" as Utils
 import "../../components"
@@ -32,10 +33,14 @@ PanelWindow {
     property real level: 0
     property bool muted: false
     property string message: ""
+    property string messageIcon: ""
+    // Level kinds draw a bar; every other kind is a text toast.
+    readonly property bool isMessage: kind !== "volume" && kind !== "brightness"
 
-    PwObjectTracker { objects: [Pipewire.defaultAudioSink] }
+    PwObjectTracker { objects: [Pipewire.defaultAudioSink, Pipewire.defaultAudioSource] }
 
     readonly property var sink: Pipewire.defaultAudioSink
+    readonly property var source: Pipewire.defaultAudioSource
 
     function show(newKind, newLevel, isMuted) {
         kind = newKind;
@@ -47,9 +52,10 @@ PanelWindow {
 
     // Text toast — no level bar — used by kinds like "bluetooth" that report
     // a one-off event instead of an adjustable value.
-    function showMessage(newKind, text) {
+    function showMessage(newKind, text, icon) {
         kind = newKind;
         message = text;
+        messageIcon = icon || "";
         shown = true;
         hideTimer.restart();
     }
@@ -62,14 +68,35 @@ PanelWindow {
 
     Connections {
         target: Bluetooth
-        function onDeviceAutoConnected(name) { osd.showMessage("bluetooth", name + " connected") }
+        function onDeviceAutoConnected(name) { osd.showMessage("bluetooth", name + " connected", "bluetooth_connected") }
     }
 
-    // Bluetooth toasts carry a device name to read, so give them a bit
-    // longer on screen than the volume/brightness level bars.
+    Connections {
+        target: osd.source ? osd.source.audio : null
+        function onMutedChanged() {
+            osd.showMessage("mic", osd.source.audio.muted ? "Microphone muted" : "Microphone on", osd.source.audio.muted ? "mic_off" : "mic")
+        }
+    }
+
+    // UPower reports the current profile shortly after startup; that first
+    // report isn't a change the user made, so skip it.
+    Timer { id: profileSettle; interval: 3000; running: true }
+    Connections {
+        target: PowerProfiles
+        function onProfileChanged() {
+            if (profileSettle.running) return;
+            const profile = PowerProfiles.profile;
+            osd.showMessage("power", profile === PowerProfile.PowerSaver ? "Power Saver"
+                : profile === PowerProfile.Performance ? "Performance" : "Balanced",
+                profile === PowerProfile.PowerSaver ? "eco" : profile === PowerProfile.Performance ? "bolt" : "balance")
+        }
+    }
+
+    // Text toasts carry words to read, so give them a bit longer on screen
+    // than the volume/brightness level bars.
     Timer {
         id: hideTimer
-        interval: osd.kind === "bluetooth" ? 2500 : 1500
+        interval: osd.isMessage ? 2500 : 1500
         onTriggered: osd.shown = false
     }
 
@@ -106,6 +133,9 @@ PanelWindow {
         }
         function brightnessUp() { osd.adjustBrightness(5) }
         function brightnessDown() { osd.adjustBrightness(-5) }
+        function toggleMicMute() {
+            if (osd.source && osd.source.audio) osd.source.audio.muted = !osd.source.audio.muted;
+        }
     }
 
     // PanelBackground's look (shadow, translucent surface, hairline border),
@@ -145,14 +175,14 @@ PanelWindow {
 
             MaterialIcon {
                 anchors.verticalCenter: parent.verticalCenter
-                icon: osd.kind === "bluetooth" ? "bluetooth_connected"
+                icon: osd.isMessage ? osd.messageIcon
                     : osd.kind === "brightness" ? "brightness_6"
                     : osd.muted ? "volume_off"
                     : osd.level > 0.5 ? "volume_up" : "volume_down"
             }
 
             StyledText {
-                visible: osd.kind === "bluetooth"
+                visible: osd.isMessage
                 width: parent.width - 30 - 12
                 anchors.verticalCenter: parent.verticalCenter
                 text: osd.message
@@ -160,7 +190,7 @@ PanelWindow {
             }
 
             Rectangle {
-                visible: osd.kind !== "bluetooth"
+                visible: !osd.isMessage
                 width: parent.width - 30 - 12
                 height: 6
                 radius: 3

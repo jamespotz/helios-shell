@@ -21,7 +21,7 @@ Item {
     readonly property var results: Launcher.results
     readonly property bool emojiMode: Launcher.emojiMode
     readonly property bool searchFocused: searchField.inputActiveFocus
-    readonly property bool gridMode: Launcher.view === "grid" && !root.emojiMode
+    readonly property bool gridMode: Launcher.view === "grid" && !root.emojiMode && !Launcher.clipboardMode
     readonly property int gridColumns: 5
     readonly property Item resultView: root.gridMode ? appGrid : resultList
     readonly property var contextMenuEntries: {
@@ -217,7 +217,7 @@ Item {
 
                             MaterialIcon {
                                 anchors.centerIn: parent
-                                visible: resultRow.kind === "window" || resultRow.kind === "action"
+                                visible: resultRow.kind !== "app" && resultRow.kind !== "emoji"
                                 icon: resultRow.kind === "window" ? "desktop_windows" : resultRow.entry.icon
                                 font.pixelSize: 18
                                 color: index === resultList.currentIndex ? Colors.accentText : Colors.subtext
@@ -387,7 +387,7 @@ Item {
                     anchors.centerIn: parent
                     spacing: 4
                     MaterialIcon { icon: "search_off"; font.pixelSize: 24; color: Colors.overlay; anchors.horizontalCenter: parent.horizontalCenter }
-                    StyledText { text: root.emojiMode ? "No matching emoji" : "No results"; color: Colors.subtext; anchors.horizontalCenter: parent.horizontalCenter }
+                    StyledText { text: root.emojiMode ? "No matching emoji" : Launcher.clipboardMode ? "No matching clipboard entries" : "No results"; color: Colors.subtext; anchors.horizontalCenter: parent.horizontalCenter }
                 }
             }
         }

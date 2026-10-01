@@ -34,6 +34,10 @@ ShellRoot {
         console.assert(typeof ThemeKiro.writeKiroTheme === "function", "kiro adapter exists and reuses ThemeVscode");
         console.assert(ThemeRofi.buildRofiTheme(p).includes("background:"), "rofi builds");
         console.assert(ThemeWofi.buildWofiCss(p).includes("#input"), "wofi builds");
+        console.assert(ThemeFuzzel.buildFuzzelTheme(p).includes("selection=" + p.accent.replace("#", "").slice(0, 6) + "ff"), "fuzzel builds");
+        console.assert(ThemeFuzzel.withInclude("include=/a\n[colors]\nx=1", "include=/h") === "include=/a\ninclude=/h\n[colors]\nx=1", "fuzzel include goes after existing includes");
+        console.assert(ThemeFuzzel.withInclude("include=/h\n", "include=/h") === "include=/h\n", "fuzzel include not duplicated");
+        console.assert(ThemeFish.buildFishTheme(p).includes("set -g fish_color_command " + p.accent.replace("#", "").slice(0, 6)), "fish builds");
 
         console.warn("THEME_SPLIT_TEST_PASS");
         root._terminateDelay.start();

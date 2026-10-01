@@ -38,6 +38,8 @@ singleton ThemeVscode 1.0 ThemeVscode.qml
 singleton ThemeKiro 1.0 ThemeKiro.qml
 singleton ThemeRofi 1.0 ThemeRofi.qml
 singleton ThemeWofi 1.0 ThemeWofi.qml
+singleton ThemeFuzzel 1.0 ThemeFuzzel.qml
+singleton ThemeFish 1.0 ThemeFish.qml
 singleton Cava 1.0 Cava.qml
 singleton Clipboard 1.0 Clipboard.qml
 singleton WifiNetworks 1.0 WifiNetworks.qml

@@ -1,5 +1,4 @@
 import QtQuick
-import Quickshell.Widgets
 import "../../services"
 import "../../components"
 
@@ -42,118 +41,18 @@ Item {
         // --- Now playing ---------------------------------------------------
         Item {
             width: parent.width
-            height: Math.max(discHolder.height, infoColumn.implicitHeight)
+            height: Math.max(discHolder.implicitHeight, infoColumn.implicitHeight)
 
-            // Disc holder — album art sized like a CD, ringed by the cava
-            // visualizer instead of the old corner bar row. The ring radius
-            // is the disc radius plus a gap, so bars never overlap the art.
-            Item {
+            // Same record player as the lock screen: cover art on a
+            // spinning record, tonearm tracking playback progress.
+            Turntable {
                 id: discHolder
-                readonly property int discSize: 132
-                readonly property int ringGap: 4
-                readonly property int maxBarLen: 14
-                readonly property int toothCount: 48
-                width: discSize + 2 * (ringGap + maxBarLen)
-                height: width
+                size: 124
                 anchors.left: parent.left
                 anchors.verticalCenter: parent.verticalCenter
-
-                Repeater {
-                    id: ring
-                    model: discHolder.toothCount
-                    visible: root.media.playback.playing
-
-                    Item {
-                        id: spoke
-                        required property int index
-                        readonly property int cavaIndex: Math.floor(index / ring.count * Cava.bars.length)
-                        readonly property real level: Cava.anyPlaying ? Cava.bars[cavaIndex] / Cava.maxRange : 0
-                        readonly property real barLen: 2 + discHolder.maxBarLen * level
-
-                        anchors.horizontalCenter: discHolder.horizontalCenter
-                        anchors.bottom: discHolder.verticalCenter
-                        width: 6
-                        height: discHolder.discSize / 2 + discHolder.ringGap + barLen
-                        transformOrigin: Item.Bottom
-                        rotation: index * (360 / ring.count)
-
-                        Behavior on height {
-                            NumberAnimation { duration: 60; easing.type: Easing.OutQuad }
-                        }
-
-                        Rectangle {
-                            anchors.top: parent.top
-                            width: parent.width
-                            height: spoke.barLen
-                            radius: width / 2
-                            color: Colors.text
-                        }
-                    }
-                }
-
-                // Album art — use the same rounded clipping primitive as the
-                // wallpaper preview. ClippingRectangle keeps the source image in
-                // the normal scene graph; the previous hidden Image + MultiEffect
-                // mask produced an empty texture and leaked the image elsewhere.
-                ClippingRectangle {
-                    id: albumArt
-                    width: discHolder.discSize
-                    height: discHolder.discSize
-                    anchors.centerIn: parent
-                    radius: width / 2
-                    color: Colors.surfaceHigh
-                    border.width: 1
-                    border.color: Colors.overlay
-                    clip: true
-
-                    RotationAnimation on rotation {
-                        from: 0
-                        to: 360
-                        duration: 6000
-                        loops: Animation.Infinite
-                        running: root.media.playback.playing && !Config.reducedMotion
-                    }
-
-                    MaterialIcon {
-                        anchors.centerIn: parent
-                        visible: !(root.track && root.track.artUrl)
-                        icon: "music_note"
-                        font.pixelSize: 34
-                        opacity: 0.7
-                    }
-
-                    Image {
-                        id: artImage
-                        anchors.fill: parent
-                        anchors.margins: 1
-                        visible: !!(root.track && root.track.artUrl)
-                        source: root.track && root.track.artUrl ? root.track.artUrl : ""
-                        fillMode: Image.PreserveAspectCrop
-                        asynchronous: true
-                    }
-
-                    // CD spindle hole + groove ring, drawn on top so they
-                    // spin with the art instead of staying fixed.
-                    Rectangle {
-                        anchors.centerIn: parent
-                        width: parent.width * 0.32
-                        height: width
-                        radius: width / 2
-                        color: "transparent"
-                        border.width: 1
-                        border.color: Colors.overlay
-                        opacity: 0.6
-                    }
-                    Rectangle {
-                        anchors.centerIn: parent
-                        width: parent.width * 0.12
-                        height: width
-                        radius: width / 2
-                        color: Colors.surface
-                        border.width: 1
-                        border.color: Colors.overlay
-                    }
-                }
+                artUrl: root.track && root.track.artUrl ? root.track.artUrl : ""
+                playing: root.media.playback.playing
+                progress: root.track && root.track.duration > 0 ? root.track.position / root.track.duration : 0
             }
 
             Column {

@@ -122,6 +122,27 @@ Loader {
                         }
                     }
 
+                    // Count only — notification content stays private while
+                    // locked. Counts what arrived since this lock started.
+                    StyledText {
+                        id: notificationCount
+                        // History is newest-first and capped, so count entries
+                        // ahead of the newest one seen at lock time.
+                        readonly property var history: Notifications.state.history
+                        property var lockedAtId: null
+                        readonly property int count: {
+                            const index = notificationCount.lockedAtId === null ? -1
+                                : notificationCount.history.findIndex(n => n.id === notificationCount.lockedAtId);
+                            return index < 0 ? notificationCount.history.length : index;
+                        }
+                        Component.onCompleted: notificationCount.lockedAtId = notificationCount.history.length ? notificationCount.history[0].id : null
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        visible: notificationCount.count > 0
+                        color: Colors.subtext
+                        font.pixelSize: Config.fontSize - 1
+                        text: notificationCount.count === 1 ? "1 new notification" : notificationCount.count + " new notifications"
+                    }
+
                     StyledText {
                         anchors.horizontalCenter: parent.horizontalCenter
                         text: pam.message.length > 0 ? pam.message : (!pwInput.enabled ? "Checking…" : "")
@@ -159,6 +180,69 @@ Loader {
                     anchors.fill: parent
                     z: -1
                     onClicked: pwInput.forceActiveFocus()
+                }
+
+                // Now playing: the cover art on a turntable, with playback
+                // controls so pausing doesn't need an unlock. Bottom-left,
+                // opposite the power menu, keeping the center for sign-in.
+                Row {
+                    id: mediaRow
+                    readonly property var media: MediaSession.state
+                    readonly property var track: mediaRow.media.track
+                    anchors.left: parent.left
+                    anchors.bottom: parent.bottom
+                    anchors.margins: 24
+                    spacing: 18
+                    visible: !!mediaRow.track && mediaRow.track.title.length > 0
+
+                    Turntable {
+                        size: 150
+                        artUrl: mediaRow.track ? mediaRow.track.artUrl : ""
+                        playing: mediaRow.media.playback.playing
+                        progress: mediaRow.track && mediaRow.track.duration > 0 ? mediaRow.track.position / mediaRow.track.duration : 0
+                    }
+
+                    Column {
+                        anchors.verticalCenter: parent.verticalCenter
+                        spacing: 4
+
+                        StyledText {
+                            width: Math.min(implicitWidth, 260)
+                            elide: Text.ElideRight
+                            font.weight: Font.DemiBold
+                            font.pixelSize: Config.fontSize + 1
+                            text: mediaRow.track ? mediaRow.track.title : ""
+                        }
+                        StyledText {
+                            visible: text.length > 0
+                            width: Math.min(implicitWidth, 260)
+                            elide: Text.ElideRight
+                            color: Colors.subtext
+                            text: mediaRow.track ? mediaRow.track.artist : ""
+                        }
+                        Row {
+                            spacing: 4
+                            topPadding: 6
+
+                            IconButton {
+                                icon: "skip_previous"
+                                iconSize: 18
+                                enabled: mediaRow.media.capabilities.previous
+                                onClicked: MediaSession.previous()
+                            }
+                            IconButton {
+                                icon: mediaRow.media.playback.playing ? "pause" : "play_arrow"
+                                iconSize: 18
+                                onClicked: MediaSession.togglePlaying()
+                            }
+                            IconButton {
+                                icon: "skip_next"
+                                iconSize: 18
+                                enabled: mediaRow.media.capabilities.next
+                                onClicked: MediaSession.next()
+                            }
+                        }
+                    }
                 }
 
                 // Power menu — a plain list popover (not PowerMenuIsland's

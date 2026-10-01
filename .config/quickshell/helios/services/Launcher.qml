@@ -14,6 +14,8 @@ QtObject {
     // "list" = ranked results; "grid" = every application, alphabetical.
     property string view: "list"
     readonly property bool emojiMode: /^\/em(?:oji)?(?:\s+.*)?$/i.test(root.query.trim())
+    readonly property bool clipboardMode: /^\/cb(?:\s+.*)?$/i.test(root.query.trim())
+    onClipboardModeChanged: if (root.clipboardMode) Clipboard.refresh()
 
     readonly property var actions: root._allActions.filter(action => !action.id.startsWith("destination:")
         || !Config.destinationHidden(action.id.slice("destination:".length)))
@@ -78,6 +80,59 @@ QtObject {
         };
     }
 
+    // Arithmetic in the query ("12*4", "(3+4)^2") becomes a result that
+    // copies the answer. The character whitelist keeps evaluation to math.
+    function _calculate(raw) {
+        const expression = raw.replace(/,/g, "");
+        if (!/^[\d\s+\-*\/%^().]+$/.test(expression) || !/\d\s*[-+*\/%^]\s*[\d(.]/.test(expression)) return null;
+        try {
+            const value = Function("return (" + expression.replace(/\^/g, "**") + ");")();
+            if (typeof value !== "number" || !isFinite(value)) return null;
+            const answer = String(Number(value.toPrecision(12)));
+            return { id: "calc:" + answer, kind: "calc", title: answer, subtitle: raw + " — copy result", icon: "calculate",
+                score: 0, entry: { icon: "calculate" }, activation: { kind: "copy", value: answer } };
+        } catch (error) {
+            return null;
+        }
+    }
+
+    // "10 km to mi", "72 f in c", "2 gib to mb" becomes a result that copies
+    // the converted value. Units in one group convert through a shared base.
+    readonly property var _unitGroups: [
+        { m: 1, km: 1000, cm: 0.01, mm: 0.001, mi: 1609.344, yd: 0.9144, ft: 0.3048, in: 0.0254 },
+        { kg: 1, g: 0.001, mg: 1e-6, lb: 0.45359237, oz: 0.028349523125 },
+        { l: 1, ml: 0.001, gal: 3.785411784 },
+        { s: 1, min: 60, h: 3600, day: 86400 },
+        { b: 1, kb: 1e3, mb: 1e6, gb: 1e9, tb: 1e12, kib: 1024, mib: 1048576, gib: 1073741824 },
+        { c: "c", f: "f", k: "k" }
+    ]
+    function _convert(raw) {
+        const match = raw.replace(/,/g, "").match(/^(-?\d*\.?\d+)\s*([a-z]+)\s+(?:to|in|as)\s+([a-z]+)$/i);
+        if (!match) return null;
+        const amount = Number(match[1]), from = match[2].toLowerCase(), to = match[3].toLowerCase();
+        const group = root._unitGroups.find(units => from in units && to in units);
+        if (!group || from === to) return null;
+        let value;
+        if (typeof group[from] === "string") {
+            const celsius = from === "c" ? amount : from === "f" ? (amount - 32) * 5 / 9 : amount - 273.15;
+            value = to === "c" ? celsius : to === "f" ? celsius * 9 / 5 + 32 : celsius + 273.15;
+        } else {
+            value = amount * group[from] / group[to];
+        }
+        const answer = String(Number(value.toPrecision(8)));
+        return { id: "convert:" + answer + to, kind: "calc", title: answer + " " + match[3], subtitle: raw + " — copy result",
+            icon: "straighten", score: 0, entry: { icon: "straighten" }, activation: { kind: "copy", value: answer } };
+    }
+    function _webSearch(raw) {
+        return root._normalized("action", root._action("web-search", "Search the web for \u201c" + raw + "\u201d", "travel_explore", "",
+            () => { Quickshell.execDetached(["xdg-open", "https://duckduckgo.com/?q=" + encodeURIComponent(raw)]); return true; }), 0);
+    }
+    function _clipboardResults(needle) {
+        return Clipboard.items.filter(item => !item.isImage && (!needle || item.preview.toLowerCase().includes(needle))).slice(0, 9)
+            .map(item => ({ id: "clip:" + item.id, kind: "clip", title: item.preview.trim(), subtitle: "Clipboard", icon: "content_paste",
+                score: 0, entry: { icon: "content_paste" }, activation: { kind: "action", execute: () => { Clipboard.copy(item.line); return true; } } }));
+    }
+
     function search(text) {
         root.query = text || "";
         const raw = root.query.trim();
@@ -88,6 +143,11 @@ QtObject {
                 subtitle: item.keywords || "", icon: "", score: 0, entry: item,
                 activation: { kind: "emoji", value: item.emoji }
             }));
+            return root.results;
+        }
+        const clip = raw.match(/^\/cb(?:\s+(.*))?$/i);
+        if (clip) {
+            root.results = root._clipboardResults((clip[1] || "").toLowerCase());
             return root.results;
         }
         const needle = raw.toLowerCase();
@@ -107,9 +167,11 @@ QtObject {
             .concat(root.windows.map(window => root._normalized("window", window, root._score({ title: window.title, subtitle: window.appClass }, needle))))
             .concat(root.actions.map(action => root._normalized("action", action, root._score(action, needle))))
             .filter(result => result.score > 0);
-        root.results = candidates.sort((a, b) => b.score - a.score
+        const answer = root._calculate(raw) || root._convert(raw);
+        // The web search always stays last, inside the 9-row limit.
+        root.results = (answer ? [answer] : []).concat(candidates.sort((a, b) => b.score - a.score
             || (b.kind === "app" ? root._count(b.title) : 0) - (a.kind === "app" ? root._count(a.title) : 0)
-            || (a.kind === "app" ? 0 : 1) - (b.kind === "app" ? 0 : 1)).slice(0, 9);
+            || (a.kind === "app" ? 0 : 1) - (b.kind === "app" ? 0 : 1))).slice(0, 8).concat([root._webSearch(raw)]);
         return root.results;
     }
 
@@ -134,9 +196,9 @@ QtObject {
         } else if (activation.kind === "app") {
             root.recordLaunch(result.title);
             AppLaunch.launch(result.entry);
-        } else if (activation.kind === "emoji") {
-            emojiCopy.command = ["sh", "-c", "printf '%s' \"$1\" | wl-copy", "_", activation.value];
-            emojiCopy.running = false; emojiCopy.running = true;
+        } else if (activation.kind === "emoji" || activation.kind === "copy") {
+            copyProcess.command = ["sh", "-c", "printf '%s' \"$1\" | wl-copy", "_", activation.value];
+            copyProcess.running = false; copyProcess.running = true;
         } else if (activation.kind === "action") accepted = activation.execute() !== false;
         else accepted = false;
         const close = accepted && !activation.keepOpen;
@@ -174,7 +236,7 @@ QtObject {
         }}
     }
     property Process focusProcess: Process {}
-    property Process emojiCopy: Process {}
+    property Process copyProcess: Process {}
     property FileView usageFile: FileView {
         path: Quickshell.statePath("launcher-app-usage.json"); printErrors: false; atomicWrites: true; preload: true; blockLoading: true
         onLoaded: { try { const parsed = JSON.parse(usageFile.text()); if (parsed && typeof parsed === "object") root.launchCounts = parsed; } catch (error) {} }
@@ -190,5 +252,6 @@ QtObject {
     }
     property Connections appChanges: Connections { target: DesktopEntries; function onApplicationsChanged() { root.search(root.query); } }
     property Connections extraChanges: Connections { target: ExtraApps; function onListChanged() { root.search(root.query); } }
+    property Connections clipboardChanges: Connections { target: Clipboard; function onItemsChanged() { if (root.clipboardMode) root.search(root.query); } }
     property Connections emojiChanges: Connections { target: Emoji; function onListChanged() { if (root.emojiMode) root.search(root.query); } }
 }

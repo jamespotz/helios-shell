@@ -46,6 +46,22 @@ ShellRoot {
             routes = root.replay([[["mouse"], []], [["mouse"], []]]);
             root.verify(routes.length === 0, "non-audio device: " + routes);
 
+            // Fullscreen → DND clears only the DND it set itself.
+            Bridge.dndEnabled = false;
+            Automations.fullscreenRule = true;
+            Automations._setFullscreen(true);
+            root.verify(Bridge.dndEnabled, "fullscreen turns on DND");
+            Automations._setFullscreen(false);
+            root.verify(!Bridge.dndEnabled, "leaving fullscreen clears its DND");
+            Bridge.dndEnabled = true;
+            Automations._setFullscreen(true);
+            Automations._setFullscreen(false);
+            root.verify(Bridge.dndEnabled, "manual DND survives fullscreen");
+            Bridge.dndEnabled = false;
+            Automations.fullscreenRule = false;
+            Automations._setFullscreen(true);
+            root.verify(!Bridge.dndEnabled, "rule off does nothing");
+
             console.warn("AUTOMATIONS_TEST_PASS");
         } catch (error) {
             console.error("AUTOMATIONS_TEST_FAIL:", error.toString());

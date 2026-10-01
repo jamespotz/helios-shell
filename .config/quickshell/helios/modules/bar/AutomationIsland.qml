@@ -122,6 +122,54 @@ Item {
             }
         }
 
+        Row {
+            width: parent.width
+            spacing: 10
+
+            MaterialIcon {
+                icon: "power"
+                font.pixelSize: 20
+                color: Automations.acRule ? Colors.accent : Colors.subtext
+                anchors.verticalCenter: parent.verticalCenter
+            }
+            Column {
+                width: parent.width - 20 - 10 - acToggle.width - 10
+                anchors.verticalCenter: parent.verticalCenter
+                StyledText { text: "Charger Connects"; font.weight: Font.DemiBold }
+                StyledText { text: "Performance on AC, Balanced on battery"; font.pixelSize: Config.fontSize - 2; color: Colors.subtext; wrapMode: Text.WordWrap; width: parent.width }
+            }
+            Toggle {
+                id: acToggle
+                anchors.verticalCenter: parent.verticalCenter
+                checked: Automations.acRule
+                onToggled: v => Automations.setAcRule(v)
+            }
+        }
+
+        Row {
+            width: parent.width
+            spacing: 10
+
+            MaterialIcon {
+                icon: "fullscreen"
+                font.pixelSize: 20
+                color: Automations.fullscreenRule ? Colors.accent : Colors.subtext
+                anchors.verticalCenter: parent.verticalCenter
+            }
+            Column {
+                width: parent.width - 20 - 10 - fullscreenToggle.width - 10
+                anchors.verticalCenter: parent.verticalCenter
+                StyledText { text: "Fullscreen Window"; font.weight: Font.DemiBold }
+                StyledText { text: "Turns on Do Not Disturb until you leave fullscreen"; font.pixelSize: Config.fontSize - 2; color: Colors.subtext; wrapMode: Text.WordWrap; width: parent.width }
+            }
+            Toggle {
+                id: fullscreenToggle
+                anchors.verticalCenter: parent.verticalCenter
+                checked: Automations.fullscreenRule
+                onToggled: v => Automations.setFullscreenRule(v)
+            }
+        }
+
         Rectangle { width: parent.width; height: 0.5; color: Colors.overlay; opacity: 0.3 }
 
         StyledText {
