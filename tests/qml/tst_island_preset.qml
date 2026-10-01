@@ -11,8 +11,29 @@ ShellRoot {
 
     function verify(value, message) { if (!value) throw new Error(message); }
 
+    readonly property FileView legacySettings: FileView {
+        path: Quickshell.statePath("island-appearance.json")
+        printErrors: false
+    }
     Component.onCompleted: {
+        root.legacySettings.setText(JSON.stringify({ islandCornerRadius: 27 }));
+        root.loadSettings.start();
+    }
+    readonly property Timer loadSettings: Timer {
+        interval: 150
+        onTriggered: {
+            Config.settingsFile.blockLoading = true;
+            Config.settingsFile.reload();
+            root.runTests.start();
+        }
+    }
+    readonly property Timer runTests: Timer {
+        interval: 150
+        onTriggered: root.testPreset()
+    }
+    function testPreset() {
         try {
+            root.verify(Config.islandIdleCornerRadius === 27 && Config.islandExpandedCornerRadius === 27, "legacy saved radius initializes both states");
             root.verify(Config.islandKeys.includes("idleLayout") && Config.islandKeys.includes("gestureScroll"), "island keys cover island options");
             root.verify(!Config.islandKeys.includes("fontFamily") && !Config.islandKeys.includes("reducedMotion"), "global options excluded");
 
@@ -40,10 +61,35 @@ ShellRoot {
             root.verify(Config.idleBumpWidth === 222 && Array.isArray(Config.hiddenDestinations) && Config.fontFamily === "Inter", "invalid values ignored");
 
             Config.resetOptions(Config.islandKeys);
-            console.warn("ISLAND_PRESET_TEST_PASS");
+            Config._applyIslandPreset(JSON.stringify({ helios: "island", version: 1, options: { islandCornerRadius: 27 } }));
+            root.verify(Config.islandIdleCornerRadius === 27 && Config.islandExpandedCornerRadius === 27, "legacy radius preset initializes both states");
+            Config._applyIslandPreset(JSON.stringify({ helios: "island", version: 1,
+                options: { islandCornerRadius: 22, islandIdleCornerRadius: 7 } }));
+            root.verify(Config.islandIdleCornerRadius === 7 && Config.islandExpandedCornerRadius === 22, "explicit state radius overrides legacy preset");
+            Config.resetOptions(Config.islandKeys);
+            Config.setOption("islandIdleCornerRadius", 9);
+            Config.setOption("islandExpandedCornerRadius", 31);
+            Config.settingsFile.writeAdapter();
+            root.checkSaved.start();
+            return;
         } catch (error) {
             console.error("ISLAND_PRESET_TEST_FAIL:", error.toString());
         }
         root.terminateDelay.start();
+    }
+    readonly property Timer checkSaved: Timer {
+        interval: 150
+        onTriggered: {
+            try {
+                root.legacySettings.blockLoading = true;
+                root.legacySettings.reload();
+                const saved = JSON.parse(root.legacySettings.text());
+                root.verify(saved.islandIdleCornerRadius === 9 && saved.islandExpandedCornerRadius === 31, "independent radii persist to settings file");
+                console.warn("ISLAND_PRESET_TEST_PASS");
+            } catch (error) {
+                console.error("ISLAND_PRESET_TEST_FAIL:", error.toString());
+            }
+            root.terminateDelay.start();
+        }
     }
 }

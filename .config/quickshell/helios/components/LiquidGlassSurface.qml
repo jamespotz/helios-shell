@@ -3,135 +3,78 @@ import "../services"
 
 // Apple-style vibrancy surface: Hyprland supplies the real blur (via
 // `layerrule blur` for the "helios:bar" namespace in shell.qml); this
-// Canvas only paints a neutral tint + subtle specular rim on top.
+// surface only paints a neutral tint + subtle specular rim on top.
 // Falls back to a flat fill (a Rectangle child) when liquid glass is disabled.
 //
 // Design principle: Apple's dark vibrancy materials are almost entirely
 // neutral gray with very slight warmth — no colored tints. The blur
 // itself provides the color from what's behind.
-Canvas {
+Item {
     id: root
 
     property bool active: false
     property real cornerRadius: 8
     property color fallbackColor: Colors.background
     property real glassAmount: active ? 1 : 0
+    readonly property real _radius: Math.min(cornerRadius, width / 2, height / 2)
 
-    // Canvas painting is imperative (getContext/fillRect), so it doesn't
-    // automatically repaint when a QML color binding changes like a
-    // Rectangle would — these connections are what make the glass tint
-    // actually follow live theme switches (Colors' own ColorAnimation
-    // Behaviors fire onXxxChanged every frame of the crossfade, so this
-    // repaints in step with it) instead of freezing at whatever the theme
-    // was when the shell started.
-    Connections {
-        target: Colors
-        function onSurfaceChanged() { root.requestPaint(); }
-        function onBackgroundChanged() { root.requestPaint(); }
-        function onShadowChanged() { root.requestPaint(); }
-    }
-
-    antialiasing: true
-
-    function traceBody(context, inset) {
-        const left = inset;
-        const top = inset;
-        const right = Math.max(left, width - inset);
-        const bottom = Math.max(top, height - inset);
-        const r = Math.max(0, Math.min(root.cornerRadius - inset,
-                                        (right - left) / 2,
-                                        (bottom - top) / 2));
-
-        // arcTo traces a true circular arc at each corner — at small radii
-        // that's indistinguishable from the previous quadraticCurveTo
-        // approximation, but at r == width/2 (a satellite badge, meant to
-        // read as a perfect circle) the Bezier version visibly flattened
-        // into more of a squircle.
-        context.beginPath();
-        context.moveTo(left + r, top);
-        context.arcTo(right, top, right, bottom, r);
-        context.arcTo(right, bottom, left, bottom, r);
-        context.arcTo(left, bottom, left, top, r);
-        context.arcTo(left, top, right, top, r);
-        context.closePath();
-    }
-
-    function _rgba(c, alpha) {
-        return "rgba(" + Math.round(c.r * 255) + ", " + Math.round(c.g * 255) + ", " + Math.round(c.b * 255) + ", " + alpha + ")";
-    }
-
-    function paintGlass(context) {
-        if (root.glassAmount <= 0.001)
-            return;
-
-        context.save();
-        root.traceBody(context, 0);
-        context.clip();
-        context.globalAlpha = root.glassAmount;
+    // Plain Rectangles, not Canvas: a Canvas texture isn't antialiased at
+    // fractional output scale (e.g. 1.25), so rounded caps rendered as hard
+    // stair steps that read as a cropped edge. Rectangles also follow theme
+    // and size changes through bindings, with no repaint per spring frame.
+    Item {
+        anchors.fill: parent
+        opacity: root.glassAmount
+        visible: opacity > 0.001
 
         // Neutral tint — Apple vibrancy is almost monochrome gray, letting
         // the blurred wallpaper underneath provide color. Drawn from the
         // live theme's surface/background tokens so it follows theme
         // switches instead of being locked to one fixed dark palette.
-        const body = context.createLinearGradient(0, 0, 0, height);
-        body.addColorStop(0, root._rgba(Colors.surface, 0.72));
-        body.addColorStop(1, root._rgba(Colors.background, 0.78));
-        context.fillStyle = body;
-        context.fillRect(0, 0, width, height);
+        Rectangle {
+            anchors.fill: parent
+            radius: root._radius
+            antialiasing: true
+            gradient: Gradient {
+                GradientStop { position: 0; color: Qt.alpha(Colors.surface, 0.72) }
+                GradientStop { position: 1; color: Qt.alpha(Colors.background, 0.78) }
+            }
+        }
 
         // Subtle vignette darkening at the bottom edge — adds depth
         // without being distracting.
-        const vignette = context.createLinearGradient(0, height * 0.6, 0, height);
-        vignette.addColorStop(0, root._rgba(Colors.shadow, 0));
-        vignette.addColorStop(1, root._rgba(Colors.shadow, 0.08));
-        context.fillStyle = vignette;
-        context.fillRect(0, 0, width, height);
+        Rectangle {
+            anchors.fill: parent
+            radius: root._radius
+            antialiasing: true
+            gradient: Gradient {
+                GradientStop { position: 0.6; color: Qt.alpha(Colors.shadow, 0) }
+                GradientStop { position: 1; color: Qt.alpha(Colors.shadow, 0.08) }
+            }
+        }
 
-        context.globalCompositeOperation = "source-over";
-
-        // Top-edge specular highlight — a single clean line, the way Apple
-        // dark materials catch ambient light at the top. Kept a literal
-        // white rather than a theme token: this is a physical light-catch
-        // reflection, not UI chrome, so it stays white in every theme the
-        // same way a real glass edge would.
-        root.traceBody(context, 0.5);
-        context.lineWidth = 0.75;
-        const rim = context.createLinearGradient(0, 0, width, 0);
-        rim.addColorStop(0, "rgba(255, 255, 255, 0.08)");
-        rim.addColorStop(0.3, "rgba(255, 255, 255, 0.18)");
-        rim.addColorStop(0.7, "rgba(255, 255, 255, 0.18)");
-        rim.addColorStop(1, "rgba(255, 255, 255, 0.08)");
-        context.strokeStyle = rim;
-        context.stroke();
-
-        context.restore();
+        // Top-edge specular rim — the way Apple dark materials catch ambient
+        // light. Kept a literal white rather than a theme token: this is a
+        // physical light-catch reflection, not UI chrome, so it stays white
+        // in every theme the same way a real glass edge would.
+        Rectangle {
+            anchors.fill: parent
+            radius: root._radius
+            antialiasing: true
+            color: "transparent"
+            border.width: 0.75
+            border.color: Qt.rgba(1, 1, 1, 0.14)
+        }
     }
 
-    onPaint: {
-        const context = getContext("2d");
-
-        context.reset();
-        context.clearRect(0, 0, width, height);
-        root.paintGlass(context);
-    }
-
-    // The flat fill is a Rectangle, not Canvas paint: the Canvas texture is
-    // truncated to whole device pixels, so at fractional scale (e.g. 1.25) an
-    // odd width lost a sliver off the right edge and the pill's right cap
-    // looked cut. A Rectangle's rounding is resolution-independent, and it
-    // spares a Canvas repaint on every frame of the island's width spring.
     Rectangle {
         anchors.fill: parent
-        radius: Math.min(root.cornerRadius, width / 2, height / 2)
+        radius: root._radius
+        antialiasing: true
         color: root.fallbackColor
         opacity: 1 - root.glassAmount
         visible: opacity > 0.001
     }
-
-    onWidthChanged: if (root.glassAmount > 0) requestPaint()
-    onHeightChanged: if (root.glassAmount > 0) requestPaint()
-    onCornerRadiusChanged: if (root.glassAmount > 0) requestPaint()
-    onGlassAmountChanged: requestPaint()
 
     Behavior on glassAmount {
         NumberAnimation { duration: 220; easing.type: Easing.OutCubic }

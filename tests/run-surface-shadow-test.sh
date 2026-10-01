@@ -16,6 +16,7 @@ output="$({
     XDG_CACHE_HOME="$test_root/cache" \
     XDG_STATE_HOME="$test_root/state" \
     QT_QPA_PLATFORM="offscreen" \
+    QT_SCALE_FACTOR="${QT_SCALE_FACTOR:-1.25}" \
     QML_IMPORT_PATH="$test_root/helios" \
         timeout 5s dbus-run-session -- qs -vv --no-color --path "$test_root/helios/tst_surface_shadow.qml"
 } 2>&1)"

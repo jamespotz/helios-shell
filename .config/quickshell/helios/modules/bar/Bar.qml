@@ -62,16 +62,15 @@ PanelWindow {
     // from the active application when they appear.
     WlrLayershell.keyboardFocus: bar.panelOpen && IslandNavigation.current && IslandNavigation.current.retainOnFocusLoss ? WlrKeyboardFocus.Exclusive : bar.panelOpen || bar.expanded || bar.satelliteOpen ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
     anchors.top: true
-    // A small gap from the true screen edge so the pill's top-corner
-    // rounding actually reads as rounded, instead of being flush-cut.
-    margins.top: Config.islandTopGap
     // Reserves enough room for the *whole* idle bump plus a visible gap
     // below it, not just the top margin — otherwise a maximized window's
     // title bar sits flush against the bump with no breathing room. This is
     // a flat constant independent of `mode`, so the gap holds even when the
     // island expands (expanded states overlap windows instead of pushing
-    // this reservation any bigger).
-    exclusiveZone: Config.islandExclusiveZone
+    // this reservation any bigger). The top gap lives inside the surface
+    // (see islandHeight) and Hyprland adds a margin on top of this zone, so
+    // the gap is counted again here to keep windows where they were.
+    exclusiveZone: Config.islandExclusiveZone + Config.islandTopGap
     color: "transparent"
 
     // The real layer-shell surface never resizes — only the item(s) inside it
@@ -81,7 +80,11 @@ PanelWindow {
     // compositing, which stays smooth. `mask` keeps the rest of this window
     // click-through so it doesn't eat input outside the visible pill.
     implicitWidth: bar.screen ? bar.screen.width : Config.islandMaxWidth
-    implicitHeight: Math.min(Config.islandMaxHeight, bar.screen ? bar.screen.height - Config.islandTopGap : Config.islandMaxHeight)
+    implicitHeight: Config.islandTopGap + Math.min(Config.islandMaxHeight, bar.screen ? bar.screen.height - Config.islandTopGap : Config.islandMaxHeight)
+    // The surface starts at the screen edge and the pill sits islandTopGap
+    // below it, not at the surface's own top: the island's shadow blurs
+    // upward too, and nothing can paint outside the surface.
+    readonly property real islandHeight: height - Config.islandTopGap
     mask: Region {
         item: hitArea
         Region {
@@ -175,7 +178,7 @@ PanelWindow {
     }
     Binding on visualTargetHeight {
         when: content.item !== null
-        value: Math.min(content.item ? content.item.implicitHeight + bar.padV * 2 : 0, Math.min(Config.islandMaxHeight, bar.height))
+        value: Math.min(content.item ? content.item.implicitHeight + bar.padV * 2 : 0, Math.min(Config.islandMaxHeight, bar.islandHeight))
     }
     Binding on visualTargetWidth {
         when: content.item === null && !bar.expanded
@@ -201,6 +204,7 @@ PanelWindow {
     FocusScope {
         id: hitArea
         anchors.top: parent.top
+        anchors.topMargin: Config.islandTopGap
         anchors.horizontalCenter: parent.horizontalCenter
         focus: bar.expanded
         TapHandler {
@@ -241,7 +245,7 @@ PanelWindow {
         // rounding, past the mask entirely. Clamping keeps overflow inside
         // the visual's own rounded-corner clip below instead.
         width: content.item ? Math.min(content.item.implicitWidth + bar.padH * 2, Math.min(Config.islandMaxWidth, bar.width)) : bar.expanded ? Math.min(Config.islandMaxWidth, bar.width) : Math.min(Config.idleBumpWidth, bar.width)
-        height: content.item ? Math.min(content.item.implicitHeight + bar.padV * 2, Math.min(Config.islandMaxHeight, bar.height)) : bar.expanded ? Math.min(Config.islandMaxHeight, bar.height) : Math.min(Config.idleBumpHeight, bar.height)
+        height: content.item ? Math.min(content.item.implicitHeight + bar.padV * 2, Math.min(Config.islandMaxHeight, bar.islandHeight)) : bar.expanded ? Math.min(Config.islandMaxHeight, bar.islandHeight) : Math.min(Config.idleBumpHeight, bar.islandHeight)
 
         // A plain MouseArea here would lose hover the instant the cursor moves
         // onto a nested IconButton's own MouseArea (overlapping MouseAreas
@@ -340,6 +344,7 @@ PanelWindow {
             IslandShape {
                 id: islandShape
                 anchors.fill: parent
+                expanded: bar.mode !== "idle"
                 liquidGlassEnabled: Bridge.liquidGlassEnabled
                 fillColor: bar.mode === "idle" ? Colors.background : Colors.surface
             }
@@ -438,10 +443,10 @@ PanelWindow {
             destinationId: IslandNavigation.destinationId
             targetScreen: bar.modelData.name
             maxContentWidth: Math.max(0, Math.min(Config.islandMaxWidth, bar.width) - bar.padH * 2)
-            maxContentHeight: Math.max(0, bar.height - bar.padV * 2 - 60
+            maxContentHeight: Math.max(0, bar.islandHeight - bar.padV * 2 - 60
                 - ((bar.leftSatellite && bar.leftSatellite.expanded && bar.leftSatellite.below)
                     || (bar.rightSatellite && bar.rightSatellite.expanded && bar.rightSatellite.below)
-                    ? bar.height / 2 + Config.satelliteRestGap : 0))
+                    ? bar.islandHeight / 2 + Config.satelliteRestGap : 0))
         }
     }
 }

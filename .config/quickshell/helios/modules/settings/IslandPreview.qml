@@ -71,6 +71,7 @@ Rectangle {
                 layer.mipmap: true
 
                 IslandShape {
+                    expanded: true
                     x: peekFrame.pad
                     y: peekFrame.pad
                     width: peekFrame.naturalWidth

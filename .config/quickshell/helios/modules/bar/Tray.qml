@@ -51,12 +51,11 @@ Row {
                             const screenW = QsWindow.window.screen.width;
                             const barSurfaceW = Config.islandMaxWidth;
                             const offsetX = (screenW - barSurfaceW) / 2;
-                            const offsetY = Config.islandTopGap;
                             Bridge.openTrayMenu(
                                 trayItem.modelData.menu,
                                 QsWindow.window.screen.name,
                                 offsetX + posInWindow.x,
-                                offsetY + posInWindow.y
+                                posInWindow.y
                             );
                         } else {
                             trayItem.modelData.secondaryActivate();

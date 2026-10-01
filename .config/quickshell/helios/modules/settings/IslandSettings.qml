@@ -129,12 +129,13 @@ Item {
             SettingsCard {
                 ConfigSlider { option: "idleBumpWidth"; icon: "width"; label: "Width" }
                 ConfigSlider { option: "idleBumpHeight"; icon: "height"; label: "Height" }
+                ConfigSlider { option: "islandIdleCornerRadius"; icon: "rounded_corner"; label: "Corner radius"; format: v => Math.round(v) + " px" }
                 ConfigSlider { option: "islandTopGap"; icon: "vertical_align_top"; label: "Top gap" }
                 ConfigSlider { option: "idleWidgetSpacing"; icon: "space_bar"; label: "Widget spacing"; last: true }
             }
 
             ResetChip {
-                keys: root.idleWidgetKeys.concat(["idleBumpWidth", "idleBumpHeight", "islandTopGap", "idleWidgetSpacing"])
+                keys: root.idleWidgetKeys.concat(["idleBumpWidth", "idleBumpHeight", "islandIdleCornerRadius", "islandTopGap", "idleWidgetSpacing"])
             }
         }
 
@@ -153,11 +154,12 @@ Item {
             SettingsCard {
                 ConfigSlider { option: "islandContentPadH"; icon: "padding"; label: "Side padding" }
                 ConfigSlider { option: "islandContentPadV"; icon: "padding"; label: "Vertical padding" }
+                ConfigSlider { option: "islandExpandedCornerRadius"; icon: "rounded_corner"; label: "Corner radius"; format: v => Math.round(v) + " px" }
                 ConfigSlider { option: "peekHeight"; icon: "height"; label: "Hover row height"; last: true }
             }
 
             ResetChip {
-                keys: root.peekWidgetKeys.concat(["islandContentPadH", "islandContentPadV", "peekHeight"])
+                keys: root.peekWidgetKeys.concat(["islandContentPadH", "islandContentPadV", "islandExpandedCornerRadius", "peekHeight"])
             }
         }
 

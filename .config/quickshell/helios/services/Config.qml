@@ -175,6 +175,8 @@ QtObject {
     // Idle and expanded share one IslandShape instance (it morphs between
     // sizes rather than swapping shapes), so its shadow is one shared knob
     // rather than per-mode — user-tunable from Settings > Island. Satellites use their own separate shadow values below.
+    readonly property real islandIdleCornerRadius: settingsAdapter.islandIdleCornerRadius
+    readonly property real islandExpandedCornerRadius: settingsAdapter.islandExpandedCornerRadius
     readonly property real islandShadowGlowRadius: settingsAdapter.islandShadowGlowRadius
     readonly property real islandShadowSpread: settingsAdapter.islandShadowSpread
 
@@ -378,6 +380,8 @@ QtObject {
         alertScreen: { value: "all" },
         islandSpringStiffness: { value: 4.0, range: [0.5, 12], step: 0.1 },
         islandSpringDamping: { value: 1.0, range: [0.1, 8], step: 0.1 },
+        islandIdleCornerRadius: { value: 18, range: [0, 48] },
+        islandExpandedCornerRadius: { value: 18, range: [0, 48] },
         islandShadowGlowRadius: { value: 14, range: [0, 32], step: 0.5 },
         islandShadowSpread: { value: 0.08, range: [0, 0.5], step: 0.01 },
 
@@ -436,6 +440,11 @@ QtObject {
         try { preset = JSON.parse(text); } catch (e) { return -1; }
         if (!preset || preset.helios !== "island" || preset.version !== 1 || !preset.options
                 || typeof preset.options !== "object" || Array.isArray(preset.options)) return -1;
+        // Older presets used one radius for both states. Explicit state values win.
+        if ("islandCornerRadius" in preset.options) {
+            for (const key of ["islandIdleCornerRadius", "islandExpandedCornerRadius"])
+                if (!(key in preset.options)) preset.options[key] = preset.options.islandCornerRadius;
+        }
         let applied = 0;
         for (const key of root.islandKeys) {
             if (!(key in preset.options)) continue;
@@ -552,6 +561,10 @@ QtObject {
             property var islandHiddenScreens: []
             property real islandSpringStiffness: root.options.islandSpringStiffness.value
             property real islandSpringDamping: root.options.islandSpringDamping.value
+            // Retain the legacy field so older saved settings seed both new values.
+            property real islandCornerRadius: 18
+            property real islandIdleCornerRadius: islandCornerRadius
+            property real islandExpandedCornerRadius: islandCornerRadius
             property real islandShadowGlowRadius: root.options.islandShadowGlowRadius.value
             property real islandShadowSpread: root.options.islandShadowSpread.value
             property int satelliteBadgeSize: root.options.satelliteBadgeSize.value

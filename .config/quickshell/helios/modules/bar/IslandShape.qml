@@ -24,10 +24,10 @@ Item {
     property real shadowGlowRadius: Config.islandShadowGlowRadius
     property real shadowSpread: Config.islandShadowSpread
 
-    // Apple's continuous corner (squircle) can't be done in pure QML
-    // without ShaderEffect, but a generous radius relative to height
-    // gets close. Stadium for small pills, capped for tall panels.
-    readonly property real cornerRadius: Math.max(6, Math.min(height / 2, 18))
+    property bool expanded: false
+    property real radiusLimit: expanded ? Config.islandExpandedCornerRadius : Config.islandIdleCornerRadius
+    // Keep corners within the shape as it morphs between Idle and Expanded.
+    readonly property real cornerRadius: Math.max(0, Math.min(width / 2, height / 2, radiusLimit))
 
     SurfaceShadow {
         anchors.fill: parent

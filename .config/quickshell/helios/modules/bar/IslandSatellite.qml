@@ -138,6 +138,7 @@ FocusScope {
     IslandShape {
         id: islandShape
         anchors.fill: parent
+        radiusLimit: 18
         liquidGlassEnabled: Bridge.liquidGlassEnabled
         fillColor: root.fillColor
         shadowEnabled: root.shadowEnabled
