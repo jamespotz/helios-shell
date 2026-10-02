@@ -19,7 +19,24 @@ QtObject {
     property var presets: [
         { id: "focus", name: "Focus", icon: "center_focus_strong", dnd: true, caffeine: true, nightLight: true, powerProfile: "", apps: [] }
     ]
-    property string activeId: ""
+    property alias activeId: stateAdapter.activeId
+
+    // Restore the selection without launching the preset's apps again.
+    property FileView stateFile: FileView {
+        path: Quickshell.statePath("focus-state.json")
+        printErrors: false
+        preload: true
+        blockLoading: true
+        onAdapterUpdated: root.stateSaveTimer.restart()
+        JsonAdapter {
+            id: stateAdapter
+            property string activeId: ""
+        }
+    }
+    property Timer stateSaveTimer: Timer {
+        interval: 300
+        onTriggered: root.stateFile.writeAdapter()
+    }
 
     function save() { presetsFile.setText(JSON.stringify(root.presets)); }
 
@@ -69,7 +86,7 @@ QtObject {
     })
 
     function apply(preset) {
-        ShellState.dndEnabled = !!preset.dnd;
+        ShellState.setDndEnabled(!!preset.dnd);
         if (IdleInhibit.inhibited !== !!preset.caffeine) IdleInhibit.toggleInhibit();
         NightLight.setEnabled(!!preset.nightLight);
         if (preset.powerProfile && root._profileMap[preset.powerProfile] !== undefined) {
@@ -88,7 +105,7 @@ QtObject {
     // whatever the settings were before, since there's no prior snapshot
     // (same tradeoff a Do Not Disturb or Night Light toggle already makes).
     function deactivate() {
-        ShellState.dndEnabled = false;
+        ShellState.setDndEnabled(false);
         if (IdleInhibit.inhibited) IdleInhibit.toggleInhibit();
         NightLight.setEnabled(false);
         PowerProfiles.profile = PowerProfile.Balanced;

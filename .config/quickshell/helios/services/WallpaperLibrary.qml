@@ -29,7 +29,9 @@ QtObject {
     }
 
     function _storedImages() {
-        const wallpapers = Array.isArray(settingsAdapter.wallpapers) ? settingsAdapter.wallpapers : [];
+        const stored = settingsAdapter.wallpapers;
+        const wallpapers = stored && typeof stored === "object" && typeof stored.length === "number"
+            ? Array.from(stored) : [];
         return wallpapers
             .filter(wallpaper => wallpaper && typeof wallpaper.path === "string" && wallpaper.path.length > 0)
             .sort((left, right) => Number(left.sortOrder) - Number(right.sortOrder))
@@ -44,7 +46,7 @@ QtObject {
         if (!forceWrite && JSON.stringify(wallpapers) === JSON.stringify(settingsAdapter.wallpapers))
             return;
         settingsAdapter.wallpapers = wallpapers;
-        settingsFile.writeAdapter();
+        root.saveTimer.restart();
     }
 
     function _mergeScan(scannedImages) {
@@ -66,7 +68,7 @@ QtObject {
     function setFolder(path) {
         settingsAdapter.folderPath = String(path || "").trim();
         settingsAdapter.wallpapers = [];
-        settingsFile.writeAdapter();
+        root.saveTimer.restart();
         root.scanFolder();
     }
 
@@ -124,6 +126,11 @@ QtObject {
             root._startThumbnail();
         }
     }
+    property Timer saveTimer: Timer {
+        interval: 300
+        onTriggered: root.settingsFile.writeAdapter()
+    }
+
     property FileView settingsFile: FileView {
         path: Quickshell.statePath("wallpaper.json")
         watchChanges: true

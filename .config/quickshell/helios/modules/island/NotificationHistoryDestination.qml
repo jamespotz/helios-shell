@@ -44,7 +44,7 @@ Item {
                     icon: ShellState.dndEnabled ? "notifications_off" : "notifications_active"
                     label: ShellState.dndEnabled ? "Turn off Do Not Disturb" : "Turn on Do Not Disturb"
                     iconColor: ShellState.dndEnabled ? Colors.warning : Colors.text
-                    onClicked: ShellState.dndEnabled = !ShellState.dndEnabled
+                    onClicked: ShellState.toggleDnd()
                 }
 
                 IconButton {

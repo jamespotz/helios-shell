@@ -86,6 +86,7 @@ QtObject {
     property FileView settingsFile: FileView {
         path: Quickshell.statePath("nightlight.json")
         watchChanges: false
+        onAdapterUpdated: root.saveTimer.restart()
 
         JsonAdapter {
             id: adapter
@@ -100,9 +101,10 @@ QtObject {
         onLoaded: if (root.enabled) root._sync()
     }
 
-    onEnabledChanged: root.settingsFile.writeAdapter()
-    onTemperatureChanged: root.settingsFile.writeAdapter()
-    onScheduledChanged: root.settingsFile.writeAdapter()
+    property Timer saveTimer: Timer {
+        interval: 300
+        onTriggered: root.settingsFile.writeAdapter()
+    }
 
     // Re-sync when the shared weather location resolves/changes so a
     // scheduled night light picks up sunset/sunrise for the right place

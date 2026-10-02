@@ -262,7 +262,11 @@ QtObject {
     // keeps exactly one marker (last, when it was missing).
     function _sanitizeLayout(surface, stored) {
         const known = root.widgetKeys[surface];
-        const source = Array.isArray(stored) ? stored : root.options[surface + "Layout"].value;
+        // JsonAdapter restores JSON arrays as Qt list values, which fail
+        // Array.isArray even though they contain the saved widget order.
+        const source = Array.isArray(stored) ? stored
+            : stored && typeof stored === "object" && typeof stored.length === "number" ? Array.from(stored)
+            : root.options[surface + "Layout"].value;
         const out = [];
         for (const key of source)
             if ((key === "|" || known.includes(key)) && !out.includes(key)) out.push(key);
@@ -314,6 +318,30 @@ QtObject {
     // Settings window respects this for its open/close and page-switch
     // transitions — user-tunable from Settings > Appearance.
     readonly property bool reducedMotion: settingsAdapter.reducedMotion
+
+    readonly property string turntableDesign: settingsAdapter.turntableDesign
+    readonly property int turntableScale: settingsAdapter.turntableScale
+    readonly property string turntableFinish: settingsAdapter.turntableFinish
+    readonly property string turntablePlatter: settingsAdapter.turntablePlatter
+    readonly property var turntablePlatterPresets: [
+        { value: "black", label: "Black", color: "#101211" },
+        { value: "sage", label: "Sage", color: "#8da58b" },
+        { value: "blue", label: "Blue", color: "#759bbd" },
+        { value: "rose", label: "Rose", color: "#c18f9d" },
+        { value: "sunset", label: "Sunset", color: "#e7aa76", endColor: "#b76f91" },
+        { value: "aurora", label: "Aurora", color: "#85bdad", endColor: "#888bc4" },
+        { value: "dusk", label: "Dusk", color: "#8a9dc7", endColor: "#b88cac" },
+        { value: "forest", label: "Forest", color: "#9bbf85", endColor: "#365d4a" },
+        { value: "ocean", label: "Ocean", color: "#79c6c3", endColor: "#406b99" },
+        { value: "sunrise", label: "Sunrise", color: "#e7a38d", endColor: "#eed397" },
+        { value: "meadow", label: "Meadow", color: "#b7d6b4", endColor: "#7caa97" },
+        { value: "autumn", label: "Autumn", color: "#d9b16d", endColor: "#ad6950" }
+    ]
+    readonly property int turntableArtworkSize: settingsAdapter.turntableArtworkSize
+    readonly property bool turntableSpin: settingsAdapter.turntableSpin
+    readonly property string turntableSpeed: settingsAdapter.turntableSpeed
+    readonly property bool turntableTonearm: settingsAdapter.turntableTonearm
+    readonly property bool turntableTrackProgress: settingsAdapter.turntableTrackProgress
 
     // Transition awww plays when the wallpaper changes (its own
     // --transition-type values — see WallpaperPlayback.qml.
@@ -380,6 +408,16 @@ QtObject {
 
         reducedMotion: { value: false },
 
+        turntableDesign: { value: "classic", choices: ["classic", "studio", "minimal", "sleeve"] },
+        turntableScale: { value: 100, range: [80, 120], step: 5 },
+        turntableFinish: { value: "cream", choices: ["cream", "theme", "charcoal"] },
+        turntablePlatter: { value: "black", choices: root.turntablePlatterPresets.map(preset => preset.value) },
+        turntableArtworkSize: { value: 64, range: [40, 72] },
+        turntableSpin: { value: true },
+        turntableSpeed: { value: "33", choices: ["33", "45"] },
+        turntableTonearm: { value: true },
+        turntableTrackProgress: { value: true },
+
         // Spring minimums stay above 0: a zero stiffness never moves and
         // zero damping never settles.
         hoverCollapseDelay: { value: 260, range: [0, 2000], step: 10 },
@@ -444,7 +482,7 @@ QtObject {
     // Island presets: every option on Settings > Island (everything here but
     // the global font, clock, workspace, wallpaper and motion options) as
     // JSON, copied and pasted through the clipboard.
-    readonly property var islandKeys: Object.keys(root.options).filter(key => ![
+    readonly property var islandKeys: Object.keys(root.options).filter(key => !key.startsWith("turntable") && ![
         "fontFamily", "fontSize", "workspaceIndicatorStyle", "showAllWorkspaces",
         "wallpaperTransitionStyle", "use24HourClock", "clockAmPmUppercase", "reducedMotion"
     ].includes(key))
@@ -565,6 +603,15 @@ QtObject {
             property bool use24HourClock: root.options.use24HourClock.value
             property bool clockAmPmUppercase: root.options.clockAmPmUppercase.value
             property bool reducedMotion: root.options.reducedMotion.value
+            property string turntableDesign: root.options.turntableDesign.value
+            property int turntableScale: root.options.turntableScale.value
+            property string turntableFinish: root.options.turntableFinish.value
+            property string turntablePlatter: root.options.turntablePlatter.value
+            property int turntableArtworkSize: root.options.turntableArtworkSize.value
+            property bool turntableSpin: root.options.turntableSpin.value
+            property string turntableSpeed: root.options.turntableSpeed.value
+            property bool turntableTonearm: root.options.turntableTonearm.value
+            property bool turntableTrackProgress: root.options.turntableTrackProgress.value
             property int hoverCollapseDelay: root.options.hoverCollapseDelay.value
             property bool hoverExpand: root.options.hoverExpand.value
             property int hoverExpandDelay: root.options.hoverExpandDelay.value

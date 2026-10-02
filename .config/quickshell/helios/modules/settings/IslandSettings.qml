@@ -6,8 +6,11 @@ import "../../components"
 // Settings > Island — what the idle bump and expanded island show, their
 // sizing, and how the island and its satellites move. Everything applies
 // as you change it; each section has its own Reset.
-Item {
+SettingsPreviewPage {
     id: root
+    title: "Island"
+    icon: "auto_awesome"
+    previewComponent: Component { IslandPreview {} }
 
     readonly property var widgetMeta: ({
         launcher: { icon: "apps", label: "Launcher" },
@@ -23,9 +26,6 @@ Item {
     })
     readonly property var idleWidgetKeys: Config.widgetKeys.idle.map(k => Config.widgetOption("idle", k)).concat(["idleLayout"])
     readonly property var peekWidgetKeys: Config.widgetKeys.peek.map(k => Config.widgetOption("peek", k)).concat(["peekLayout"])
-
-    implicitWidth: 320
-    implicitHeight: col.implicitHeight
 
     component ConfigToggle: OptionToggle { target: Config }
     component ConfigSlider: OptionSlider { target: Config }
@@ -73,14 +73,6 @@ Item {
         id: col
         width: parent.width
         spacing: 20
-
-        Row {
-            spacing: 8
-            MaterialIcon { icon: "auto_awesome"; font.pixelSize: 18; color: Colors.accent; anchors.verticalCenter: parent.verticalCenter }
-            StyledText { text: "Island"; font.weight: Font.DemiBold; font.pixelSize: Config.fontSize + 2; anchors.verticalCenter: parent.verticalCenter }
-        }
-
-        IslandPreview {}
 
         Column {
             width: parent.width
@@ -337,7 +329,7 @@ Item {
                     Toggle {
                         label: "Do Not Disturb"
                         checked: ShellState.dndEnabled
-                        onToggled: v => ShellState.dndEnabled = v
+                        onToggled: v => ShellState.setDndEnabled(v)
                     }
                 }
                 ConfigToggle { option: "showTaskAlerts"; icon: "progress_activity"; label: "Task progress" }

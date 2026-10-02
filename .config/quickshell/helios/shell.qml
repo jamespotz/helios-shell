@@ -273,8 +273,8 @@ ShellRoot {
     IpcHandler {
         target: "dnd"
         function toggle() { ShellState.toggleDnd() }
-        function on() { ShellState.dndEnabled = true }
-        function off() { ShellState.dndEnabled = false }
+        function on() { ShellState.setDndEnabled(true) }
+        function off() { ShellState.setDndEnabled(false) }
     }
 
     IpcHandler {

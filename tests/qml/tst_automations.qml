@@ -47,17 +47,17 @@ ShellRoot {
             root.verify(routes.length === 0, "non-audio device: " + routes);
 
             // Fullscreen → DND clears only the DND it set itself.
-            ShellState.dndEnabled = false;
+            ShellState.setDndEnabled(false);
             Automations.fullscreenRule = true;
             Automations._setFullscreen(true);
             root.verify(ShellState.dndEnabled, "fullscreen turns on DND");
             Automations._setFullscreen(false);
             root.verify(!ShellState.dndEnabled, "leaving fullscreen clears its DND");
-            ShellState.dndEnabled = true;
+            ShellState.setDndEnabled(true);
             Automations._setFullscreen(true);
             Automations._setFullscreen(false);
             root.verify(ShellState.dndEnabled, "manual DND survives fullscreen");
-            ShellState.dndEnabled = false;
+            ShellState.setDndEnabled(false);
             Automations.fullscreenRule = false;
             Automations._setFullscreen(true);
             root.verify(!ShellState.dndEnabled, "rule off does nothing");

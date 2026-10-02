@@ -166,7 +166,7 @@ Item {
                 anchors.verticalCenter: parent.verticalCenter
                 font.pixelSize: Config.fontSize - 1
                 font.weight: Font.Medium
-                text: Math.round(Weather.tempC) + "°"
+                text: Weather.formatTemperature(Weather.tempC)
                 opacity: 0.85
             }
         }

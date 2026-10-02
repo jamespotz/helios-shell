@@ -42,7 +42,7 @@ Item {
         StyledText {
             anchors.verticalCenter: parent.verticalCenter
             font.weight: Font.Medium
-            text: Math.round(Weather.tempC) + "°"
+            text: Weather.formatTemperature(Weather.tempC)
         }
     }
 

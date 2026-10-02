@@ -9,7 +9,7 @@ Item {
     anchors.fill: parent
 
     readonly property string effect: {
-        if (!Weather.available) return "none";
+        if (!Weather.available || !Weather.animationsEnabled) return "none";
         const c = Weather.condition.toLowerCase();
         if (c.includes("thunder")) return "storm";
         if (c.includes("heavy rain") || c.includes("violent")) return "heavyrain";
@@ -19,9 +19,17 @@ Item {
         return "none";
     }
 
+    readonly property bool motionEnabled: root.visible && Weather.animationsEnabled && !Config.reducedMotion
+    onMotionEnabledChanged: if (!motionEnabled) {
+        boltAnim.stop();
+        flashAnim.stop();
+        boltCanvas.opacity = 0;
+        flash.opacity = 0;
+    }
+
     visible: effect !== "none"
     opacity: visible ? 0.6 : 0
-    Behavior on opacity { NumberAnimation { duration: Config.animFast; easing.type: Easing.OutCubic } }
+    Behavior on opacity { NumberAnimation { duration: Config.reducedMotion ? 0 : Config.animFast; easing.type: Easing.OutCubic } }
 
     // --- Rain ---------------------------------------------------------------
     Canvas {
@@ -73,7 +81,7 @@ Item {
         }
 
         Timer {
-            running: rainCanvas.visible && !Config.reducedMotion
+            running: rainCanvas.visible && root.motionEnabled
             interval: 33
             repeat: true
             onTriggered: rainCanvas.requestPaint()
@@ -131,7 +139,7 @@ Item {
         }
 
         Timer {
-            running: snowCanvas.visible && !Config.reducedMotion
+            running: snowCanvas.visible && root.motionEnabled
             interval: 33
             repeat: true
             onTriggered: snowCanvas.requestPaint()
@@ -238,7 +246,7 @@ Item {
         }
 
         Timer {
-            running: flash.visible && !Config.reducedMotion
+            running: flash.visible && root.motionEnabled
             repeat: true
             interval: 5000 + Math.random() * 7000
             onTriggered: {

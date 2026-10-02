@@ -220,15 +220,11 @@ QtObject {
     // ─── Rule: fullscreen window → Do Not Disturb ────────────────────────
     // Only clears DND it set itself, so DND turned on by hand or a Focus
     // Mode survives leaving fullscreen.
-    property bool _fullscreenDnd: false
-
     function _setFullscreen(fullscreen) {
         if (fullscreen && root.fullscreenRule && !ShellState.dndEnabled) {
-            ShellState.dndEnabled = true;
-            root._fullscreenDnd = true;
-        } else if (!fullscreen && root._fullscreenDnd) {
-            root._fullscreenDnd = false;
-            ShellState.dndEnabled = false;
+            ShellState.automaticDndEnabled = true;
+        } else if (!fullscreen) {
+            ShellState.automaticDndEnabled = false;
         }
     }
 

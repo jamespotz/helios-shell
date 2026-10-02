@@ -44,6 +44,8 @@ PanelWindow {
           keywords: ["workspace indicator", "workspace icons", "dots", "numbers"] },
         { id: "dock", label: "Dock", icon: "dock_to_bottom", group: "Personalization", component: dockPage,
           keywords: ["dock", "taskbar", "pinned apps", "autohide", "magnification", "icon size", "window previews", "badges", "recent apps", "scroll", "liquid glass", "trash", "separator"] },
+        { id: "turntable", label: "Turntable", icon: "album", group: "Personalization", component: turntablePage,
+          keywords: ["record player", "vinyl", "media", "album artwork", "tonearm", "rpm", "rotation", "cream", "charcoal", "platter", "color", "solid", "gradient", "sage", "blue", "rose", "sunset", "aurora", "dusk", "forest", "ocean", "sunrise", "meadow", "autumn", "nature", "design", "classic", "studio", "minimal", "sleeve", "album cover", "record label"] },
         { id: "displays", label: "Displays", icon: "monitor", group: "Hardware", component: displaysPage,
           keywords: ["resolution", "refresh rate", "scale", "vrr", "adaptive sync", "night light", "blue light", "warmth", "color temperature"] },
         { id: "sound", label: "Sound", icon: "volume_up", group: "Hardware", component: soundPage,
@@ -61,7 +63,7 @@ PanelWindow {
         { id: "datetime", label: "Date & time", icon: "schedule", group: "System", component: dateTimePage,
           keywords: ["clock", "clock format", "24-hour", "am/pm", "time"] },
         { id: "weather", label: "Weather", icon: "partly_cloudy_day", group: "System", component: weatherPage,
-          keywords: ["weather location", "city", "latitude", "longitude", "forecast"] },
+          keywords: ["weather location", "city", "latitude", "longitude", "forecast", "temperature units", "celsius", "fahrenheit", "wind", "mph", "refresh", "weather animations"] },
         { id: "lockscreen", label: "Lock screen", icon: "bedtime", group: "System", component: lockscreenPage,
           keywords: ["auto-lock", "caffeine mode", "dim screen", "turn off display", "idle"] },
         { id: "power", label: "Power", icon: "bolt", group: "System", component: powerPage,
@@ -321,6 +323,7 @@ PanelWindow {
         // ─── Content ──────────────────────────────────────────────────────
         Flickable {
             id: contentFlick
+            readonly property bool previewPage: pageLoader.item instanceof SettingsPreviewPage
             anchors.top: headerDivider.bottom
             anchors.topMargin: 16
             anchors.bottom: parent.bottom
@@ -329,7 +332,8 @@ PanelWindow {
             anchors.leftMargin: 21
             width: 560
             contentWidth: width
-            contentHeight: pageLoader.implicitHeight
+            contentHeight: pageLoader.height
+            interactive: !previewPage
             clip: true
             boundsBehavior: Flickable.StopAtBounds
             flickableDirection: Flickable.VerticalFlick
@@ -337,6 +341,7 @@ PanelWindow {
             Loader {
                 id: pageLoader
                 width: contentFlick.width
+                height: contentFlick.previewPage ? contentFlick.height : implicitHeight
                 // Unloads on close instead of just hiding — a PanelWindow's
                 // tree survives `visible: false`, so without this any
                 // unapplied draft edit (font family, island width, satellite
@@ -351,7 +356,7 @@ PanelWindow {
                     NumberAnimation { duration: Config.animFast; easing.type: Easing.OutCubic }
                 }
                 onSourceComponentChanged: opacity = 0
-                onLoaded: opacity = 1
+                onLoaded: { contentFlick.contentY = 0; opacity = 1; }
             }
         }
 
@@ -430,4 +435,5 @@ PanelWindow {
     Component { id: dateTimePage; DateTimeSettings {} }
     Component { id: weatherPage; WeatherSettings {} }
     Component { id: dockPage; DockSettings {} }
+    Component { id: turntablePage; TurntableSettings {} }
 }

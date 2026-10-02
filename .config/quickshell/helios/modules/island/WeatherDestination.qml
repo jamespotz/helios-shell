@@ -193,7 +193,7 @@ Item {
 
                         StyledText {
                             anchors.right: parent.right
-                            text: root.selectedDay ? Math.round(root.selectedDay.tempC) + "°" : ""
+                            text: root.selectedDay ? Weather.formatTemperature(root.selectedDay.tempC) : ""
                             font.pixelSize: Config.fontSize + 22
                             font.weight: Font.Thin
                         }
@@ -213,10 +213,10 @@ Item {
 
                         Repeater {
                             model: root.selectedDay ? [
-                                { icon: "air", value: Math.round(root.selectedDay.windKmph) + " km/h" },
+                                { icon: "air", value: Weather.formatWind(root.selectedDay.windKmph) },
                                 { icon: "water_drop", value: root.selectedDay.humidity + "%" },
                                 { icon: "rainy", value: root.selectedDay.chanceOfRain + "%" },
-                                { icon: "device_thermostat", value: Math.round(root.selectedDay.feelsLikeC) + "°" }
+                                { icon: "device_thermostat", value: Weather.formatTemperature(root.selectedDay.feelsLikeC) }
                             ] : []
 
                             Row {
@@ -457,7 +457,7 @@ Item {
                                     anchors.horizontalCenter: parent.horizontalCenter
                                 }
                                 StyledText {
-                                    text: Math.round(modelData.tempC) + "°"
+                                    text: Weather.formatTemperature(modelData.tempC)
                                     font.pixelSize: Config.fontSize - 3
                                     font.weight: Font.DemiBold
                                     color: index === 0 ? Colors.accentText : Colors.text

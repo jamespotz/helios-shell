@@ -6,11 +6,11 @@ import "../dock"
 
 // Settings > Dock — visibility, hiding behavior, icon size, and which
 // screens show the Dock.
-Item {
+SettingsPreviewPage {
     id: root
-
-    implicitWidth: 320
-    implicitHeight: col.implicitHeight
+    title: "Dock"
+    icon: "dock_to_bottom"
+    previewComponent: Component { DockSettingsPreview {} }
 
     component DockToggle: OptionToggle { target: Dock }
     component DockChoice: OptionChoice { target: Dock }
@@ -20,12 +20,6 @@ Item {
         id: col
         width: parent.width
         spacing: 20
-
-        Row {
-            spacing: 8
-            MaterialIcon { icon: "dock_to_bottom"; font.pixelSize: 18; color: Colors.accent; anchors.verticalCenter: parent.verticalCenter }
-            StyledText { text: "Dock"; font.weight: Font.DemiBold; font.pixelSize: Config.fontSize + 2; anchors.verticalCenter: parent.verticalCenter }
-        }
 
         SettingsCard {
             DockToggle { icon: "dock_to_bottom"; label: "Show Dock"; option: "enabled"; last: true }

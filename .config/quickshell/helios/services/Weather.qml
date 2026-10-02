@@ -12,6 +12,15 @@ QtObject {
 
     property bool available: false
     property bool loading: false
+    property string error: ""
+    property double lastUpdated: 0
+    property bool searching: false
+    property var searchResults: []
+    property string searchError: ""
+    property int _searchGeneration: 0
+    property int _forecastGeneration: 0
+    property var _searchRequest: null
+    property var _forecastRequest: null
 
     property real tempC: 0
     property real feelsLikeC: 0
@@ -29,7 +38,7 @@ QtObject {
     // Today's remaining forecast, next 8 hours: [{ label, tempC, condition,
     // icon, chanceOfRain }, ...]
     property var hourly: []
-    // Per-day summaries for the day-nav in WeatherPanel — index 0 is today
+    // Per-day summaries for the day-nav in WeatherDestination — index 0 is today
     // (mirrors the flat properties above), 1/2 are tomorrow/day-after built
     // from that day's daily max/min + midday hourly block.
     // [{ date, tempC, feelsLikeC, condition, icon, humidity, windKmph,
@@ -37,8 +46,126 @@ QtObject {
     property var daily: []
 
     readonly property string locationOverride: settingsAdapter.locationOverride
+    readonly property string locationName: settingsAdapter.locationName
+    readonly property string temperatureUnit: settingsAdapter.temperatureUnit === "fahrenheit" ? "fahrenheit" : "celsius"
+    readonly property string windUnit: ["kmh", "mph", "ms"].includes(settingsAdapter.windUnit) ? settingsAdapter.windUnit : "kmh"
+    readonly property int refreshMinutes: [10, 20, 30, 60].includes(settingsAdapter.refreshMinutes) ? settingsAdapter.refreshMinutes : 20
+    readonly property bool animationsEnabled: settingsAdapter.animationsEnabled
 
-    // Shared by WeatherWidget (peek), IslandIdle (idle) and WeatherPanel's
+    function setOption(key, value) {
+        if (key === "temperatureUnit" && !["celsius", "fahrenheit"].includes(value)) return;
+        if (key === "windUnit" && !["kmh", "mph", "ms"].includes(value)) return;
+        if (key === "refreshMinutes" && ![10, 20, 30, 60].includes(value)) return;
+        if (key === "animationsEnabled" && typeof value !== "boolean") return;
+        if (!["temperatureUnit", "windUnit", "refreshMinutes", "animationsEnabled"].includes(key)) return;
+        settingsAdapter[key] = value;
+        root.saveTimer.restart();
+    }
+
+    function formatTemperature(celsius, withUnit) {
+        const value = root.temperatureUnit === "fahrenheit" ? celsius * 9 / 5 + 32 : celsius;
+        return Math.round(value) + "°" + (withUnit ? (root.temperatureUnit === "fahrenheit" ? "F" : "C") : "");
+    }
+
+    function formatWind(kmph) {
+        const value = root.windUnit === "mph" ? kmph / 1.609344 : root.windUnit === "ms" ? kmph / 3.6 : kmph;
+        return Math.round(value) + " " + (root.windUnit === "mph" ? "mph" : root.windUnit === "ms" ? "m/s" : "km/h");
+    }
+
+    function parseCoordinates(text) {
+        const match = text.match(/^\s*([+-]?\d+(?:\.\d+)?)\s*,\s*([+-]?\d+(?:\.\d+)?)\s*$/);
+        if (!match) return null;
+        const lat = Number(match[1]), lon = Number(match[2]);
+        return Math.abs(lat) <= 90 && Math.abs(lon) <= 180 ? {latitude: lat, longitude: lon} : null;
+    }
+
+    function locationLabel(place) {
+        return [place.name, place.admin1, place.country].filter((part, index, parts) => part && parts.indexOf(part) === index).join(", ");
+    }
+
+    function searchLocations(text) {
+        const generation = ++root._searchGeneration;
+        root.searchTimer.stop();
+        if (root._searchRequest) root._searchRequest.abort();
+        root._searchRequest = null;
+        root.searchResults = [];
+        root.searchError = "";
+        root.searching = false;
+        const query = text.trim();
+        if (query.length < 2) return;
+        root.searching = true;
+        const xhr = new XMLHttpRequest();
+        root._searchRequest = xhr;
+        xhr.onreadystatechange = () => {
+            if (xhr.readyState !== XMLHttpRequest.DONE || generation !== root._searchGeneration) return;
+            root.searchTimer.stop();
+            root._searchRequest = null;
+            root.searching = false;
+            if (xhr.status !== 200) { root.searchError = "City search failed. Try again."; return; }
+            try {
+                const data = JSON.parse(xhr.responseText);
+                root.searchResults = (data.results || []).filter(place => place.name && Number.isFinite(place.latitude) && Number.isFinite(place.longitude));
+                if (!root.searchResults.length) root.searchError = "No matching cities found.";
+            } catch (e) { root.searchError = "City search returned invalid data. Try again."; }
+        };
+        xhr.open("GET", "https://geocoding-api.open-meteo.com/v1/search?count=10&name=" + encodeURIComponent(query));
+        root.searchTimer.restart();
+        xhr.send();
+    }
+
+    function selectLocation(place) {
+        const coordinates = root.parseCoordinates(place.latitude + "," + place.longitude);
+        if (!coordinates) return;
+        root.setLocation(coordinates.latitude + "," + coordinates.longitude, root.locationLabel(place));
+        root.searchLocations("");
+    }
+
+    property Timer searchTimer: Timer {
+        interval: 20000
+        onTriggered: {
+            ++root._searchGeneration;
+            if (root._searchRequest) root._searchRequest.abort();
+            root._searchRequest = null;
+            root.searching = false;
+            root.searchError = "City search timed out. Try again.";
+        }
+    }
+
+    // A generation guards every stage of the location/forecast chain.
+    function _requestJson(url, callback) {
+        const generation = root._forecastGeneration;
+        const xhr = new XMLHttpRequest();
+        root._forecastRequest = xhr;
+        xhr.onreadystatechange = () => {
+            if (xhr.readyState !== XMLHttpRequest.DONE || generation !== root._forecastGeneration) return;
+            root.requestTimer.stop();
+            root._forecastRequest = null;
+            if (xhr.status !== 200) { root._fail("Weather request failed. Check your connection and try again."); return; }
+            try { callback(JSON.parse(xhr.responseText)); }
+            catch (e) { root._fail("Weather returned invalid data. Try again."); }
+        };
+        xhr.open("GET", url);
+        root.requestTimer.restart();
+        xhr.send();
+    }
+
+    function _fail(message) {
+        root.loading = false;
+        root.error = message;
+        root._scheduleRetry();
+    }
+
+    property Timer requestTimer: Timer {
+        interval: 20000
+        onTriggered: {
+            ++root._forecastGeneration;
+            if (root._forecastRequest) root._forecastRequest.abort();
+            root._forecastRequest = null;
+            root._fail("Weather request timed out. Try again.");
+        }
+    }
+
+    // Shared by WeatherWidget (peek), IslandIdle (idle) and WeatherDestination's
     // hourly strip so they all agree on which glyph a condition maps to.
     function iconFor(conditionText) {
         const c = (conditionText || "").toLowerCase();
@@ -71,26 +198,37 @@ QtObject {
         return map[code] || "Cloudy";
     }
 
-    function setLocation(text) {
-        settingsAdapter.locationOverride = text.trim();
-        root.settingsFile.writeAdapter();
-        root.refresh();
-    }
-
-    function refresh() {
-        if (root.loading) return;
-        root.loading = true;
-
-        const override = settingsAdapter.locationOverride;
-        if (!override) {
-            root._geolocate();
+    function setLocation(text, name) {
+        const value = text.trim();
+        if (/^[+\d.,\s-]+$/.test(value) && value.includes(",") && !root.parseCoordinates(value)) {
+            root.error = "Enter latitude between -90 and 90, longitude between -180 and 180.";
             return;
         }
+        settingsAdapter.locationOverride = value;
+        settingsAdapter.locationName = name || "";
+        root.saveTimer.restart();
+        root.available = false;
+        root.lastUpdated = 0;
+        root.location = name || value;
+        root._retryCount = 0;
+        root.refresh(true);
+    }
 
-        const m = override.match(/^\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*$/);
-        if (m) {
-            root.location = override;
-            root._fetchForecast(parseFloat(m[1]), parseFloat(m[2]));
+    function refresh(force) {
+        if (root.loading && !force) return;
+        ++root._forecastGeneration;
+        root.requestTimer.stop();
+        root.retryTimer.stop();
+        if (root._forecastRequest) root._forecastRequest.abort();
+        root._forecastRequest = null;
+        root.loading = true;
+        root.error = "";
+        const override = settingsAdapter.locationOverride;
+        if (!override) { root._geolocate(); return; }
+        const coordinates = root.parseCoordinates(override);
+        if (coordinates) {
+            root.location = settingsAdapter.locationName || override;
+            root._fetchForecast(coordinates.latitude, coordinates.longitude);
         } else {
             root._geocode(override);
         }
@@ -117,45 +255,28 @@ QtObject {
 
     // No override set — resolve the requester's IP to a lat/long.
     function _geolocate() {
-        const xhr = new XMLHttpRequest();
-        xhr.onreadystatechange = () => {
-            if (xhr.readyState !== XMLHttpRequest.DONE) return;
-            if (xhr.status !== 200) { root.loading = false; root.available = false; root._scheduleRetry(); return; }
-            try {
-                const ip = JSON.parse(xhr.responseText);
-                root.location = ip.city || "";
-                root._fetchForecast(ip.latitude, ip.longitude);
-            } catch (e) {
-                root.loading = false;
-                root.available = false;
-                root._scheduleRetry();
+        root._requestJson("https://ipapi.co/json/", ip => {
+            if (!Number.isFinite(ip.latitude) || !Number.isFinite(ip.longitude)) {
+                root._fail("Could not detect your location. Choose a city or coordinates.");
+                return;
             }
-        };
-        xhr.open("GET", "https://ipapi.co/json/");
-        xhr.send();
+            root.location = ip.city || "";
+            root._fetchForecast(ip.latitude, ip.longitude);
+        });
     }
 
-    // City-name override — resolve to a lat/long via Open-Meteo's own
-    // geocoding endpoint.
+    // Keep existing city-name overrides working; new selections save coordinates.
     function _geocode(text) {
-        const xhr = new XMLHttpRequest();
-        xhr.onreadystatechange = () => {
-            if (xhr.readyState !== XMLHttpRequest.DONE) return;
-            if (xhr.status !== 200) { root.loading = false; root.available = false; root._scheduleRetry(); return; }
-            try {
-                const data = JSON.parse(xhr.responseText);
-                const first = data.results && data.results[0];
-                if (!first) { root.loading = false; root.available = false; return; }
-                root.location = first.name;
-                root._fetchForecast(first.latitude, first.longitude);
-            } catch (e) {
+        root._requestJson("https://geocoding-api.open-meteo.com/v1/search?count=1&name=" + encodeURIComponent(text), data => {
+            const first = data.results && data.results[0];
+            if (!first) {
                 root.loading = false;
-                root.available = false;
-                root._scheduleRetry();
+                root.error = "Location not found. Choose a city or coordinates.";
+                return;
             }
-        };
-        xhr.open("GET", "https://geocoding-api.open-meteo.com/v1/search?count=1&name=" + encodeURIComponent(text));
-        xhr.send();
+            root.location = first.name;
+            root._fetchForecast(first.latitude, first.longitude);
+        });
     }
 
     function _fetchForecast(lat, lon) {
@@ -168,45 +289,41 @@ QtObject {
             + "&daily=temperature_2m_max,temperature_2m_min,weather_code,uv_index_max,sunrise,sunset"
             + "&timezone=auto&forecast_days=3";
 
-        const xhr = new XMLHttpRequest();
-        xhr.onreadystatechange = () => {
-            if (xhr.readyState !== XMLHttpRequest.DONE) return;
-            root.loading = false;
-            if (xhr.status !== 200) { root.available = false; root._scheduleRetry(); return; }
+        root._requestJson(url, data => {
+            const cur = data.current;
+            if (!cur || !Number.isFinite(cur.temperature_2m) || !Number.isFinite(cur.wind_speed_10m))
+                throw new Error("Missing current conditions");
+            root.tempC = cur.temperature_2m;
+            root.feelsLikeC = cur.apparent_temperature;
+            root.condition = root.conditionFor(cur.weather_code);
+            root.humidity = Math.round(cur.relative_humidity_2m);
+            root.windKmph = cur.wind_speed_10m;
 
-            try {
-                const data = JSON.parse(xhr.responseText);
-                const cur = data.current;
-                root.tempC = cur.temperature_2m;
-                root.feelsLikeC = cur.apparent_temperature;
-                root.condition = root.conditionFor(cur.weather_code);
-                root.humidity = Math.round(cur.relative_humidity_2m);
-                root.windKmph = cur.wind_speed_10m;
+            const daily = data.daily;
+            if (daily && daily.time && daily.time.length > 0) {
+                root.minTempC = daily.temperature_2m_min[0];
+                root.maxTempC = daily.temperature_2m_max[0];
+                root.uvIndex = Math.round(daily.uv_index_max ? daily.uv_index_max[0] : 0);
+                root.sunrise = (daily.sunrise && daily.sunrise[0]) ? daily.sunrise[0].split("T")[1] : "";
+                root.sunset = (daily.sunset && daily.sunset[0]) ? daily.sunset[0].split("T")[1] : "";
+            }
 
-                const daily = data.daily;
-                if (daily && daily.time && daily.time.length > 0) {
-                    root.minTempC = daily.temperature_2m_min[0];
-                    root.maxTempC = daily.temperature_2m_max[0];
-                    root.uvIndex = Math.round(daily.uv_index_max ? daily.uv_index_max[0] : 0);
-                    root.sunrise = (daily.sunrise && daily.sunrise[0]) ? daily.sunrise[0].split("T")[1] : "";
-                    root.sunset = (daily.sunset && daily.sunset[0]) ? daily.sunset[0].split("T")[1] : "";
-                }
+            // Next 8 hours, starting from now.
+            const hourly = data.hourly;
+            const blocks = [];
+            if (hourly && hourly.time) {
+                const nowMs = Date.now();
+                for (let i = 0; i < hourly.time.length && blocks.length < 8; i++) {
+                    if (new Date(hourly.time[i]).getTime() < nowMs) continue;
+                    const hh = hourly.time[i].split("T")[1].slice(0, 5);
+                    blocks.push({
+                        label: hh,
+                        tempC: hourly.temperature_2m[i],
+                        condition: root.conditionFor(hourly.weather_code[i]),
+                        icon: root.iconFor(root.conditionFor(hourly.weather_code[i])),
+                        chanceOfRain: hourly.precipitation_probability ? hourly.precipitation_probability[i] : 0
 
-                // Next 8 hours, starting from now.
-                const hourly = data.hourly;
-                const blocks = [];
-                if (hourly && hourly.time) {
-                    const nowMs = Date.now();
-                    for (let i = 0; i < hourly.time.length && blocks.length < 8; i++) {
-                        if (new Date(hourly.time[i]).getTime() < nowMs) continue;
-                        const hh = hourly.time[i].split("T")[1].slice(0, 5);
-                        blocks.push({
-                            label: hh,
-                            tempC: hourly.temperature_2m[i],
-                            condition: root.conditionFor(hourly.weather_code[i]),
-                            icon: root.iconFor(root.conditionFor(hourly.weather_code[i])),
-                            chanceOfRain: hourly.precipitation_probability ? hourly.precipitation_probability[i] : 0
-                        });
+        });
                     }
                 }
                 root.hourly = blocks;
@@ -261,14 +378,16 @@ QtObject {
                 root.daily = days;
 
                 root.available = true;
+                root.loading = false;
+                root.error = "";
+                root.lastUpdated = Date.now();
                 root._retryCount = 0;
-            } catch (e) {
-                root.available = false;
-                root._scheduleRetry();
-            }
-        };
-        xhr.open("GET", url);
-        xhr.send();
+        });
+    }
+
+    property Timer saveTimer: Timer {
+        interval: 100
+        onTriggered: root.settingsFile.writeAdapter()
     }
 
     property FileView settingsFile: FileView {
@@ -282,11 +401,16 @@ QtObject {
         JsonAdapter {
             id: settingsAdapter
             property string locationOverride: ""
+            property string locationName: ""
+            property string temperatureUnit: "celsius"
+            property string windUnit: "kmh"
+            property int refreshMinutes: 20
+            property bool animationsEnabled: true
         }
     }
 
     property Timer refreshTimer: Timer {
-        interval: 20 * 60 * 1000
+        interval: root.refreshMinutes * 60 * 1000
         running: true
         repeat: true
         onTriggered: root.refresh()

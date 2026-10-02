@@ -20,7 +20,8 @@ Rectangle {
     readonly property bool mediaPlaying: (Mpris.players ? Mpris.players.values : []).some(p => p.isPlaying)
 
     width: parent ? parent.width : 0
-    height: stage.implicitHeight + 36
+    implicitHeight: stage.implicitHeight + 36
+    height: implicitHeight
     radius: Colors.radiusLarge
     color: Colors.surfaceHigh
     enabled: false
@@ -40,6 +41,7 @@ Rectangle {
 
             IslandIdle {
                 id: idle
+                objectName: "islandPreviewIdle"
                 anchors.fill: parent
                 targetScreen: root.targetScreen
                 mediaPlaying: root.mediaPlaying

@@ -78,7 +78,7 @@ QtObject {
         if (!palette) return;
         settingsAdapter.mode = "preset";
         settingsAdapter.presetName = name;
-        root.settingsFile.writeAdapter();
+        root.saveTimer.restart();
         const full = root.deriveFullPalette(palette);
         Colors.apply(full);
         root.writeSystemTheme(full);
@@ -122,7 +122,7 @@ QtObject {
     function setPaletteScheme(name) {
         if (settingsAdapter.paletteScheme === name) return;
         settingsAdapter.paletteScheme = name;
-        root.settingsFile.writeAdapter();
+        root.saveTimer.restart();
         if (root.mode === "dynamic") root.applyDynamic();
     }
 
@@ -133,7 +133,7 @@ QtObject {
     function setDynamicMode(isDark) {
         if (settingsAdapter.dynamicDark === isDark) return;
         settingsAdapter.dynamicDark = isDark;
-        root.settingsFile.writeAdapter();
+        root.saveTimer.restart();
         if (root.mode !== "dynamic") return;
         const cached = isDark ? settingsAdapter.dynamicPaletteDark : settingsAdapter.dynamicPaletteLight;
         if (cached) {
@@ -281,7 +281,7 @@ QtObject {
                     settingsAdapter.mode = "dynamic";
                     settingsAdapter.dynamicPaletteDark = JSON.stringify(paletteDark);
                     settingsAdapter.dynamicPaletteLight = JSON.stringify(paletteLight);
-                    root.settingsFile.writeAdapter();
+                    root.saveTimer.restart();
                     const active = root.dynamicDark ? paletteDark : paletteLight;
                     Colors.apply(active);
                     root.writeSystemTheme(active);
@@ -520,6 +520,11 @@ QtObject {
     }
 
     Component.onCompleted: root.restoreFromSettings()
+
+    property Timer saveTimer: Timer {
+        interval: 300
+        onTriggered: root.settingsFile.writeAdapter()
+    }
 
     property FileView settingsFile: FileView {
         path: Quickshell.statePath("theme.json")

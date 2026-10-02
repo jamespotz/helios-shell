@@ -91,7 +91,7 @@ Loader {
                             anchors.verticalCenter: parent.verticalCenter
                             font.pixelSize: Config.fontSize + 1
                             color: Colors.subtext
-                            text: Math.round(Weather.tempC) + "°  " + Weather.condition
+                            text: Weather.formatTemperature(Weather.tempC) + "  " + Weather.condition
                         }
                     }
 

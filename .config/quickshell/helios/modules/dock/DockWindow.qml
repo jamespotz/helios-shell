@@ -326,42 +326,8 @@ PanelWindow {
             }
             Behavior on opacity { NumberAnimation { duration: Config.animFast } }
 
-            // SurfaceBackground's look with the fill swapped for
-            // LiquidGlassSurface, same as the OSD, so the Dock follows the
-            // Liquid Glass toggle (or its own override).
-            Rectangle {
-                id: bodyBackground
+            DockSurface {
                 anchors.fill: parent
-                radius: Math.min(Dock.cornerRadius, Math.min(width, height) / 2)
-                opacity: Dock.backgroundOpacity
-                color: "transparent"
-
-                // The shadow would darken the translucent glass tint.
-                SurfaceShadow {
-                    anchors.fill: parent
-                    z: -1
-                    cornerRadius: bodyBackground.radius
-                    visible: !Dock.glassActive
-                    glowRadius: Dock.shadowGlowRadius
-                    spread: Dock.shadowSpread
-                }
-
-                LiquidGlassSurface {
-                    anchors.fill: parent
-                    z: -1
-                    active: Dock.glassActive
-                    cornerRadius: bodyBackground.radius
-                    fallbackColor: Qt.alpha(Colors.surface, Colors.panelOpacity)
-                }
-            }
-
-            SurfaceBorder {
-                anchors.fill: parent
-                visible: Dock.border
-                radius: bodyBackground.radius
-                border.width: Dock.borderWidth
-                tint: Dock.borderColor
-                tintOpacity: Dock.borderOpacity
             }
 
             Grid {

@@ -7,7 +7,14 @@ QtObject {
     id: root
     property bool locked: false
 
-    property bool dndEnabled: false
+    readonly property bool dndEnabled: liquidGlassAdapter.dndEnabled || root.automaticDndEnabled
+    // Fullscreen automation is temporary; only manual DND is persisted.
+    property bool automaticDndEnabled: false
+
+    function setDndEnabled(enabled) {
+        liquidGlassAdapter.dndEnabled = enabled;
+        if (!enabled) root.automaticDndEnabled = false;
+    }
 
     // Settings window — a separate top-level surface from the island (see
     // SettingsWindow.qml). settingsPage remembers the last page shown so
@@ -61,17 +68,16 @@ QtObject {
 
     signal lockRequested()
 
-    function toggleDnd() { dndEnabled = !dndEnabled }
+    function toggleDnd() { root.setDndEnabled(!root.dndEnabled) }
 
     function lock() { lockRequested() }
 
     function toggleLiquidGlass() { liquidGlassEnabled = !liquidGlassEnabled }
 
-    // --- Persisted: liquid glass preference ---------------------------------
+    // --- Persisted: liquid glass and Do Not Disturb preferences --------------
     // Unlike the rest of this singleton (which is deliberately session-only
-    // UI state — open panels, tray menu position, etc.), liquid glass is a
-    // user preference like NightLight.enabled/IdleInhibit.enabled, so it
-    // should survive a shell restart.
+    // UI state — open panels, tray menu position, etc.), liquid glass and
+    // Do Not Disturb are user preferences and survive a shell restart.
     //
     // Aliased straight to the JsonAdapter's own property rather than mirrored
     // into a plain `property bool` restored in Component.onCompleted: FileView
@@ -87,12 +93,17 @@ QtObject {
     property FileView liquidGlassFile: FileView {
         path: Quickshell.statePath("liquid-glass.json")
         watchChanges: true
+        onAdapterUpdated: root.saveTimer.restart()
 
         JsonAdapter {
             id: liquidGlassAdapter
             property bool enabled: false
+            property bool dndEnabled: false
         }
     }
 
-    onLiquidGlassEnabledChanged: root.liquidGlassFile.writeAdapter()
+    property Timer saveTimer: Timer {
+        interval: 300
+        onTriggered: root.liquidGlassFile.writeAdapter()
+    }
 }

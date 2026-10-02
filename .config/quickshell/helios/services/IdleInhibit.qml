@@ -124,6 +124,7 @@ QtObject {
     property FileView settingsFile: FileView {
         path: Quickshell.statePath("idle-settings.json")
         watchChanges: false
+        onAdapterUpdated: root.saveTimer.restart()
 
         JsonAdapter {
             id: adapter
@@ -140,9 +141,10 @@ QtObject {
         onLoaded: root._sync()
     }
 
-    onEnabledChanged: root.settingsFile.writeAdapter()
-    onLockTimeoutChanged: root.settingsFile.writeAdapter()
-    onDpmsTimeoutChanged: root.settingsFile.writeAdapter()
-    onDimTimeoutChanged: root.settingsFile.writeAdapter()
-    onInhibitedChanged: root.settingsFile.writeAdapter()
+    // Adapter updates exclude disk loading, so restoring preferences never
+    // writes a partially restored snapshot back over the saved settings.
+    property Timer saveTimer: Timer {
+        interval: 300
+        onTriggered: root.settingsFile.writeAdapter()
+    }
 }
