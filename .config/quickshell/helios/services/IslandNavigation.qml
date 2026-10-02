@@ -6,7 +6,7 @@ import Quickshell.Hyprland
 QtObject {
     id: root
 
-    readonly property var destinations: [root._destination("volume", "Volume", "VolumeDestination.qml"), root._destination("mixer", "Audio Mixer", "AudioMixerDestination.qml"), root._destination("bluetooth", "Bluetooth", "BluetoothDestination.qml"), root._destination("wifi", "Wi-Fi", "WifiDestination.qml"), root._destination("focus", "Focus Modes", "FocusDestination.qml"), root._destination("privacy", "Privacy", "PrivacyDestination.qml"), root._destination("automation", "Automations", "AutomationDestination.qml"), root._destination("media", "Media", "MediaDestination.qml"), root._destination("clipboard", "Clipboard", "ClipboardDestination.qml"), root._destination("recorder", "Screen Recorder", "ScreenRecorderDestination.qml"), root._destination("screenshot", "Screenshot", "ScreenshotDestination.qml"), root._destination("weather", "Weather", "WeatherDestination.qml"), root._destination("calendar", "Calendar", "CalendarDestination.qml"), root._destination("system", "System Monitor", "SystemMonitorDestination.qml"), root._destination("notifications", "Notifications", "NotificationHistoryDestination.qml"), root._destination("nightlight", "Night Light", "NightLightDestination.qml"), root._destination("display", "Displays", "DisplayDestination.qml"), root._destination("idlelock", "Idle & Lock", "IdleDestination.qml"), root._destination("wallpaper", "Wallpaper", "WallpaperDestination.qml"), root._destination("theme", "Theme", "ThemeDestination.qml"), root._destination("power", "Power", "PowerDestination.qml"), root._destination("powermenu", "Power", "PowerMenuDestination.qml"), root._destination("keybinds", "Keybinds", "KeybindsDestination.qml"), root._destination("maintenance", "Maintenance", "MaintenanceDestination.qml", 0, "maintenance"), root._destination("recording", "Recording", "RecordingDestination.qml", 0, "recording"), root._destination("annotate", "Annotate", "AnnotateDestination.qml", 0, "", true), root._destination("colorpicker", "Color Picker", "ColorPickerDestination.qml", 0, "", true), root._destination("launcher", "Launcher", "LauncherDestination.qml")]
+    readonly property var destinations: [root._destination("volume", "Volume", "VolumeDestination.qml"), root._destination("mixer", "Audio Mixer", "AudioMixerDestination.qml"), root._destination("bluetooth", "Bluetooth", "BluetoothDestination.qml"), root._destination("wifi", "Wi-Fi", "WifiDestination.qml"), root._destination("focus", "Focus Modes", "FocusDestination.qml"), root._destination("privacy", "Privacy", "PrivacyDestination.qml"), root._destination("automation", "Automations", "AutomationDestination.qml"), root._destination("media", "Media", "MediaDestination.qml"), root._destination("clipboard", "Clipboard", "ClipboardDestination.qml"), root._destination("recorder", "Screen Recorder", "ScreenRecorderDestination.qml"), root._destination("screenshot", "Screenshot", "ScreenshotDestination.qml"), root._destination("weather", "Weather", "WeatherDestination.qml"), root._destination("calendar", "Calendar", "CalendarDestination.qml"), root._destination("system", "System Monitor", "SystemMonitorDestination.qml"), root._destination("notifications", "Notifications", "NotificationHistoryDestination.qml"), root._destination("nightlight", "Night Light", "NightLightDestination.qml"), root._destination("display", "Displays", "DisplayDestination.qml"), root._destination("idlelock", "Idle & Lock", "IdleDestination.qml"), root._destination("wallpaper", "Wallpaper", "WallpaperDestination.qml"), root._destination("theme", "Theme", "ThemeDestination.qml"), root._destination("power", "Power", "PowerDestination.qml"), root._destination("powermenu", "Power", "PowerMenuDestination.qml"), root._destination("keybinds", "Keybinds", "KeybindsDestination.qml"), root._destination("maintenance", "Maintenance", "MaintenanceDestination.qml", 0, "maintenance"), root._destination("recording", "Recording", "RecordingDestination.qml", 0, "recording"), root._destination("privacy-status", "Privacy activity", "PrivacyStatusDestination.qml", 0, "privacy-status"), root._destination("tasks", "Background tasks", "TasksDestination.qml", 0, "tasks"), root._destination("focus-status", "Active focus mode", "FocusStatusDestination.qml", 0, "focus-status"), root._destination("caffeine", "Caffeine", "CaffeineDestination.qml", 0, "caffeine"), root._destination("meeting", "Upcoming meeting", "MeetingDestination.qml", 0, "meeting"), root._destination("annotate", "Annotate", "AnnotateDestination.qml", 0, "", true), root._destination("colorpicker", "Color Picker", "ColorPickerDestination.qml", 0, "", true), root._destination("launcher", "Launcher", "LauncherDestination.qml")]
 
     property bool _open: false
     property string _screen: ""
@@ -26,9 +26,29 @@ QtObject {
     readonly property string satelliteId: root._satelliteId
 
     readonly property var satellites: [
-        { id: "recording", label: "Recording", onRight: false, active: () => ScreenRecorder.recording },
-        { id: "maintenance", label: "Maintenance", onRight: true, active: () => Maintenance.hasAlert }
+        { id: "recording", label: qsTr("Recording"), onRight: false, active: () => ScreenRecorder.recording },
+        { id: "privacy-status", label: qsTr("Privacy"), onRight: false, active: () => MicActivity.isSystemMicActive || CameraActivity.isSystemCameraActive },
+        { id: "meeting", label: qsTr("Upcoming meeting"), onRight: true, alertScoped: true, active: () => Config.showMeetingAlerts && Calendar.upcomingAlert !== null },
+        { id: "tasks", label: qsTr("Background tasks"), onRight: true, alertScoped: true, active: () => Config.showTaskAlerts && Tasks.items.length > 0 },
+        { id: "maintenance", label: qsTr("Maintenance"), onRight: true, active: () => Maintenance.hasAlert },
+        { id: "focus-status", label: qsTr("Focus mode"), onRight: true, active: () => FocusModes.activeId.length > 0 },
+        { id: "caffeine", label: qsTr("Caffeine"), onRight: true, active: () => IdleInhibit.inhibited }
     ]
+
+    // Catalogue order is priority. Each side owns one slot; an expanded
+    // destination stays pinned while other activities change underneath it.
+    function satellitesFor(screenName, onRight) {
+        return root.satellites.filter(s => s.onRight === onRight && s.active()
+            && (!s.alertScoped || root._alertsOn(screenName, Config.alertScreen, root._focusedScreen, root._alertScreens)));
+    }
+
+    function satelliteFor(screenName, onRight) {
+        if (root.satelliteOpenFor(screenName)) {
+            const selected = root.satellites.find(s => s.id === root.satelliteId && s.onRight === onRight);
+            if (selected) return selected;
+        }
+        return root.satellitesFor(screenName, onRight)[0] || null;
+    }
 
     signal rejected(string destinationId)
 
@@ -84,15 +104,6 @@ QtObject {
             mode: "notify",
             active: () => Notifications.state.popups.length > 0,
             dismiss: () => Notifications.dismissAll()
-        },
-        {
-            mode: "task",
-            active: () => Config.showTaskAlerts && Tasks.items.length > 0
-        },
-        {
-            mode: "meeting",
-            active: () => Config.showMeetingAlerts && Calendar.upcomingAlert !== null,
-            dismiss: () => Calendar.dismissAlert()
         },
         {
             mode: "battery",

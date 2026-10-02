@@ -118,6 +118,11 @@ QtObject {
     // event's alert time and is rescheduled whenever events change.
     property var upcomingAlert: null
     property var _alertedKeys: ({})
+    property SystemClock meetingClock: SystemClock { precision: SystemClock.Minutes }
+    readonly property int upcomingMinutesUntil: {
+        const start = root.upcomingAlert ? root._eventStart(root.upcomingAlert) : null;
+        return start ? Math.max(0, Math.ceil((start.getTime() - root.meetingClock.date.getTime()) / 60000)) : 0;
+    }
 
     // event.date is "YYYY-MM-DD", event.startTime is "HH:MM" (both from
     // calendar-info.py) — parsed as local time, matching how the agenda
@@ -159,7 +164,18 @@ QtObject {
     function _scheduleAlert() {
         root._scanForAlerts();
         alertTimer.stop();
-        if (root.upcomingAlert) return;
+        if (root.upcomingAlert) {
+            const start = root._eventStart(root.upcomingAlert);
+            const expiresAt = start ? start.getTime() + 60000 : 0;
+            if (expiresAt <= Date.now()) {
+                root.upcomingAlert = null;
+                Qt.callLater(root._scheduleAlert);
+                return;
+            }
+            alertTimer.interval = Math.min(expiresAt - Date.now() + 100, 5 * 60000);
+            alertTimer.start();
+            return;
+        }
         const now = Date.now();
         let next = Infinity;
         for (const event of root.events) {
@@ -176,6 +192,7 @@ QtObject {
     }
 
     onEventsChanged: root._scheduleAlert()
+    onUpcomingAlertChanged: root._scheduleAlert()
 
     property Timer alertTimer: Timer {
         onTriggered: root._scheduleAlert()

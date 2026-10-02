@@ -389,10 +389,11 @@ PanelWindow {
     property Item rightSatellite: null
     Repeater {
         id: satellites
-        model: IslandNavigation.satellites
+        model: [false, true]
         delegate: IslandSatelliteHost {
-            required property var modelData
-            definition: modelData
+            required property bool modelData
+            slotOnRight: modelData
+            definition: IslandNavigation.satelliteFor(bar.modelData.name, modelData)
             targetScreen: bar.modelData.name
             anchorItem: hitArea
             defaultFillColor: bar.mode === "idle" ? Colors.background : Colors.surface

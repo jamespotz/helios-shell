@@ -8,6 +8,20 @@ ShellRoot {
     readonly property Process terminator: Process { command: ["sh", "-c", "kill -TERM $PPID"] }
     readonly property Timer terminateDelay: Timer { interval: 50; onTriggered: root.terminator.running = true }
     function verify(value, message) { if (!value) throw new Error(message); }
+    readonly property Timer completionCheck: Timer {
+        interval: 1800
+        onTriggered: {
+            try {
+                root.verify(!Tasks.items.some(t => t.id === "completed"), "completed task expires without opening its Satellite");
+                root.verify(Tasks.items.some(t => t.id === "failed"), "failed task stays available until dismissed");
+                Tasks.remove("failed");
+                IdleInhibit.inhibited = false;
+                root.verify(IslandNavigation.satelliteFor("screen-a", true) === null, "empty right slot disappears");
+                console.warn("ISLAND_SATELLITE_TEST_PASS");
+            } catch (error) { console.error("ISLAND_SATELLITE_TEST_FAIL:", error.toString()); }
+            root.terminateDelay.start();
+        }
+    }
 
     Component.onCompleted: {
         try {
@@ -52,7 +66,42 @@ ShellRoot {
             root.verify(IslandNavigation.panelOpenFor("screen-a") && !IslandNavigation.satelliteOpen, "outside click preserves retained annotation and closes transient satellite");
             IslandNavigation.close();
             root.verify(!IslandNavigation.open && !IslandNavigation.satelliteOpen, "legacy close releases both hosts");
-            console.warn("ISLAND_SATELLITE_TEST_PASS");
+            Maintenance.infoProc.running = false;
+            Maintenance.unitsProc.running = false;
+            Maintenance.failedUnits = [];
+            Maintenance.firmwareUpdates = [];
+            Maintenance.rebootRequired = false;
+            Maintenance.flatpakUpdates = 0;
+            Maintenance.dnfUpdates = 1;
+            Tasks.start("build", "Build");
+            FocusModes.activeId = "focus";
+            IdleInhibit.inhibited = true;
+            root.verify(IslandNavigation.satelliteFor("screen-a", true).id === "tasks", "tasks take priority over maintenance, focus, and caffeine");
+            const meetingStart = new Date(Date.now() + 3 * 60000);
+            Calendar.upcomingAlert = { date: Qt.formatDateTime(meetingStart, "yyyy-MM-dd"), startTime: Qt.formatDateTime(meetingStart, "HH:mm"), summary: "Standup", links: [] };
+            root.verify(IslandNavigation.satelliteFor("screen-a", true).id === "meeting", "upcoming meeting takes priority over tasks");
+            root.verify(IslandNavigation.modeFor("screen-a", false) === "idle", "meeting keeps main Island idle");
+            Calendar.dismissAlert();
+            Tasks.remove("build");
+            root.verify(IslandNavigation.satelliteFor("screen-a", true).id === "maintenance", "maintenance wins after task finishes");
+            Maintenance.dnfUpdates = 0;
+            root.verify(IslandNavigation.satelliteFor("screen-a", true).id === "focus-status", "focus takes priority over caffeine");
+            root.verify(IslandNavigation.satellitesFor("screen-a", true).some(s => s.id === "caffeine"), "competing activity remains available");
+            root.verify(IslandNavigation.showSatellite("screen-a", "caffeine"), "caffeine controls open");
+            root.verify(IslandNavigation.satelliteFor("screen-a", true).id === "caffeine", "expanded activity remains pinned despite priority");
+            root.verify(IslandNavigation.satelliteFor("screen-b", true).id === "focus-status", "pin only affects its own screen");
+            IslandNavigation.close();
+            FocusModes.activeId = "";
+            const expiredStart = new Date(Date.now() - 2 * 60000);
+            Calendar.upcomingAlert = { date: Qt.formatDateTime(expiredStart, "yyyy-MM-dd"), startTime: Qt.formatDateTime(expiredStart, "HH:mm"), summary: "Expired meeting", links: [] };
+            Calendar._scheduleAlert();
+            root.verify(Calendar.upcomingAlert === null, "expired meeting does not leave a stale Satellite");
+            Tasks.start("completed", "Completed task");
+            Tasks.finish("completed", true);
+            Tasks.start("failed", "Failed task");
+            Tasks.finish("failed", false);
+            root.completionCheck.start();
+            return;
         } catch (error) { console.error("ISLAND_SATELLITE_TEST_FAIL:", error.toString()); }
         root.terminateDelay.start();
     }

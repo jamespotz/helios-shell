@@ -28,11 +28,13 @@ ShellRoot {
             const names = Quickshell.screens.map(s => s.name);
             const here = names[0];
             Config.setOption("alertScreen", here);
-            root.verify(IslandNavigation.modeFor(here, false) === "task", "alert on chosen screen");
+            root.verify(IslandNavigation.satellitesFor(here, true).some(s => s.id === "tasks"), "task Satellite on chosen screen");
+            root.verify(!IslandNavigation.satellitesFor("elsewhere", true).some(s => s.id === "tasks"), "task Satellite stays off other screens");
+            root.verify(IslandNavigation.modeFor(here, false) === "idle", "task keeps chosen Island free");
             root.verify(IslandNavigation.modeFor("elsewhere", false) === "idle", "other screens stay idle");
             root.verify(IslandNavigation.modeFor("elsewhere", true) === "peek", "other screens still hover");
             Config.resetOptions(["alertScreen"]);
-            root.verify(IslandNavigation.modeFor("elsewhere", false) === "task", "all again after reset");
+            root.verify(IslandNavigation.satellitesFor("elsewhere", true).some(s => s.id === "tasks"), "task Satellite on all screens after reset");
 
             console.warn("ALERT_SCREEN_TEST_PASS");
         } catch (error) {

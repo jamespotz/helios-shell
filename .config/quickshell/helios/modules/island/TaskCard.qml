@@ -16,25 +16,6 @@ Item {
     implicitWidth: Config.notifyWidth
     implicitHeight: col.implicitHeight
 
-    HoverHandler { id: hoverTracker }
-
-    // A finished single task (done/error) stays put just long enough to
-    // read the result, then removes itself — same idea as NotificationCard's
-    // auto-dismiss, just shorter since there's no body text.
-    Timer {
-        id: autoRemoveTimer
-        interval: 1600
-        onTriggered: {
-            if (hoverTracker.hovered) { autoRemoveTimer.restart(); return; }
-            if (root.single && root.single.status !== "running") Tasks.remove(root.single.id);
-        }
-    }
-
-    onSingleChanged: {
-        if (root.single && root.single.status !== "running") autoRemoveTimer.restart();
-        else autoRemoveTimer.stop();
-    }
-
     function statusIcon(task) {
         return task.status === "done" ? "check_circle" : task.status === "error" ? "error" : "sync";
     }
@@ -86,8 +67,8 @@ Item {
                         height: parent.height
                         radius: parent.radius
                         color: Colors.accent
-                        width: root.single && root.single.progress >= 0 ? parent.width * root.single.progress : 0
-                        Behavior on width { NumberAnimation { duration: Config.animFast; easing.type: Easing.OutCubic } }
+                        width: root.single && root.single.progress >= 0 ? parent.width * Math.max(0, Math.min(1, root.single.progress)) : 0
+                        Behavior on width { enabled: !Config.reducedMotion; NumberAnimation { duration: Config.animFast; easing.type: Easing.OutCubic } }
                     }
                 }
             }
@@ -121,24 +102,50 @@ Item {
             Repeater {
                 model: root.list
 
-                delegate: Row {
+                delegate: Column {
                     required property var modelData
                     width: parent.width
-                    spacing: 8
+                    spacing: 6
 
-                    MaterialIcon {
-                        icon: root.statusIcon(modelData)
-                        font.pixelSize: 14
-                        color: root.statusColor(modelData)
-                        anchors.verticalCenter: parent.verticalCenter
+                    Row {
+                        width: parent.width
+                        spacing: 8
+                        MaterialIcon {
+                            icon: root.statusIcon(modelData)
+                            font.pixelSize: 14
+                            color: root.statusColor(modelData)
+                            anchors.verticalCenter: parent.verticalCenter
+                        }
+                        StyledText {
+                            width: parent.width - 22 - percentage.implicitWidth - 8
+                            elide: Text.ElideRight
+                            font.pixelSize: Config.fontSize - 1
+                            text: modelData.label
+                            anchors.verticalCenter: parent.verticalCenter
+                        }
+                        StyledText {
+                            id: percentage
+                            text: modelData.status === "running" && modelData.progress >= 0
+                                ? Math.round(Math.max(0, Math.min(1, modelData.progress)) * 100) + "%" : ""
+                            color: Colors.subtext
+                            font.pixelSize: Config.fontSize - 2
+                            anchors.verticalCenter: parent.verticalCenter
+                        }
                     }
-
-                    StyledText {
-                        width: parent.width - 14 - 8
-                        elide: Text.ElideRight
-                        font.pixelSize: Config.fontSize - 1
-                        text: modelData.label
-                        anchors.verticalCenter: parent.verticalCenter
+                    Rectangle {
+                        x: 22
+                        width: parent.width - 22
+                        height: 4
+                        radius: 2
+                        color: Colors.surfaceHigh
+                        visible: modelData.status === "running"
+                        Rectangle {
+                            height: parent.height
+                            radius: parent.radius
+                            color: Colors.accent
+                            width: modelData.progress >= 0 ? parent.width * Math.max(0, Math.min(1, modelData.progress)) : 0
+                            Behavior on width { enabled: !Config.reducedMotion; NumberAnimation { duration: Config.animFast; easing.type: Easing.OutCubic } }
+                        }
                     }
                 }
             }

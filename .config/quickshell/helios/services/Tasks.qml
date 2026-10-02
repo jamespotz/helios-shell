@@ -34,10 +34,26 @@ QtObject {
     function finish(id, ok) {
         const task = root.items.find(t => t.id === id);
         if (!task) return;
-        root.items = root.items.map(t => t.id === id ? Object.assign({}, t, { status: ok ? "done" : "error", progress: 1 }) : t);
+        root.items = root.items.map(t => t.id === id ? Object.assign({}, t, { status: ok ? "done" : "error", progress: 1, finishedAt: Date.now() }) : t);
     }
 
-    // TaskCard.qml calls this once it's shown a finished task long enough
-    // to read — same shape as Notifications.dismiss() being UI-driven.
+    // Completion lifetime belongs here, even when the destination is closed.
+    // Errors remain available until acknowledged.
+    function _scheduleCleanup() {
+        cleanup.stop();
+        const completed = root.items.filter(t => t.status === "done");
+        if (completed.length === 0) return;
+        const next = Math.min(...completed.map(t => t.finishedAt + 1600));
+        cleanup.interval = Math.max(1, next - Date.now());
+        cleanup.start();
+    }
+    onItemsChanged: root._scheduleCleanup()
+    property Timer cleanup: Timer {
+        onTriggered: {
+            const now = Date.now();
+            root.items = root.items.filter(t => t.status !== "done" || t.finishedAt + 1600 > now);
+        }
+    }
+
     function remove(id) { root.items = root.items.filter(t => t.id !== id); }
 }

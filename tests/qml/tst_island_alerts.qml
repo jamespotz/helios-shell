@@ -22,9 +22,11 @@ ShellRoot {
             root.verify(Config.batteryAlertThreshold === 50, "threshold clamps");
 
             Tasks.start("build", "Build");
-            root.verify(IslandNavigation.modeFor("DP-1", false) === "task", "task alert shows");
+            root.verify(IslandNavigation.modeFor("DP-1", false) === "idle", "background task leaves the Island idle");
+            root.verify(IslandNavigation.satellitesFor("DP-1", true).some(s => s.id === "tasks"), "task appears in right Satellite activities");
             Config.setOption("showTaskAlerts", false);
             root.verify(IslandNavigation.modeFor("DP-1", false) === "idle", "task alert hidden when off");
+            root.verify(!IslandNavigation.satellitesFor("DP-1", true).some(s => s.id === "tasks"), "task Satellite honors alert setting");
             root.verify(Tasks.items.length === 1, "task still tracked");
             Config.resetOptions(["showTaskAlerts", "batteryAlertThreshold"]);
 
