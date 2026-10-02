@@ -35,17 +35,49 @@ ShellRoot {
         onTriggered: {
             try {
                 root.verify(recordingHost.height > 100, "tall main Island leaves satellite content visible beside it");
-                const stop = root.findText(recordingHost, "Stop recording");
+                const stop = root.findText(recordingHost, "Recording stopped");
                 root.verify(stop && !stop.enabled, "stop unavailable when recording has finished");
+                ScreenRecorder.recording = true;
+                root.verify(root.findText(recordingHost, "Stop recording") === stop && stop.enabled,
+                    "stop action follows live recording state");
+                ScreenRecorder.recording = false;
+                root.verify(root.findText(recordingHost, "Recording stopped") === stop && !stop.enabled,
+                    "finished recording disables stop and updates its label");
                 const recorder = root.findText(recordingHost, "Open Recorder");
                 root.verify(recorder, "recording controls instantiate in shared host");
                 anchor.forceActiveFocus();
                 input.mouseClick(recordingHost, 10, 50);
                 root.verify(recordingHost.activeFocus, "pointer interaction restores satellite keyboard focus");
-                recorder.clicked();
+                recorder.forceActiveFocus();
+                input.keyClick(Qt.Key_Space);
                 root.verify(IslandNavigation.destinationId === "recorder" && IslandNavigation.panelOpenFor("test-screen"), "Recorder action opens main destination on correct screen");
                 root.verify(!recordingHost.expanded && !root.findText(recordingHost, "Open Recorder"), "Recorder action closes and unloads satellite controls");
                 IslandNavigation.close();
+                anchor.height = 32;
+                Config.setOption("reducedMotion", false);
+                satellite.active = true;
+                root.verify(satellite.x >= anchor.x && satellite.x < anchor.x + anchor.width,
+                    "Satellite emerges from inside the Idle Island");
+                root.motionCheck.start();
+                return;
+            } catch (error) { console.error("ISLAND_SATELLITE_UI_TEST_FAIL:", error.toString()); }
+            root.terminateDelay.start();
+        }
+    }
+    readonly property Timer motionCheck: Timer {
+        interval: Config.animFast + Config.animSlow + 180
+        onTriggered: {
+            try {
+                root.verify(satellite.x + satellite.width <= anchor.x - satellite.restGap + 0.5,
+                    "blob settles beside the Island with the configured gap");
+                satellite.active = false;
+                satellite.onRight = true;
+                satellite.active = true;
+                root.verify(satellite.x >= anchor.x && satellite.x < anchor.x + anchor.width,
+                    "right Satellite emerges from inside the Idle Island");
+                Config.setOption("reducedMotion", true);
+                root.verify(satellite.x >= anchor.x + anchor.width + satellite.restGap - 0.5,
+                    "enabling reduced motion interrupts emergence and settles immediately");
                 console.warn("ISLAND_SATELLITE_UI_TEST_PASS");
             } catch (error) { console.error("ISLAND_SATELLITE_UI_TEST_FAIL:", error.toString()); }
             root.terminateDelay.start();

@@ -395,7 +395,7 @@ PanelWindow {
             definition: modelData
             targetScreen: bar.modelData.name
             anchorItem: hitArea
-            fillColor: bar.mode === "idle" ? Colors.background : Colors.surface
+            defaultFillColor: bar.mode === "idle" ? Colors.background : Colors.surface
         }
         onItemAdded: (index, item) => {
             if (index === 0) bar.leftSatellite = item;

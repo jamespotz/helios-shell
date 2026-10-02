@@ -2,12 +2,8 @@ import QtQuick
 import "../../services"
 import "../../components"
 
-// Shared chrome for the small badges that flank the island (recording
-// status, maintenance alerts). Liquid-pops in from the island's edge when
-// `active` turns on, and — for badges that opt in via `interactive` — can
-// morph in place into a full panel via `expanded`, using the exact same
-// spring behavior as the main island's own hitArea/visual morph so both
-// reveals read as one consistent motion language.
+// Satellites emerge from inside the Island, stretch as they separate, and
+// settle beside it. Expanded destinations keep the Island's spring sizing.
 FocusScope {
     id: root
 
@@ -25,10 +21,12 @@ FocusScope {
     readonly property bool shown: root.active || root.expanded
 
     property int badgeSize: Config.satelliteBadgeSize
-    property int padH: Config.satellitePadH
-    property int padV: Config.satellitePadV
+    property real padH: Config.satellitePadH
+    property real padV: Config.satellitePadV
 
     property color fillColor: Colors.surface
+    property bool plainSurface: false
+    property real radiusLimit: 18
     property bool shadowEnabled: true
     // Small enough that the blur doesn't reach past restGap into the
     // island's own shadow — keeps a visible shadow without the two merging
@@ -44,6 +42,9 @@ FocusScope {
     signal closeRequested()
 
     property real gap: 0
+    property real entranceProgress: 1
+    // The Island covers the emerging blob until it has separated.
+    z: root.entranceProgress < 1 ? -1 : 0
 
     // Same escape-to-close as the main island's hitArea (Island.qml) — focus
     // has to sit here, the shallowest ancestor of expandedContent, so keys
@@ -72,15 +73,21 @@ FocusScope {
     readonly property real separatedX: root.below ? root.animatedX
         : root.onRight ? Math.max(root.animatedX, anchorItem.x + anchorItem.width + gap)
         : Math.min(root.animatedX, anchorItem.x - root.width - gap)
-    x: Math.max(0, Math.min(root.separatedX, parent.width - root.width))
-    y: root.below ? anchorItem.y + anchorItem.height + root.restGap : anchorItem.y
+    readonly property real emergenceX: anchorItem.x
+        + (root.onRight ? anchorItem.width - root.badgeSize : 0)
+        + (root.badgeSize - root.width) / 2
+    readonly property real emergenceY: anchorItem.y + Math.max(0, (anchorItem.height - root.badgeSize) / 2)
+    readonly property real restingY: root.below ? anchorItem.y + anchorItem.height + root.restGap : anchorItem.y
+    x: Math.max(0, Math.min(root.emergenceX + (root.separatedX - root.emergenceX) * root.entranceProgress,
+        parent.width - root.width))
+    y: root.emergenceY + (root.restingY - root.emergenceY) * root.entranceProgress
     Behavior on animatedX {
         enabled: !Config.reducedMotion
         SpringAnimation { spring: Config.satelliteSpringStiffness; damping: Config.satelliteSpringDamping }
     }
 
-    readonly property int _expandedWidth: expandedLoader.item ? expandedLoader.item.implicitWidth + root.padH * 2 : root.badgeSize
-    readonly property int _expandedHeight: expandedLoader.item ? expandedLoader.item.implicitHeight + root.padV * 2 : root.badgeSize
+    readonly property real _expandedWidth: expandedLoader.item ? expandedLoader.item.implicitWidth + root.padH * 2 : root.badgeSize
+    readonly property real _expandedHeight: expandedLoader.item ? expandedLoader.item.implicitHeight + root.padV * 2 : root.badgeSize
 
     width: root.expanded ? Math.min(root._expandedWidth, Config.islandMaxWidth, parent.width) : root.badgeSize
     height: root.expanded ? Math.max(root.badgeSize, Math.min(root._expandedHeight, Config.islandMaxHeight, parent.height - root.y)) : root.badgeSize
@@ -111,12 +118,13 @@ FocusScope {
     function syncEntrance(animate) {
         liquidSlideIn.stop();
         root.gap = root.shown ? root.restGap : 0;
+        root.entranceProgress = 1;
         liquidScale.xScale = 1;
         liquidScale.yScale = 1;
         if (root.shown && animate && !Config.reducedMotion) {
-            root.gap = 0;
-            liquidScale.xScale = 1.32;
-            liquidScale.yScale = 0.76;
+            root.entranceProgress = 0;
+            liquidScale.xScale = 0.4;
+            liquidScale.yScale = 0.7;
             liquidSlideIn.start();
         }
     }
@@ -130,21 +138,38 @@ FocusScope {
 
     ParallelAnimation {
         id: liquidSlideIn
-        NumberAnimation { target: root; property: "gap"; to: root.restGap; duration: 720; easing.type: Easing.OutElastic; easing.amplitude: 0.25; easing.period: 0.45 }
-        NumberAnimation { target: liquidScale; property: "xScale"; to: 1.0; duration: 720; easing.type: Easing.OutElastic; easing.amplitude: 0.25; easing.period: 0.45 }
-        NumberAnimation { target: liquidScale; property: "yScale"; to: 1.0; duration: 720; easing.type: Easing.OutElastic; easing.amplitude: 0.25; easing.period: 0.45 }
+        NumberAnimation { target: root; property: "entranceProgress"; to: 1; duration: Config.animFast + Config.animSlow; easing.type: Easing.OutCubic }
+        SequentialAnimation {
+            ParallelAnimation {
+                NumberAnimation { target: liquidScale; property: "xScale"; to: 1.32; duration: Config.animFast; easing.type: Easing.OutCubic }
+                NumberAnimation { target: liquidScale; property: "yScale"; to: 0.76; duration: Config.animFast; easing.type: Easing.OutCubic }
+            }
+            ParallelAnimation {
+                NumberAnimation { target: liquidScale; property: "xScale"; to: 1; duration: Config.animSlow; easing.type: Easing.OutElastic; easing.amplitude: 0.25; easing.period: 0.45 }
+                NumberAnimation { target: liquidScale; property: "yScale"; to: 1; duration: Config.animSlow; easing.type: Easing.OutElastic; easing.amplitude: 0.25; easing.period: 0.45 }
+            }
+        }
     }
 
     IslandShape {
         id: islandShape
         anchors.fill: parent
-        radiusLimit: 18
+        visible: !root.plainSurface
+        radiusLimit: root.radiusLimit
         borderEnabled: Config.satelliteBorder
         borderWidth: Config.satelliteBorderWidth
         fillColor: root.fillColor
         shadowEnabled: root.shadowEnabled
         shadowGlowRadius: root.shadowGlowRadius
         shadowSpread: root.shadowSpread
+    }
+
+    Rectangle {
+        anchors.fill: parent
+        visible: root.plainSurface
+        color: root.fillColor
+        radius: islandShape.cornerRadius
+        antialiasing: true
     }
 
     // Clip badge and destination to the same rounded shape during the morph.
@@ -170,6 +195,7 @@ FocusScope {
             anchors.topMargin: root.padV
             anchors.left: parent.left
             anchors.leftMargin: root.padH
+            width: Math.max(0, root.width - root.padH * 2)
             active: root.expanded && !!root.expandedContent
             enabled: root.expanded
             sourceComponent: root.expandedContent

@@ -6,6 +6,15 @@ IslandSatellite {
     id: root
     required property var definition
     required property string targetScreen
+    readonly property bool recordingCard: root.definition.id === "recording" && root.expanded
+    readonly property real recordingScale: Config.fontSize / 13
+    property color defaultFillColor: Colors.surface
+
+    padH: root.recordingCard ? 24 * root.recordingScale : Config.satellitePadH
+    padV: root.recordingCard ? 24 * root.recordingScale : Config.satellitePadV
+    plainSurface: root.recordingCard
+    radiusLimit: root.recordingCard ? 16 * root.recordingScale : 18
+    fillColor: root.recordingCard ? (Themes.isDark(Colors.background) ? "#12151f" : "#ffffff") : root.defaultFillColor
 
     onRight: root.definition.onRight
     label: root.definition.label
@@ -34,7 +43,13 @@ IslandSatellite {
             color: Maintenance.rebootRequired || Maintenance.failedUnits.length > 0 ? Colors.danger : Colors.accent
         }
     }
-    expandedContent: Component {
+    expandedContent: root.definition.id === "recording" ? recordingContent : destinationContent
+    Component {
+        id: recordingContent
+        RecordingDestination { targetScreen: root.targetScreen }
+    }
+    Component {
+        id: destinationContent
         IslandDestinationHost {
             destinationId: root.definition.id
             targetScreen: root.targetScreen
