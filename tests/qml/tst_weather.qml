@@ -19,6 +19,7 @@ ShellRoot {
             root.verify(Weather.iconFor("Slight snow fall") === "ac_unit", "snow icon");
             root.verify(Weather.iconFor("Light drizzle") === "rainy", "drizzle is rain");
             root.verify(Weather.iconFor("Clear sky") === "wb_sunny", "clear is sunny");
+            root.verify(Weather.iconFor("Clear sky", true) === "clear_night", "clear night shows the moon");
             root.verify(Weather.iconFor("") === "cloud", "empty falls back");
             root.verify(typeof Weather.formatTemperature === "function", "temperature formatting available");
             root.verify(Weather.formatTemperature(0) === "0°", "Celsius default");

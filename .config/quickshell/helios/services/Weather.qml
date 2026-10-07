@@ -25,6 +25,7 @@ QtObject {
     property real tempC: 0
     property real feelsLikeC: 0
     property string condition: ""
+    property bool isDay: true
     property string location: ""
     property real latitude: 0
     property real longitude: 0
@@ -167,8 +168,10 @@ QtObject {
 
     // Shared by WeatherWidget (peek), IslandIdle (idle) and WeatherDestination's
     // hourly strip so they all agree on which glyph a condition maps to.
-    function iconFor(conditionText) {
+    function iconFor(conditionText, night) {
         const c = (conditionText || "").toLowerCase();
+        if (night && c.includes("partly")) return "partly_cloudy_night";
+        if (night && c.includes("clear")) return "clear_night";
         if (c.includes("thunder")) return "thunderstorm";
         if (c.includes("snow") || c.includes("sleet") || c.includes("ice")) return "ac_unit";
         if (c.includes("rain") || c.includes("drizzle")) return "rainy";
@@ -177,7 +180,7 @@ QtObject {
         if (c.includes("sun") || c.includes("clear")) return "wb_sunny";
         return "cloud";
     }
-    readonly property string icon: root.iconFor(root.condition)
+    readonly property string icon: root.iconFor(root.condition, !root.isDay)
 
     // WMO weather-code -> human condition text (Open-Meteo returns a numeric
     // code, not a description). Kept as plain keyworded text so iconFor()
@@ -284,8 +287,8 @@ QtObject {
         root.longitude = lon;
 
         const url = "https://api.open-meteo.com/v1/forecast?latitude=" + lat + "&longitude=" + lon
-            + "&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m"
-            + "&hourly=temperature_2m,weather_code,precipitation_probability"
+            + "&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m,is_day"
+            + "&hourly=temperature_2m,weather_code,precipitation_probability,is_day"
             + "&daily=temperature_2m_max,temperature_2m_min,weather_code,uv_index_max,sunrise,sunset"
             + "&timezone=auto&forecast_days=3";
 
@@ -298,6 +301,7 @@ QtObject {
             root.condition = root.conditionFor(cur.weather_code);
             root.humidity = Math.round(cur.relative_humidity_2m);
             root.windKmph = cur.wind_speed_10m;
+            root.isDay = cur.is_day !== 0;
 
             const daily = data.daily;
             if (daily && daily.time && daily.time.length > 0) {
@@ -308,19 +312,20 @@ QtObject {
                 root.sunset = (daily.sunset && daily.sunset[0]) ? daily.sunset[0].split("T")[1] : "";
             }
 
-            // Next 8 hours, starting from now.
+            // The current hour ("Now") and the 7 after it.
             const hourly = data.hourly;
             const blocks = [];
             if (hourly && hourly.time) {
                 const nowMs = Date.now();
                 for (let i = 0; i < hourly.time.length && blocks.length < 8; i++) {
-                    if (new Date(hourly.time[i]).getTime() < nowMs) continue;
+                    if (new Date(hourly.time[i]).getTime() + 3600000 <= nowMs) continue;
                     const hh = hourly.time[i].split("T")[1].slice(0, 5);
+                    const night = hourly.is_day ? hourly.is_day[i] === 0 : false;
                     blocks.push({
-                        label: hh,
+                        label: blocks.length === 0 ? "Now" : hh,
                         tempC: hourly.temperature_2m[i],
                         condition: root.conditionFor(hourly.weather_code[i]),
-                        icon: root.iconFor(root.conditionFor(hourly.weather_code[i])),
+                        icon: root.iconFor(root.conditionFor(hourly.weather_code[i]), night),
                         chanceOfRain: hourly.precipitation_probability ? hourly.precipitation_probability[i] : 0
 
         });
@@ -340,7 +345,7 @@ QtObject {
                                 tempC: root.tempC,
                                 feelsLikeC: root.feelsLikeC,
                                 condition: root.condition,
-                                icon: root.iconFor(root.condition),
+                                icon: root.icon,
                                 humidity: root.humidity,
                                 windKmph: root.windKmph,
                                 chanceOfRain: blocks.length > 0 ? blocks[0].chanceOfRain : 0,

@@ -2,16 +2,35 @@ import QtQuick
 import "../../services"
 import "../../components"
 
-// Immersive weather panel — one full-bleed surface instead of separate
-// card zones. Clock and hero conditions float top-left/top-right over a
-// weather-effect backdrop; a compact calendar tile and hourly strip float
-// bottom-left/bottom-right as translucent glass over the same art.
+// Current conditions for the selected day, the next hours, and a date picker
+// for jumping between forecast days.
 Item {
     id: root
 
-    // --- Calendar month grid ---
+    // --- Day navigator for forecast ---
+    property int dayOffset: 0
+    readonly property int maxDayOffset: Math.max(0, Weather.daily.length - 1)
+    onMaxDayOffsetChanged: dayOffset = Math.min(dayOffset, maxDayOffset)
+    readonly property var selectedDay: Weather.daily.length > dayOffset ? Weather.daily[dayOffset] : null
+    readonly property date selectedDate: {
+        if (selectedDay) {
+            const parts = selectedDay.date.split("-").map(Number);
+            return new Date(parts[0], parts[1] - 1, parts[2]);
+        }
+        return new Date(Date.now() + dayOffset * 86400000);
+    }
+    readonly property string condition: root.selectedDay ? root.selectedDay.condition : Weather.condition
+
+    // --- Date picker month grid ---
+    property bool pickerOpen: false
     property date viewDate: new Date()
     readonly property date today: new Date()
+
+    function openPicker() {
+        root.viewDate = root.selectedDate;
+        root.pickerOpen = true;
+        picker.forceActiveFocus();
+    }
 
     function shiftMonth(delta) {
         const d = new Date(root.viewDate);
@@ -24,6 +43,10 @@ Item {
         const cellDate = new Date(year, month, day);
         const t = new Date(root.today.getFullYear(), root.today.getMonth(), root.today.getDate());
         return Math.round((cellDate - t) / 86400000);
+    }
+
+    function coordinate(value, positive, negative) {
+        return Math.abs(value).toFixed(4) + "° " + (value >= 0 ? positive : negative);
     }
 
     readonly property var weeks: {
@@ -42,45 +65,17 @@ Item {
     readonly property bool viewingCurrentMonth: viewDate.getFullYear() === today.getFullYear()
         && viewDate.getMonth() === today.getMonth()
 
-    // --- Day navigator for forecast ---
-    property int dayOffset: 0
-    readonly property int maxDayOffset: Math.max(0, Weather.daily.length - 1)
-    onMaxDayOffsetChanged: dayOffset = Math.min(dayOffset, maxDayOffset)
-    readonly property var selectedDay: Weather.daily.length > dayOffset ? Weather.daily[dayOffset] : null
-    readonly property date selectedDate: {
-        if (selectedDay) {
-            const parts = selectedDay.date.split("-").map(Number);
-            return new Date(parts[0], parts[1] - 1, parts[2]);
-        }
-        return new Date(Date.now() + dayOffset * 86400000);
-    }
-
-    // --- Live clock ---
-    property date now: new Date()
-    Timer { interval: 1000; running: true; repeat: true; onTriggered: root.now = new Date() }
+    onVisibleChanged: if (!visible) pickerOpen = false
 
     implicitWidth: 660
-    implicitHeight: Weather.available ? (contentCol.implicitHeight + 24) : 200
+    implicitHeight: Weather.available ? (contentCol.implicitHeight + 56) : 200
 
-    // ═══════════════════════════════════════════════════════════════════
-    // BACKDROP — one continuous surface, weather effect fills it entirely
-    // ═══════════════════════════════════════════════════════════════════
     Rectangle {
         id: backdrop
         anchors.fill: parent
         radius: Colors.radiusLarge
+        color: Colors.surface
         clip: true
-
-        gradient: Gradient {
-            GradientStop { position: 0.0; color: Colors.surfaceHigh }
-            GradientStop { position: 0.55; color: Colors.surface }
-            GradientStop { position: 1.0; color: Colors.background }
-        }
-
-        WeatherEffectMini {
-            anchors.fill: parent
-            opacity: 0.65
-        }
 
         StyledText {
             visible: !Weather.available
@@ -97,371 +92,381 @@ Item {
             anchors.top: parent.top
             anchors.left: parent.left
             anchors.right: parent.right
-            anchors.margins: 12
-            spacing: 10
+            anchors.topMargin: 28
+            anchors.leftMargin: 30
+            anchors.rightMargin: 30
             visible: Weather.available
 
-            // Header — kept small so it doesn't compete with the clock/hero
-            // row just below it.
-            Row {
-                spacing: 6
-                MaterialIcon { icon: "cloud"; font.pixelSize: 14; color: Colors.accent; anchors.verticalCenter: parent.verticalCenter }
-                StyledText {
-                    text: "Weather"
-                    font.weight: Font.DemiBold
-                    font.pixelSize: Config.fontSize - 1
-                    color: Colors.subtext
-                    anchors.verticalCenter: parent.verticalCenter
-                }
-            }
-
-            // ═══════════════════════════════════════════════════════════
-            // TOP ROW — clock (left) / hero conditions + stats (right)
-            // ═══════════════════════════════════════════════════════════
+            // --- Location and day navigation ---
             Item {
+                id: header
                 width: parent.width
-                height: Math.max(clockCol.implicitHeight, heroCol.implicitHeight)
+                height: Math.max(placeCol.implicitHeight, dayNav.implicitHeight)
 
                 Column {
-                    id: clockCol
+                    id: placeCol
                     anchors.left: parent.left
-                    anchors.verticalCenter: parent.verticalCenter
+                    anchors.right: dayNav.left
+                    anchors.rightMargin: 12
+                    anchors.top: parent.top
                     spacing: 2
 
                     StyledText {
-                        text: Qt.formatTime(root.now, Config.timeFormat)
-                        font.family: Config.monoFontFamily
-                        font.pixelSize: Config.fontSize + 20
-                        font.weight: Font.Light
+                        width: parent.width
+                        text: Weather.location || Weather.locationName || "Weather"
+                        elide: Text.ElideRight
+                        font.pixelSize: Config.fontSize + 1
+                        font.weight: Font.DemiBold
                     }
                     StyledText {
-                        text: Qt.formatDate(root.now, "dddd, MMMM d")
-                        font.pixelSize: Config.fontSize
+                        width: parent.width
+                        text: root.coordinate(Weather.latitude, "N", "S") + ", " + root.coordinate(Weather.longitude, "E", "W")
+                        elide: Text.ElideRight
+                        font.pixelSize: Config.fontSize - 4
                         color: Colors.subtext
                     }
                 }
 
-                Column {
-                    id: heroCol
+                Row {
+                    id: dayNav
                     anchors.right: parent.right
+                    anchors.rightMargin: -8
                     anchors.verticalCenter: parent.verticalCenter
-                    spacing: 2
+                    spacing: 6
 
-                    // Day navigator
-                    Item {
-                        width: navRow.implicitWidth
-                        height: 22
-                        anchors.right: parent.right
+                    IconButton {
+                        objectName: "weatherPreviousDay"
+                        anchors.verticalCenter: parent.verticalCenter
+                        icon: "chevron_left"
+                        iconColor: Colors.subtext
+                        label: "Previous forecast day"
+                        enabled: root.dayOffset > 0
+                        onClicked: root.dayOffset -= 1
+                    }
+                    Chip {
+                        objectName: "weatherDatePickerButton"
+                        anchors.verticalCenter: parent.verticalCenter
+                        inactiveTint: "transparent"
+                        Accessible.name: "Choose forecast day, " + dayLabel.text
+                        onClicked: root.pickerOpen ? root.pickerOpen = false : root.openPicker()
 
-                        Row {
-                            id: navRow
-                            anchors.centerIn: parent
-                            spacing: 4
+                        StyledText {
+                            id: dayLabel
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: root.dayOffset === 0 ? "Today" : root.dayOffset === 1 ? "Tomorrow" : Qt.formatDate(root.selectedDate, "dddd")
+                            font.pixelSize: Config.fontSize - 2
+                            font.weight: Font.Medium
+                        }
+                        MaterialIcon {
+                            anchors.verticalCenter: parent.verticalCenter
+                            icon: "expand_more"
+                            font.pixelSize: 14
+                            color: Colors.subtext
+                            rotation: root.pickerOpen ? 180 : 0
+                            Behavior on rotation { NumberAnimation { duration: Config.reducedMotion ? 0 : Config.animFast; easing.type: Easing.OutCubic } }
+                        }
+                    }
+                    IconButton {
+                        objectName: "weatherNextDay"
+                        anchors.verticalCenter: parent.verticalCenter
+                        icon: "chevron_right"
+                        iconColor: Colors.subtext
+                        label: "Next forecast day"
+                        enabled: root.dayOffset < root.maxDayOffset
+                        onClicked: root.dayOffset += 1
+                    }
+                }
+            }
 
-                            IconButton {
-                                icon: "chevron_left"
-                                anchors.verticalCenter: parent.verticalCenter
-                                enabled: root.dayOffset > 0
-                                opacity: enabled ? 1 : 0.3
-                                onClicked: root.dayOffset -= 1
+            Item { width: 1; height: 14 }
+
+            // --- Temperature, condition, and icon ---
+            Item {
+                width: parent.width
+                height: temperature.implicitHeight
+
+                StyledText {
+                    id: temperature
+                    objectName: "weatherHeroTemperature"
+                    anchors.left: parent.left
+                    anchors.leftMargin: -4
+                    text: Weather.formatTemperature(root.selectedDay ? root.selectedDay.tempC : Weather.tempC)
+                    font.pixelSize: Config.fontSize + 78
+                    font.weight: Font.Medium
+                    font.letterSpacing: -2
+                }
+                Column {
+                    anchors.left: temperature.right
+                    anchors.leftMargin: 18
+                    anchors.right: conditionIcon.left
+                    anchors.rightMargin: 12
+                    anchors.verticalCenter: temperature.verticalCenter
+                    anchors.verticalCenterOffset: 6
+                    spacing: 4
+
+                    StyledText {
+                        width: parent.width
+                        text: root.condition
+                        font.pixelSize: Config.fontSize + 5
+                        font.weight: Font.Medium
+                        elide: Text.ElideRight
+                    }
+                    StyledText {
+                        width: parent.width
+                        text: "High " + Weather.formatTemperature(root.selectedDay ? root.selectedDay.maxTempC : Weather.maxTempC)
+                            + " · Low " + Weather.formatTemperature(root.selectedDay ? root.selectedDay.minTempC : Weather.minTempC)
+                        font.pixelSize: Config.fontSize - 3
+                        color: Colors.subtext
+                        elide: Text.ElideRight
+                    }
+                }
+                MaterialIcon {
+                    id: conditionIcon
+                    objectName: "weatherConditionIcon"
+                    anchors.right: parent.right
+                    anchors.verticalCenter: temperature.verticalCenter
+                    anchors.verticalCenterOffset: 6
+                    // Day-level forecasts are midday snapshots; only today follows day and night.
+                    icon: root.dayOffset === 0 ? Weather.icon : Weather.iconFor(root.condition)
+                    font.pixelSize: 44
+                    weight: 200
+                    color: Colors.subtext
+                    Accessible.ignored: true
+                }
+            }
+
+            Item { width: 1; height: 22 }
+
+            // --- Details ---
+            Row {
+                width: parent.width
+                visible: root.selectedDay !== null
+
+                Repeater {
+                    model: root.selectedDay ? [
+                        { label: "Feels like", value: Weather.formatTemperature(root.selectedDay.feelsLikeC) },
+                        { label: "Chance of rain", value: root.selectedDay.chanceOfRain + "%" },
+                        { label: "Humidity", value: root.selectedDay.humidity + "%" },
+                        { label: "Wind", value: Weather.formatWind(root.selectedDay.windKmph) }
+                    ] : []
+                    Column {
+                        required property var modelData
+                        width: contentCol.width / 4
+                        spacing: 4
+                        StyledText { text: modelData.label; font.pixelSize: Config.fontSize - 4; color: Colors.subtext }
+                        StyledText { text: modelData.value; font.pixelSize: Config.fontSize + 1; font.weight: Font.Medium }
+                    }
+                }
+            }
+
+            Item { width: 1; height: 40; visible: hourly.visible }
+
+            // --- Next hours ---
+            Item {
+                id: hourly
+                width: parent.width
+                height: hourRow.y + hourRow.implicitHeight
+                visible: Weather.hourly.length > 0
+                readonly property var hours: Weather.hourly.slice(0, 7)
+                readonly property real columnWidth: width / Math.max(1, hours.length)
+
+                Rectangle { width: parent.width; height: 1; color: Colors.overlay; opacity: 0.15 }
+                Rectangle {
+                    // Marks the current hour.
+                    x: hourly.columnWidth / 2 - width / 2
+                    y: -1
+                    width: 28
+                    height: 2
+                    radius: 1
+                    color: Colors.accent
+                }
+
+                Row {
+                    id: hourRow
+                    y: 18
+
+                    Repeater {
+                        model: hourly.hours
+                        Column {
+                            required property var modelData
+                            required property int index
+                            width: hourly.columnWidth
+                            spacing: 8
+                            StyledText {
+                                anchors.horizontalCenter: parent.horizontalCenter
+                                text: modelData.label
+                                font.pixelSize: Config.fontSize - 4
+                                font.weight: Font.Medium
+                                color: index === 0 ? Colors.accent : Colors.subtext
+                            }
+                            MaterialIcon {
+                                anchors.horizontalCenter: parent.horizontalCenter
+                                icon: modelData.icon
+                                font.pixelSize: 16
+                                weight: 300
+                                color: Colors.subtext
                             }
                             StyledText {
-                                anchors.verticalCenter: parent.verticalCenter
+                                anchors.horizontalCenter: parent.horizontalCenter
+                                text: Weather.formatTemperature(modelData.tempC)
+                                font.pixelSize: Config.fontSize - 2
                                 font.weight: Font.DemiBold
-                                font.pixelSize: Config.fontSize - 1
-                                font.capitalization: Font.AllUppercase
-                                color: Colors.subtext
-                                text: root.dayOffset === 0 ? "Today"
-                                    : root.dayOffset === 1 ? "Tomorrow"
-                                    : Qt.formatDate(root.selectedDate, "dddd")
-                            }
-                            IconButton {
-                                icon: "chevron_right"
-                                anchors.verticalCenter: parent.verticalCenter
-                                enabled: root.dayOffset < root.maxDayOffset
-                                opacity: enabled ? 1 : 0.3
-                                onClicked: root.dayOffset += 1
                             }
                         }
                     }
+                }
+            }
+        }
 
-                    // Hero temperature
-                    Column {
+        // Clicking anywhere outside the open picker dismisses it.
+        MouseArea {
+            anchors.fill: parent
+            visible: root.pickerOpen
+            onClicked: root.pickerOpen = false
+        }
+
+        // --- Date picker ---
+        Rectangle {
+            id: picker
+            objectName: "weatherDatePicker"
+            anchors.right: parent.right
+            anchors.top: parent.top
+            anchors.rightMargin: 30
+            anchors.topMargin: 70
+            width: 236
+            height: pickerCol.implicitHeight + 28
+            radius: Colors.radiusSmall
+            color: Colors.surfaceHigh
+            visible: opacity > 0
+            opacity: root.pickerOpen ? 1 : 0
+            scale: root.pickerOpen || Config.reducedMotion ? 1 : 0.96
+            transformOrigin: Item.TopRight
+            Behavior on opacity { NumberAnimation { duration: Config.reducedMotion ? 0 : Config.animFast; easing.type: Easing.OutCubic } }
+            Behavior on scale { NumberAnimation { duration: Config.reducedMotion ? 0 : Config.animFast; easing.type: Easing.OutCubic } }
+            Keys.onEscapePressed: event => { root.pickerOpen = false; event.accepted = true; }
+
+            // Swallow clicks so they don't reach the dismiss area behind.
+            MouseArea { anchors.fill: parent }
+
+            Column {
+                id: pickerCol
+                anchors.top: parent.top
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.margins: 14
+                spacing: 6
+
+                Item {
+                    width: parent.width
+                    height: 26
+
+                    StyledText {
+                        anchors.left: parent.left
+                        anchors.leftMargin: 2
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: Qt.formatDate(root.viewDate, "MMMM yyyy")
+                        font.pixelSize: Config.fontSize - 1
+                        font.weight: Font.DemiBold
+                    }
+                    Row {
                         anchors.right: parent.right
-                        spacing: 0
-                        visible: root.selectedDay !== null
-
-                        StyledText {
-                            anchors.right: parent.right
-                            text: root.selectedDay ? Weather.formatTemperature(root.selectedDay.tempC) : ""
-                            font.pixelSize: Config.fontSize + 22
-                            font.weight: Font.Thin
+                        anchors.verticalCenter: parent.verticalCenter
+                        IconButton {
+                            icon: "chevron_left"
+                            iconSize: 14
+                            iconColor: Colors.subtext
+                            implicitWidth: 26
+                            implicitHeight: 26
+                            label: "Previous month"
+                            onClicked: root.shiftMonth(-1)
                         }
+                        IconButton {
+                            icon: "chevron_right"
+                            iconSize: 14
+                            iconColor: Colors.subtext
+                            implicitWidth: 26
+                            implicitHeight: 26
+                            label: "Next month"
+                            onClicked: root.shiftMonth(1)
+                        }
+                    }
+                }
+
+                Row {
+                    Repeater {
+                        model: ["S", "M", "T", "W", "T", "F", "S"]
                         StyledText {
-                            anchors.right: parent.right
-                            text: root.selectedDay ? root.selectedDay.condition : ""
-                            font.pixelSize: Config.fontSize
+                            required property string modelData
+                            width: pickerCol.width / 7
+                            horizontalAlignment: Text.AlignHCenter
+                            text: modelData
+                            font.pixelSize: Config.fontSize - 5
+                            font.weight: Font.Medium
                             color: Colors.subtext
                         }
                     }
-
-                    // Borderless stat row — floats directly on the backdrop
-                    Row {
-                        anchors.right: parent.right
-                        spacing: 14
-                        visible: root.selectedDay !== null
-
-                        Repeater {
-                            model: root.selectedDay ? [
-                                { icon: "air", value: Weather.formatWind(root.selectedDay.windKmph) },
-                                { icon: "water_drop", value: root.selectedDay.humidity + "%" },
-                                { icon: "rainy", value: root.selectedDay.chanceOfRain + "%" },
-                                { icon: "device_thermostat", value: Weather.formatTemperature(root.selectedDay.feelsLikeC) }
-                            ] : []
-
-                            Row {
-                                required property var modelData
-                                spacing: 4
-
-                                MaterialIcon {
-                                    icon: modelData.icon
-                                    font.pixelSize: 14
-                                    color: Colors.accent
-                                    anchors.verticalCenter: parent.verticalCenter
-                                }
-                                StyledText {
-                                    text: modelData.value
-                                    font.pixelSize: Config.fontSize - 2
-                                    color: Colors.subtext
-                                    anchors.verticalCenter: parent.verticalCenter
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            // ═══════════════════════════════════════════════════════════
-            // BOTTOM ROW — mini calendar tile (left) / hourly strip (right)
-            // ═══════════════════════════════════════════════════════════
-            Item {
-                width: parent.width
-                height: Math.max(calTile.height, hourlyCol.implicitHeight)
-
-                // --- Mini calendar glass tile ---
-                Rectangle {
-                    id: calTile
-                    anchors.left: parent.left
-                    anchors.bottom: parent.bottom
-                    width: 180
-                    height: calCol.implicitHeight + 14
-                    radius: Colors.radiusSmall
-                    color: Colors.surfaceHigh
-                    opacity: 0.75
-
-                    Column {
-                        id: calCol
-                        anchors.top: parent.top
-                        anchors.left: parent.left
-                        anchors.right: parent.right
-                        anchors.margins: 7
-                        spacing: 3
-
-                        // Month header with navigation
-                        Item {
-                            width: parent.width
-                            height: 18
-
-                            IconButton {
-                                icon: "chevron_left"
-                                iconSize: 11
-                                anchors.left: parent.left
-                                anchors.verticalCenter: parent.verticalCenter
-                                implicitWidth: 18
-                                implicitHeight: 18
-                                onClicked: root.shiftMonth(-1)
-                            }
-                            StyledText {
-                                anchors.centerIn: parent
-                                font.weight: Font.DemiBold
-                                text: Qt.formatDate(root.viewDate, "MMMM yyyy")
-                                font.pixelSize: Config.fontSize - 4
-                            }
-                            IconButton {
-                                icon: "chevron_right"
-                                iconSize: 11
-                                anchors.right: parent.right
-                                anchors.verticalCenter: parent.verticalCenter
-                                implicitWidth: 18
-                                implicitHeight: 18
-                                onClicked: root.shiftMonth(1)
-                            }
-                        }
-
-                        // Day-of-week headers
-                        Row {
-                            width: parent.width
-                            Repeater {
-                                model: ["S", "M", "T", "W", "T", "F", "S"]
-                                StyledText {
-                                    required property string modelData
-                                    width: (calCol.width) / 7
-                                    horizontalAlignment: Text.AlignHCenter
-                                    text: modelData
-                                    font.pixelSize: Config.fontSize - 6
-                                    font.weight: Font.Medium
-                                    color: Colors.subtext
-                                }
-                            }
-                        }
-
-                        // Day grid
-                        Column {
-                            width: parent.width
-                            spacing: 1
-
-                            Repeater {
-                                model: root.weeks
-
-                                Row {
-                                    required property var modelData
-                                    width: calCol.width
-
-                                    Repeater {
-                                        model: parent.modelData
-
-                                        Item {
-                                            id: cell
-                                            required property int modelData
-                                            readonly property bool isToday: root.viewingCurrentMonth && modelData === root.today.getDate()
-                                            readonly property int diffFromToday: root.daysFromToday(root.viewDate.getFullYear(), root.viewDate.getMonth(), modelData)
-                                            readonly property bool isForecastLinkable: !cell.isToday && cell.diffFromToday >= 0 && cell.diffFromToday <= root.maxDayOffset
-                                            readonly property bool isSelectedForecastDay: !cell.isToday && cell.diffFromToday === root.dayOffset
-
-                                            width: calCol.width / 7
-                                            height: width
-                                            // Blank pad cells must keep their
-                                            // column (see CalendarDestination.qml) —
-                                            // `visible` would collapse them
-                                            // and shift the month left.
-                                            opacity: modelData > 0 ? 1 : 0
-                                            enabled: modelData > 0
-
-                                            // Today: solid accent circle
-                                            Rectangle {
-                                                visible: cell.isToday
-                                                anchors.centerIn: parent
-                                                width: Math.min(parent.width, parent.height) - 4
-                                                height: width
-                                                radius: width / 2
-                                                color: Colors.accent
-                                            }
-
-                                            // Selected forecast day: outline ring
-                                            Rectangle {
-                                                visible: cell.isSelectedForecastDay
-                                                anchors.centerIn: parent
-                                                width: Math.min(parent.width, parent.height) - 3
-                                                height: width
-                                                radius: width / 2
-                                                color: "transparent"
-                                                border.width: 1
-                                                border.color: Colors.accent
-                                            }
-
-                                            // Hover state
-                                            Rectangle {
-                                                visible: !cell.isToday && dayHover.hovered
-                                                anchors.centerIn: parent
-                                                width: Math.min(parent.width, parent.height) - 4
-                                                height: width
-                                                radius: width / 2
-                                                color: Colors.overlay
-                                                opacity: 0.2
-                                            }
-
-                                            HoverHandler { id: dayHover }
-
-                                            MouseArea {
-                                                anchors.fill: parent
-                                                enabled: cell.isForecastLinkable
-                                                cursorShape: Qt.PointingHandCursor
-                                                onClicked: root.dayOffset = cell.diffFromToday
-                                            }
-
-                                            StyledText {
-                                                anchors.centerIn: parent
-                                                text: cell.modelData
-                                                font.pixelSize: Config.fontSize - 6
-                                                font.weight: cell.isToday ? Font.Bold : Font.Normal
-                                                color: cell.isToday ? Colors.accentText : Colors.text
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
                 }
 
-                // --- Hourly forecast strip ---
                 Column {
-                    id: hourlyCol
-                    anchors.right: parent.right
-                    anchors.bottom: parent.bottom
-                    width: 400
-                    spacing: 6
-                    visible: Weather.hourly.length > 0
+                    Repeater {
+                        model: root.weeks
 
-                    StyledText {
-                        anchors.right: parent.right
-                        text: "Hourly Forecast"
-                        font.pixelSize: Config.fontSize - 2
-                        font.weight: Font.DemiBold
-                        color: Colors.subtext
-                        font.capitalization: Font.AllUppercase
-                    }
-
-                    ListView {
-                        width: parent.width
-                        height: 78
-                        orientation: ListView.Horizontal
-                        spacing: 6
-                        clip: true
-                        model: Weather.hourly
-                        boundsBehavior: Flickable.StopAtBounds
-
-                        delegate: Rectangle {
+                        Row {
                             required property var modelData
-                            required property int index
-                            width: 52
-                            height: 74
-                            radius: 26
-                            color: index === 0 ? Colors.accent : Colors.surfaceHigh
-                            opacity: index === 0 ? 1 : 0.75
 
-                            Column {
-                                anchors.centerIn: parent
-                                spacing: 4
-                                StyledText {
-                                    text: modelData.label
-                                    font.pixelSize: Config.fontSize - 5
-                                    font.weight: Font.Medium
-                                    color: index === 0 ? Colors.accentText : Colors.subtext
-                                    anchors.horizontalCenter: parent.horizontalCenter
-                                }
-                                MaterialIcon {
-                                    icon: modelData.icon
-                                    font.pixelSize: 15
-                                    color: index === 0 ? Colors.accentText : Colors.accent
-                                    anchors.horizontalCenter: parent.horizontalCenter
-                                }
-                                StyledText {
-                                    text: Weather.formatTemperature(modelData.tempC)
-                                    font.pixelSize: Config.fontSize - 3
-                                    font.weight: Font.DemiBold
-                                    color: index === 0 ? Colors.accentText : Colors.text
-                                    anchors.horizontalCenter: parent.horizontalCenter
+                            Repeater {
+                                model: parent.modelData
+
+                                Item {
+                                    id: cell
+                                    required property int modelData
+                                    readonly property bool isToday: root.viewingCurrentMonth && modelData === root.today.getDate()
+                                    readonly property int diffFromToday: root.daysFromToday(root.viewDate.getFullYear(), root.viewDate.getMonth(), modelData)
+                                    readonly property bool hasForecast: modelData > 0 && diffFromToday >= 0 && diffFromToday <= root.maxDayOffset
+                                    readonly property bool isSelected: hasForecast && diffFromToday === root.dayOffset
+
+                                    width: pickerCol.width / 7
+                                    height: 28
+                                    // Blank pad cells keep their column; `visible` would shift the month left.
+                                    opacity: modelData > 0 ? 1 : 0
+                                    enabled: hasForecast
+                                    activeFocusOnTab: hasForecast
+                                    Accessible.role: Accessible.Button
+                                    Accessible.name: Qt.formatDate(new Date(root.viewDate.getFullYear(), root.viewDate.getMonth(), Math.max(1, modelData)), "MMMM d")
+                                    Accessible.onPressAction: cell.choose()
+                                    Keys.onReturnPressed: cell.choose()
+                                    Keys.onSpacePressed: cell.choose()
+
+                                    function choose() {
+                                        root.dayOffset = cell.diffFromToday;
+                                        root.pickerOpen = false;
+                                    }
+
+                                    Rectangle {
+                                        anchors.centerIn: parent
+                                        width: 26
+                                        height: 26
+                                        radius: width / 2
+                                        color: cell.isToday ? Colors.accent
+                                            : dayMouse.containsMouse ? Qt.alpha(Colors.overlay, 0.2) : "transparent"
+                                        border.width: cell.activeFocus || (cell.isSelected && !cell.isToday) ? 1 : 0
+                                        border.color: cell.isToday ? Colors.accentText : Colors.accent
+                                    }
+                                    MouseArea {
+                                        id: dayMouse
+                                        anchors.fill: parent
+                                        hoverEnabled: true
+                                        cursorShape: Qt.PointingHandCursor
+                                        onClicked: cell.choose()
+                                    }
+                                    StyledText {
+                                        anchors.centerIn: parent
+                                        text: cell.modelData
+                                        font.pixelSize: Config.fontSize - 3
+                                        font.weight: cell.isToday ? Font.Bold : Font.Normal
+                                        color: cell.isToday ? Colors.accentText : Colors.text
+                                        opacity: cell.hasForecast ? 1 : 0.45
+                                    }
                                 }
                             }
                         }

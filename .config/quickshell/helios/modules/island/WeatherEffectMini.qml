@@ -7,10 +7,11 @@ import "../../services"
 Item {
     id: root
     anchors.fill: parent
+    property string condition: Weather.condition
 
     readonly property string effect: {
         if (!Weather.available || !Weather.animationsEnabled) return "none";
-        const c = Weather.condition.toLowerCase();
+        const c = root.condition.toLowerCase();
         if (c.includes("thunder")) return "storm";
         if (c.includes("heavy rain") || c.includes("violent")) return "heavyrain";
         if (c.includes("rain") || c.includes("drizzle") || c.includes("shower")) return "rain";

@@ -41,6 +41,9 @@ sudo dnf install quickshell hyprland
 # Required
 sudo dnf install brightnessctl wl-clipboard grim slurp jq
 
+# 3D weather scene
+sudo dnf install qt6-qtquick3d
+
 # Audio visualizer (optional — media art still shows without it)
 sudo dnf install cava
 

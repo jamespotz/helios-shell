@@ -15,7 +15,7 @@ ShellRoot {
     function verify(value, message) { if (!value) throw new Error(message); }
     function find(item, value, action) {
         if ((item.objectName === value || item.text === value || item.label === value) && (!action || item.clicked || item.toggled)) return item;
-        for (const child of item.children || []) {
+        for (const child of item.data || item.children || []) {
             const result = root.find(child, value, action);
             if (result) return result;
         }
@@ -56,7 +56,15 @@ ShellRoot {
                     Weather.available = true;
                     Weather.tempC = 25;
                     Weather.condition = "Rain";
-                    Weather.daily = [{date: "2026-10-03", tempC: 25, feelsLikeC: 27, condition: "Rain", humidity: 60, windKmph: 36, chanceOfRain: 40}];
+                    Weather.daily = [{date: "2026-10-03", tempC: 25, feelsLikeC: 27, minTempC: 22, maxTempC: 28, condition: "Rain", humidity: 60, windKmph: 36, chanceOfRain: 40}];
+                    Weather.hourly = [
+                        {label: "Now", tempC: 25, icon: "rainy"},
+                        {label: "14:00", tempC: 26, icon: "cloud"},
+                        {label: "15:00", tempC: 28, icon: "wb_sunny"},
+                        {label: "16:00", tempC: 27, icon: "wb_sunny"},
+                        {label: "17:00", tempC: 26, icon: "cloud"},
+                        {label: "18:00", tempC: 24, icon: "cloud"}
+                    ];
                     root.press("weatherFahrenheit");
                     root.press("mph");
                     root.press("60 min");
@@ -65,6 +73,8 @@ ShellRoot {
                     root.verify(root.find(destination, "77°"), "destination follows Fahrenheit setting");
                     root.verify(root.find(destination, "22 mph"), "destination follows wind setting");
                     root.verify(Weather.refreshMinutes === 60, "interval keyboard control works");
+                    root.verify(root.find(destination, "Now"), "hourly strip starts with the current hour");
+                    root.verify(root.find(destination, "weatherConditionIcon").icon === "rainy", "condition icon follows forecast");
                     root.press("Weather animations");
                     break;
                 case 2:
@@ -103,6 +113,30 @@ ShellRoot {
                     break;
                 case 6:
                     root.verify(root.find(settings, Weather.error), "request error visible");
+                    // Keep late network responses from replacing the navigation fixture.
+                    Weather._forecastGeneration++;
+                    if (Weather._forecastRequest) Weather._forecastRequest.abort();
+                    Weather.daily = [
+                        {date: "2026-10-03", tempC: 25, feelsLikeC: 27, minTempC: 22, maxTempC: 28, condition: "Rain", humidity: 60, windKmph: 36, chanceOfRain: 40},
+                        {date: "2026-10-04", tempC: 28, feelsLikeC: 29, minTempC: 23, maxTempC: 30, condition: "Clear sky", humidity: 55, windKmph: 18, chanceOfRain: 0}
+                    ];
+                    root.find(destination, "weatherNextDay").forceActiveFocus();
+                    input.keyClick(Qt.Key_Space);
+                    break;
+                case 7:
+                    root.verify(destination.dayOffset === 1 && root.find(destination, "82°"), "keyboard navigation updates hero temperature");
+                    root.verify(root.find(destination, "weatherConditionIcon").icon === "wb_sunny", "icon follows selected forecast day");
+                    root.find(destination, "weatherDatePickerButton").forceActiveFocus();
+                    input.keyClick(Qt.Key_Space);
+                    break;
+                case 8:
+                    root.verify(destination.pickerOpen && root.find(destination, "weatherDatePicker").visible, "date picker opens from day button");
+                    input.keyClick(Qt.Key_Escape);
+                    break;
+                case 9:
+                    root.verify(!destination.pickerOpen, "Escape closes the date picker");
+                    break;
+                case 10:
                     if (Quickshell.env("HELIOS_WEATHER_CAPTURE")) {
                         surface.grabToImage(result => {
                             result.saveToFile(Quickshell.env("HELIOS_WEATHER_CAPTURE"));
