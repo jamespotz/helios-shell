@@ -80,19 +80,21 @@ QtObject {
 
     // Apple-style spring: critically damped (no overshoot) with moderate
     // stiffness for a smooth, decisive morph. Both axes must share params
-    // or they desync mid-animation. Shell-wide geometry motion follows
-    // it too (components/Spring.qml). User-tunable from Settings > Island.
+    // or they desync mid-animation. User-tunable from Settings > Island.
     readonly property real islandSpringStiffness: settingsAdapter.islandSpringStiffness
     readonly property real islandSpringDamping: settingsAdapter.islandSpringDamping
 
-    // Motion presets set the island (and so shell-wide) and satellite
-    // springs together. The active preset is derived from those four
+    // Motion presets set the island, satellite and shell UI springs
+    // together. The active preset is derived from the island and satellite
     // values rather than stored, so moving an Advanced slider reads as
-    // "custom".
+    // "custom". ui* is the spring for small shell motion (dock, buttons,
+    // toggles), where the Island's ~1s settle is far too slow. Settle to
+    // 98%: snappy ~80ms, smooth ~175ms, bouncy ~130ms with ~6% overshoot.
+    // Custom uses smooth's.
     readonly property var motionPresets: ({
-        snappy: { stiffness: 7.0, damping: 1.0 },
-        smooth: { stiffness: 4.0, damping: 1.0 },
-        bouncy: { stiffness: 4.0, damping: 0.4 }
+        snappy: { stiffness: 7.0, damping: 1.0, uiStiffness: 35, uiDamping: 1.0 },
+        smooth: { stiffness: 4.0, damping: 1.0, uiStiffness: 20, uiDamping: 1.0 },
+        bouncy: { stiffness: 4.0, damping: 0.4, uiStiffness: 7, uiDamping: 0.4 }
     })
     readonly property var motionKeys: ["islandSpringStiffness", "islandSpringDamping", "satelliteSpringStiffness", "satelliteSpringDamping"]
     readonly property string motionPreset: {
@@ -104,6 +106,9 @@ QtObject {
         }
         return "custom";
     }
+    readonly property var _uiSpring: root.motionPresets[root.motionPreset] || root.motionPresets.smooth
+    readonly property real uiSpringStiffness: root._uiSpring.uiStiffness
+    readonly property real uiSpringDamping: root._uiSpring.uiDamping
 
     function applyMotionPreset(name) {
         const p = root.motionPresets[name];
