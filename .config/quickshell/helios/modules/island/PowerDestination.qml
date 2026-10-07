@@ -74,7 +74,7 @@ Item {
 
                 Behavior on x {
                     enabled: !Config.reducedMotion
-                    SpringAnimation { spring: Config.islandSpringStiffness; damping: Config.islandSpringDamping }
+                    Spring {}
                 }
                 Behavior on color { ColorAnimation { duration: Config.animFast } }
             }

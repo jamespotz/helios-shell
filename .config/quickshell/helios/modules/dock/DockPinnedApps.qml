@@ -93,7 +93,7 @@ Column {
                             : root.dropIndex <= pinRow.index && pinRow.index < root.dragIndex ? root.rowHeight : 0
                         Behavior on y {
                             enabled: !pinRow.dragged && !Config.reducedMotion
-                            NumberAnimation { duration: Config.animFast; easing.type: Easing.OutCubic }
+                            Spring {}
                         }
                     }
 

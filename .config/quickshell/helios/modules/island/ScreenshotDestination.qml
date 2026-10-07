@@ -139,25 +139,11 @@ Item {
                         height: width
                         radius: Screenshot.capturing ? 6 : 28
                         color: Colors.accent
-                        Behavior on width {
-                            NumberAnimation {
-                                duration: Config.animMedium
-                                easing.type: Easing.OutCubic
-                            }
-                        }
-                        Behavior on radius {
-                            NumberAnimation {
-                                duration: Config.animMedium
-                                easing.type: Easing.OutCubic
-                            }
-                        }
+                        Behavior on width { enabled: !Config.reducedMotion; Spring {} }
+                        Behavior on radius { enabled: !Config.reducedMotion; Spring {} }
 
                         scale: captureHover.hovered ? 0.92 : 1.0
-                        Behavior on scale {
-                            NumberAnimation {
-                                duration: Config.animFast
-                            }
-                        }
+                        Behavior on scale { enabled: !Config.reducedMotion; Spring {} }
                     }
 
                     HoverHandler {

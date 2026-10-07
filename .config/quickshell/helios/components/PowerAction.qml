@@ -26,7 +26,7 @@ Item {
     implicitWidth: 84
     implicitHeight: 84
     scale: Config.reducedMotion ? 1 : actionMouse.pressed ? 0.96 : 1
-    Behavior on scale { NumberAnimation { duration: Config.reducedMotion ? 0 : Config.animFast; easing.type: Easing.OutCubic } }
+    Behavior on scale { enabled: !Config.reducedMotion; Spring {} }
 
     Rectangle {
         anchors.fill: parent

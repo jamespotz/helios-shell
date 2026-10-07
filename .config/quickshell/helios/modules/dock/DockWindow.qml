@@ -384,11 +384,11 @@ PanelWindow {
                             y: dock.vertical ? mainShift : crossShift
                             Behavior on x {
                                 enabled: !iconCell.dragged && !dock.vertical && !Config.reducedMotion
-                                NumberAnimation { duration: Config.animFast; easing.type: Easing.OutCubic }
+                                Spring {}
                             }
                             Behavior on y {
                                 enabled: !iconCell.dragged && dock.vertical && !Config.reducedMotion
-                                NumberAnimation { duration: Config.animFast; easing.type: Easing.OutCubic }
+                                Spring {}
                             }
                         }
 
@@ -424,7 +424,7 @@ PanelWindow {
                             scale: (iconMouse.pressed && !iconCell.dragged && !Config.reducedMotion ? 0.9 : 1)
                                 * dock.magnification(iconCell.along)
                             opacity: iconCell.minimized ? 0.6 : 1
-                            Behavior on scale { NumberAnimation { duration: 90; easing.type: Easing.OutCubic } }
+                            Behavior on scale { enabled: !Config.reducedMotion; Spring {} }
 
                             MaterialIcon {
                                 anchors.centerIn: parent
@@ -498,8 +498,8 @@ PanelWindow {
                                     color: iconCell.minimized ? "transparent" : iconCell.focusedApp ? Colors.accent : Colors.subtext
                                     border.width: iconCell.minimized ? 1 : 0
                                     border.color: Colors.subtext
-                                    Behavior on width { NumberAnimation { duration: Config.animFast } }
-                                    Behavior on height { NumberAnimation { duration: Config.animFast } }
+                                    Behavior on width { enabled: !Config.reducedMotion; Spring {} }
+                                    Behavior on height { enabled: !Config.reducedMotion; Spring {} }
                                 }
                             }
                         }
@@ -603,7 +603,7 @@ PanelWindow {
                         Accessible.role: Accessible.Button
                         Accessible.name: dockButton.modelData.label
                         Behavior on color { ColorAnimation { duration: Config.animFast } }
-                        Behavior on scale { NumberAnimation { duration: 90; easing.type: Easing.OutCubic } }
+                        Behavior on scale { enabled: !Config.reducedMotion; Spring {} }
 
                         MaterialIcon {
                             id: buttonIcon

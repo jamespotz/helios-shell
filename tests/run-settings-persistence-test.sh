@@ -3,6 +3,10 @@ set -euo pipefail
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 test_root="$(mktemp -d)"
 trap 'rm -rf "$test_root"' EXIT
+# Private runtime dir: the test bus starts its own portals, which would
+# otherwise take over the real session's $XDG_RUNTIME_DIR/doc mount.
+mkdir -m 700 "$test_root/runtime"
+export XDG_RUNTIME_DIR="$test_root/runtime"
 
 # Exercise real setters and storage, with system actions isolated from the session.
 mkdir -p "$test_root/bin" "$test_root/home/wallpapers" "$test_root/home/.config/quickshell/helios/data"

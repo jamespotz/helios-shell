@@ -98,7 +98,7 @@ Item {
         HoverHandler { enabled: action.enabled; cursorShape: Qt.PointingHandCursor }
         implicitHeight: (action.secondary ? 43.575 : 44) * root.uiScale
         scale: !action.secondary && action.down && !Config.reducedMotion ? 0.985 : 1
-        Behavior on scale { enabled: !Config.reducedMotion; NumberAnimation { duration: 120; easing.type: Easing.BezierSpline; easing.bezierCurve: [0.2, 0.7, 0.3, 1, 1, 1] } }
+        Behavior on scale { enabled: !Config.reducedMotion; Spring {} }
         background: Rectangle {
             radius: (action.secondary ? 8 : 12) * root.uiScale
             color: action.secondary ? (action.hovered ? root.hoverColor : "transparent")

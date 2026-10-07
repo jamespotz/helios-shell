@@ -99,7 +99,7 @@ Rectangle {
                                 const t = Math.min(1, Math.abs(along - pointer) / ((Dock.iconSize + Dock.iconSpacing) * 2.5));
                                 return 1 + (Dock.magnifyScale - 1) * (Math.cos(Math.PI * t) + 1) / 2;
                             }
-                            Behavior on scale { NumberAnimation { duration: Config.reducedMotion ? 0 : 90; easing.type: Easing.OutCubic } }
+                            Behavior on scale { enabled: !Config.reducedMotion; Spring {} }
 
                             Image {
                                 id: appIcon

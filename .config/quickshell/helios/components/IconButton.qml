@@ -31,7 +31,7 @@ Rectangle {
     Behavior on color { ColorAnimation { duration: Config.animFast; easing.type: Easing.OutCubic } }
     Behavior on scale {
         enabled: !Config.reducedMotion
-        SpringAnimation { spring: 7; damping: 0.35; epsilon: 0.002 }
+        Spring {}
     }
 
     MaterialIcon {

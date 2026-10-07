@@ -249,7 +249,7 @@ Item {
             : root._sleeve ? -4 : root._studio ? -7 : 0
         Behavior on rotation {
             enabled: !Config.reducedMotion && root.visible && Config.turntableTonearm
-            NumberAnimation { duration: Config.animSlow; easing.type: Easing.InOutCubic }
+            Spring {}
         }
 
         // Counterweight and pivot housing.

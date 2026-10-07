@@ -31,7 +31,7 @@ Rectangle {
     color: active ? root.tint : (hoverHandler.hovered ? Colors.surfaceHigh : root.inactiveTint)
 
     Behavior on color { ColorAnimation { duration: Config.animFast; easing.type: Easing.OutCubic } }
-    Behavior on scale { NumberAnimation { duration: Config.reducedMotion ? 0 : Config.animFast; easing.type: Easing.OutCubic } }
+    Behavior on scale { enabled: !Config.reducedMotion; Spring {} }
 
     Row {
         id: content

@@ -80,14 +80,15 @@ QtObject {
 
     // Apple-style spring: critically damped (no overshoot) with moderate
     // stiffness for a smooth, decisive morph. Both axes must share params
-    // or they desync mid-animation. User-tunable from Settings >
-    // Island.
+    // or they desync mid-animation. Shell-wide geometry motion follows
+    // it too (components/Spring.qml). User-tunable from Settings > Island.
     readonly property real islandSpringStiffness: settingsAdapter.islandSpringStiffness
     readonly property real islandSpringDamping: settingsAdapter.islandSpringDamping
 
-    // Motion presets set the island and satellite springs together. The
-    // active preset is derived from those four values rather than stored,
-    // so moving an Advanced slider reads as "custom".
+    // Motion presets set the island (and so shell-wide) and satellite
+    // springs together. The active preset is derived from those four
+    // values rather than stored, so moving an Advanced slider reads as
+    // "custom".
     readonly property var motionPresets: ({
         snappy: { stiffness: 7.0, damping: 1.0 },
         smooth: { stiffness: 4.0, damping: 1.0 },

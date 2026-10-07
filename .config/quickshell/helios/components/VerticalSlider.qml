@@ -59,7 +59,7 @@ Item {
             anchors.horizontalCenter: parent.horizontalCenter
             y: track.height * (1 - root.value) - height / 2
 
-            Behavior on width { NumberAnimation { duration: Config.animFast; easing.type: Easing.OutCubic } }
+            Behavior on width { enabled: !Config.reducedMotion; Spring {} }
 
             // Focus ring — keyboard-navigation feedback
             Rectangle {

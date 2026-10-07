@@ -21,7 +21,7 @@ Rectangle {
     scale: Config.reducedMotion ? 1 : rowMouse.pressed ? 0.985 : 1
 
     Behavior on color { ColorAnimation { duration: Config.animFast; easing.type: Easing.OutCubic } }
-    Behavior on scale { NumberAnimation { duration: Config.reducedMotion ? 0 : Config.animFast; easing.type: Easing.OutCubic } }
+    Behavior on scale { enabled: !Config.reducedMotion; Spring {} }
 
     // Hover overlay — subtle, layered on top of highlight state
     Rectangle {

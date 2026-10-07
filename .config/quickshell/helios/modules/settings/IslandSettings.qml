@@ -163,7 +163,7 @@ SettingsPreviewPage {
 
             SectionTitle {
                 title: "Behavior"
-                subtitle: "With Open on hover off, click the idle pill to open it. Motion sets how the island and its satellites spring open. Over fullscreen: Alerts shows alert cards and shortcut-opened panels above fullscreen apps."
+                subtitle: "With Open on hover off, click the idle pill to open it. Motion sets how the island, its satellites and the rest of the shell spring. Over fullscreen: Alerts shows alert cards and shortcut-opened panels above fullscreen apps."
             }
 
             SettingsCard {

@@ -87,7 +87,7 @@ Item {
                 anchors.verticalCenter: parent ? parent.verticalCenter : undefined
                 opacity: modelData.focused ? 1 : 0.6
 
-                Behavior on width { NumberAnimation { duration: Config.animFast; easing.type: Easing.OutCubic } }
+                Behavior on width { enabled: !Config.reducedMotion; Spring {} }
                 Behavior on opacity { NumberAnimation { duration: Config.animFast } }
 
                 Rectangle {
@@ -145,7 +145,7 @@ Item {
 
         Behavior on x {
             enabled: badge.visible && !Config.reducedMotion
-            NumberAnimation { duration: Config.animMedium; easing.type: Easing.OutCubic }
+            Spring {}
         }
     }
 

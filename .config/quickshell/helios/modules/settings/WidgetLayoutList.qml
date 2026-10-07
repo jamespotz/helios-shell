@@ -71,7 +71,7 @@ Rectangle {
                         : root.dropIndex <= widgetRow.index && widgetRow.index < root.dragIndex ? root.rowHeight : 0
                     Behavior on y {
                         enabled: !widgetRow.dragged && !Config.reducedMotion
-                        NumberAnimation { duration: Config.animFast; easing.type: Easing.OutCubic }
+                        Spring {}
                     }
                 }
 

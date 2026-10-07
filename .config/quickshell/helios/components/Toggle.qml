@@ -24,7 +24,7 @@ Rectangle {
     border.color: Colors.accent
 
     Behavior on color { ColorAnimation { duration: Config.animMedium; easing.type: Easing.OutCubic } }
-    Behavior on scale { NumberAnimation { duration: Config.reducedMotion ? 0 : Config.animFast; easing.type: Easing.OutCubic } }
+    Behavior on scale { enabled: !Config.reducedMotion; Spring {} }
 
     // Knob — pure white regardless of theme, matching Apple's switch design
     Rectangle {
@@ -35,7 +35,7 @@ Rectangle {
         anchors.verticalCenter: parent.verticalCenter
         x: root.checked ? parent.width - width - 3 : 3
 
-        Behavior on x { NumberAnimation { duration: Config.animMedium; easing.type: Easing.OutCubic } }
+        Behavior on x { enabled: !Config.reducedMotion; Spring {} }
     }
 
     // Focus ring — keyboard-navigation feedback

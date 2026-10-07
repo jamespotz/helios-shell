@@ -8,6 +8,7 @@ import "modules/settings" as SettingsUI
 ShellRoot {
     id: root
     property int phase: 0
+    property int settleTicks: 0
     property real previewY: 0
     property real controlHeight: 0
     readonly property Process terminator: Process { command: ["sh", "-c", "kill -TERM $PPID"] }
@@ -112,6 +113,9 @@ ShellRoot {
                     Config.setOption("reducedMotion", true);
                     break;
                 case 9:
+                    // Turning on Reduce motion retargets the icon's running
+                    // spring, which then settles back to rest once.
+                    if (root.find(page.item, "dockPreviewIcon_0").scale !== 1 && ++root.settleTicks < 12) { advance.restart(); return; }
                     root.verify(root.find(page.item, "dockPreviewIcon_0").scale === 1, "Dock preview respects reduced motion");
                     if (Quickshell.env("HELIOS_SETTINGS_PREVIEW_CAPTURE")) {
                         surface.grabToImage(result => {

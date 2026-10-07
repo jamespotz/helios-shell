@@ -163,7 +163,7 @@ Item {
                             font.pixelSize: 14
                             color: Colors.subtext
                             rotation: root.pickerOpen ? 180 : 0
-                            Behavior on rotation { NumberAnimation { duration: Config.reducedMotion ? 0 : Config.animFast; easing.type: Easing.OutCubic } }
+                            Behavior on rotation { enabled: !Config.reducedMotion; Spring {} }
                         }
                     }
                     IconButton {
@@ -342,7 +342,7 @@ Item {
             scale: root.pickerOpen || Config.reducedMotion ? 1 : 0.96
             transformOrigin: Item.TopRight
             Behavior on opacity { NumberAnimation { duration: Config.reducedMotion ? 0 : Config.animFast; easing.type: Easing.OutCubic } }
-            Behavior on scale { NumberAnimation { duration: Config.reducedMotion ? 0 : Config.animFast; easing.type: Easing.OutCubic } }
+            Behavior on scale { enabled: !Config.reducedMotion; Spring {} }
             Keys.onEscapePressed: event => { root.pickerOpen = false; event.accepted = true; }
 
             // Swallow clicks so they don't reach the dismiss area behind.

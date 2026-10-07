@@ -49,7 +49,7 @@ Rectangle {
                 color: segment.active ? Colors.accent : (segHover.hovered ? Colors.surface : "transparent")
 
                 Behavior on color { ColorAnimation { duration: Config.animFast; easing.type: Easing.OutCubic } }
-                Behavior on scale { NumberAnimation { duration: Config.reducedMotion ? 0 : Config.animFast; easing.type: Easing.OutCubic } }
+                Behavior on scale { enabled: !Config.reducedMotion; Spring {} }
 
                 Row {
                     anchors.centerIn: parent
