@@ -37,6 +37,8 @@ Item {
             StyledText { text: "Focus Modes"; font.weight: Font.DemiBold; font.pixelSize: Config.fontSize + 2; anchors.verticalCenter: parent.verticalCenter }
         }
 
+        FocusTimerControls { width: parent.width }
+
         // ─── Preset list ───────────────────────────────────────────────
         Repeater {
             model: FocusModes.presets

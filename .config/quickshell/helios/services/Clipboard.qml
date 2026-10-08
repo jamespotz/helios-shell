@@ -13,6 +13,81 @@ QtObject {
     id: root
 
     property var items: []
+    property var favorites: []
+    property bool favoriteBusy: false
+    property string error: ""
+    property var _pendingFavorites: null
+    property var _request: ({})
+    property string _response: ""
+
+    property FileView favoritesFile: FileView {
+        path: Quickshell.statePath("clipboard-favorites.json")
+        preload: true
+        blockLoading: true
+        atomicWrites: true
+        printErrors: false
+        onLoaded: {
+            try {
+                const saved = JSON.parse(text());
+                if (Array.isArray(saved)) root.favorites = saved.filter(f => f && typeof f.id === "string" && typeof f.text === "string")
+                    .map(f => ({ id: f.id, text: f.text, preview: f.text.split("\n")[0] || qsTr("Blank text") }));
+            } catch (e) { }
+        }
+        onSaved: {
+            if (root._pendingFavorites !== null) root.favorites = root._pendingFavorites;
+            root._pendingFavorites = null;
+            root.favoriteBusy = false;
+        }
+        onSaveFailed: { root._pendingFavorites = null; root.favoriteBusy = false; root.error = qsTr("Could not save clipboard favorites"); }
+    }
+    function _saveFavorites(next) {
+        root._pendingFavorites = next;
+        root.favoriteBusy = true;
+        favoritesFile.setText(JSON.stringify(next));
+    }
+    function pin(line) {
+        if (root.favoriteBusy) return false;
+        const item = root.items.find(entry => entry.line === line);
+        if ((item && item.isImage) || /\[\[ binary data /i.test(line)) { root.error = qsTr("Only text can be pinned"); return false; }
+        return root._runFavorite({ action: "decode", line: line });
+    }
+    function unpin(id) {
+        if (root.favoriteBusy) return false;
+        root.error = "";
+        root._saveFavorites(root.favorites.filter(f => f.id !== id));
+        return true;
+    }
+    function copyFavorite(id) {
+        const favorite = root.favorites.find(f => f.id === id);
+        return favorite ? root._runFavorite({ action: "copy", text: favorite.text }) : false;
+    }
+    function _runFavorite(request) {
+        if (root.favoriteBusy) return false;
+        root.error = "";
+        root.favoriteBusy = true;
+        root._request = request;
+        root._response = "";
+        favoriteProcess.stdinEnabled = true;
+        favoriteProcess.running = true;
+        return true;
+    }
+    property Process favoriteProcess: Process {
+        command: ["python3", Qt.resolvedUrl("clipboard-text.py").toString().replace("file://", "")]
+        stdinEnabled: true
+        onStarted: { write(JSON.stringify(root._request) + "\n"); stdinEnabled = false; }
+        stdout: StdioCollector { onStreamFinished: root._response = text }
+        onExited: (exitCode, exitStatus) => {
+            try {
+                const result = JSON.parse(root._response);
+                if (exitCode !== 0 || !result.ok) throw new Error(result.error || qsTr("Clipboard operation failed"));
+                if (root._request.action === "decode" && !root.favorites.some(f => f.text === result.text)) {
+                    root._saveFavorites(root.favorites.concat([{ id: "favorite-" + Date.now(), text: result.text, preview: result.text.split("\n")[0] || qsTr("Blank text") }]));
+                    return;
+                }
+            } catch (e) { root.error = qsTr("Clipboard operation failed: %1").arg(e.message); }
+            root.favoriteBusy = false;
+        }
+    }
 
     // Ids whose thumbnail has already been decoded to disk this session —
     // ListView recycles/recreates delegates on scroll, and each delegate
@@ -46,6 +121,8 @@ QtObject {
         wiper.running = false;
         wiper.running = true;
     }
+
+    Component.onCompleted: favoritesFile.text()
 
     property Process lister: Process {
         command: ["cliphist", "list"]

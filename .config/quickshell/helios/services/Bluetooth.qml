@@ -53,6 +53,7 @@ QtObject {
         if (root.active === active) return;
         root.active = active;
         if (active) cardsProc.running = true;
+        if (root.adapter && root.adapter.enabled) root.setScanning(active);
         root._scheduleReconnect(false);
     }
 
@@ -409,7 +410,10 @@ QtObject {
 
     property Connections adapterWatcher: Connections {
         target: root.adapter
-        function onEnabledChanged() { root._scheduleReconnect(true); }
+        function onEnabledChanged() {
+            if (root.active && root.adapter.enabled) root.setScanning(true);
+            root._scheduleReconnect(true);
+        }
     }
 
     property Connections batteryWatcher: Connections {

@@ -59,6 +59,35 @@ Item {
             }
         }
 
+        StyledText { visible: Clipboard.error.length > 0; width: parent.width; wrapMode: Text.Wrap; text: Clipboard.error; color: Colors.danger }
+        StyledText { text: qsTr("Favorites"); font.weight: Font.DemiBold }
+        StyledText { visible: Clipboard.favorites.length === 0; text: qsTr("Pin text from history to keep it here"); color: Colors.subtext; font.pixelSize: Config.fontSize - 2 }
+        Item {
+            width: parent.width
+            visible: Clipboard.favorites.length > 0
+            height: Math.min(184, Clipboard.favorites.length * 46)
+            ListView {
+                id: favoriteList
+                anchors.fill: parent
+                clip: true
+                model: Clipboard.favorites
+                boundsBehavior: Flickable.StopAtBounds
+                delegate: HoverRow {
+                    id: favoriteRow
+                    required property var modelData
+                    width: favoriteList.width
+                    height: 44
+                    label: qsTr("Copy favorite: %1").arg(modelData.preview)
+                    enabled: !Clipboard.favoriteBusy
+                    onClicked: Clipboard.copyFavorite(modelData.id)
+                    StyledText { anchors.left: parent.left; anchors.leftMargin: 6; anchors.verticalCenter: parent.verticalCenter; width: parent.width - 44; text: favoriteRow.modelData.preview; elide: Text.ElideRight }
+                    IconButton { anchors.right: parent.right; anchors.verticalCenter: parent.verticalCenter; icon: "push_pin"; active: true; label: qsTr("Unpin text"); onClicked: Clipboard.unpin(favoriteRow.modelData.id) }
+                }
+            }
+            ScrollIndicator { target: favoriteList }
+        }
+        StyledText { text: qsTr("History"); font.weight: Font.DemiBold }
+
         StyledText {
             visible: Clipboard.items.length === 0
             text: "No clipboard history"
@@ -94,6 +123,7 @@ Item {
 
                     width: clipList.width
                     height: 44
+                    label: qsTr("Copy clipboard entry: %1").arg(modelData.preview)
                     onClicked: { Clipboard.copy(row.modelData.line); IslandNavigation.close(); }
 
                     Process {
@@ -143,25 +173,25 @@ Item {
 
                         StyledText {
                             anchors.verticalCenter: parent.verticalCenter
-                            width: parent.width - 16 - 8 - (row.modelData.isImage ? 40 : 0)
+                            width: parent.width - 68 - 16 - (row.modelData.isImage ? 40 : 0)
                             elide: Text.ElideRight
                             text: row.modelData.preview
                         }
 
-                        MaterialIcon {
+                        IconButton {
+                            anchors.verticalCenter: parent.verticalCenter
+                            icon: "push_pin"
+                            label: qsTr("Pin text")
+                            enabled: !row.modelData.isImage && !Clipboard.favoriteBusy
+                            iconSize: 14
+                            onClicked: Clipboard.pin(row.modelData.line)
+                        }
+                        IconButton {
                             anchors.verticalCenter: parent.verticalCenter
                             icon: "close"
-                            font.pixelSize: 14
-                            opacity: row.hovering ? 1 : 0
-                            Behavior on opacity { NumberAnimation { duration: Config.animFast } }
-
-                            MouseArea {
-                                anchors.fill: parent
-                                anchors.margins: -6
-                                cursorShape: Qt.PointingHandCursor
-                                enabled: row.hovering
-                                onClicked: Clipboard.remove(row.modelData.line)
-                            }
+                            label: qsTr("Delete history entry")
+                            iconSize: 14
+                            onClicked: Clipboard.remove(row.modelData.line)
                         }
                     }
                 }

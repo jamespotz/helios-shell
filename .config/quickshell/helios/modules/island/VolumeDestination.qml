@@ -142,6 +142,15 @@ Item {
             font.pixelSize: Config.fontSize - 2
         }
 
+        Column {
+            width: parent.width
+            spacing: 6
+            visible: root.isOutput && Audio.preferredOutputName.length > 0
+            StyledText { width: parent.width; wrapMode: Text.Wrap; text: qsTr("Preferred on connection: %1").arg((Audio.sinks.find(n => n.name === Audio.preferredOutputName) || {}).description || Audio.preferredOutputName); color: Colors.subtext; font.pixelSize: Config.fontSize - 1 }
+            PrimaryButton { width: parent.width; text: qsTr("Clear output preference"); onClicked: Audio.clearOutputPreference() }
+        }
+        StyledText { visible: Audio.error.length > 0; width: parent.width; wrapMode: Text.Wrap; text: Audio.error; color: Colors.danger }
+
         // Wrapped so ScrollIndicator (anchors to its target's edges) is a
         // sibling of the Flickable rather than a child inside it; Qt
         // doesn't support a child anchoring to the Flickable it's inside
@@ -171,7 +180,7 @@ Item {
                     height: 40
                     highlighted: isDefault
                     onClicked: {
-                        if (root.isOutput) Pipewire.preferredDefaultAudioSink = devRow.modelData;
+                        if (root.isOutput) Audio.setOutput(devRow.modelData.name);
                         else Pipewire.preferredDefaultAudioSource = devRow.modelData;
                     }
 
@@ -196,11 +205,19 @@ Item {
 
                         StyledText {
                             anchors.verticalCenter: parent.verticalCenter
-                            width: devRow.width - 28 - 16 - 22
+                            width: devRow.width - 28 - 16 - 22 - (root.isOutput ? 38 : 0)
                             elide: Text.ElideRight
                             text: devRow.modelData.description || devRow.modelData.nickname || devRow.modelData.name
                         }
 
+                        IconButton {
+                            visible: root.isOutput
+                            anchors.verticalCenter: parent.verticalCenter
+                            icon: "headphones"
+                            active: Audio.preferredOutputName === devRow.modelData.name
+                            label: qsTr("Prefer this output when it connects")
+                            onClicked: active ? Audio.clearOutputPreference() : Audio.preferOutput(devRow.modelData.name)
+                        }
                         MaterialIcon {
                             anchors.verticalCenter: parent.verticalCenter
                             visible: devRow.isDefault

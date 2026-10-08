@@ -65,3 +65,7 @@ singleton DefaultApps 1.0 DefaultApps.qml
 singleton Maintenance 1.0 Maintenance.qml
 singleton ColorPickerHistory 1.0 ColorPickerHistory.qml
 singleton AnnotateState 1.0 AnnotateState.qml
+FocusTimerCore 1.0 FocusTimerCore.qml
+singleton FocusTimer 1.0 FocusTimer.qml
+AudioOutputRuleCore 1.0 AudioOutputRuleCore.qml
+singleton RemovableDrives 1.0 RemovableDrives.qml

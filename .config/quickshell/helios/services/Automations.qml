@@ -112,7 +112,8 @@ QtObject {
         }
         const step = root._bluetoothAudioStep(root._bluetoothAudioState, root.connectedBluetoothIds, root.connectedBluetoothAudio);
         root._bluetoothAudioState = step.state;
-        if (step.route && root.bluetoothAudioRule) Audio.setOutput(step.route);
+        if (step.route && (root.bluetoothAudioRule || Audio.preferredOutputName === step.route))
+            Audio.routeConnectedBluetoothOutput(step.route);
     }
 
     onConnectedBluetoothIdsChanged: root._updateBluetoothAudio()

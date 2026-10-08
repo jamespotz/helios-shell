@@ -26,6 +26,7 @@ PanelWindow {
     readonly property bool notifyMode: mode === "notify"
     readonly property bool taskMode: mode === "task"
     readonly property bool meetingMode: mode === "meeting"
+    readonly property bool focusTimerMode: mode === "focus-timer"
     readonly property bool batteryMode: mode === "battery"
     readonly property bool satelliteOpen: IslandNavigation.satelliteOpenFor(modelData.name)
     readonly property var hyprMonitor: Hyprland.monitorFor(modelData)
@@ -219,7 +220,7 @@ PanelWindow {
         // Loader). A sibling of `visual` never sees keys typed into it.
         Keys.onEscapePressed: {
             IslandNavigation.dismiss(bar.modelData.name, bar.mode);
-            if (!bar.panelOpen && !bar.notifyMode && !bar.meetingMode && !bar.batteryMode)
+            if (!bar.panelOpen && !bar.notifyMode && !bar.meetingMode && !bar.batteryMode && !bar.focusTimerMode)
                 bar.hovering = false;
         }
 
@@ -368,7 +369,7 @@ PanelWindow {
                     anchors.topMargin: bar.padV
                     anchors.horizontalCenter: parent.horizontalCenter
                     opacity: 0
-                    sourceComponent: bar.panelOpen ? panelComp : bar.notifyMode ? notifyComp : bar.taskMode ? taskComp : bar.meetingMode ? meetingComp : bar.batteryMode ? batteryComp : bar.hovering ? peekComp : idleComp
+                    sourceComponent: bar.panelOpen ? panelComp : bar.notifyMode ? notifyComp : bar.taskMode ? taskComp : bar.meetingMode ? meetingComp : bar.batteryMode ? batteryComp : bar.focusTimerMode ? focusTimerComp : bar.hovering ? peekComp : idleComp
                     onLoaded: contentFadeIn.restart()
 
                     NumberAnimation {
@@ -449,4 +450,6 @@ PanelWindow {
                     ? bar.islandHeight / 2 + Config.satelliteRestGap : 0))
         }
     }
+    Component { id: focusTimerComp; FocusTimerCard {} }
+
 }

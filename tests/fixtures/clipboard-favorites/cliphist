@@ -1,0 +1,9 @@
+#!/usr/bin/env python3
+import sys
+if sys.argv[1] == "decode":
+    line = sys.stdin.read()
+    if line.startswith("bad"):
+        sys.exit(1)
+    sys.stdout.write("first line\nquotes ' \" and $(touch /tmp/helios-should-not-exist)\n\n")
+elif sys.argv[1] == "list":
+    print("1\tfirst line")

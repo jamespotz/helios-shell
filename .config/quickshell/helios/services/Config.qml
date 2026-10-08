@@ -240,6 +240,7 @@ QtObject {
     readonly property bool showIdleActiveWindow: settingsAdapter.showIdleActiveWindow
     readonly property bool showIdleTray: settingsAdapter.showIdleTray
     readonly property bool showIdleStatusIndicators: settingsAdapter.showIdleStatusIndicators
+    readonly property bool showIdleFocusTimer: settingsAdapter.showIdleFocusTimer
     readonly property bool showIdleClipboard: settingsAdapter.showIdleClipboard
 
     // Widget order and side for the idle pill and the hover row. Each list
@@ -247,7 +248,7 @@ QtObject {
     // on the left, after it on the right. Whether a widget shows is still
     // its show*/showIdle* toggle above. Set from Settings > Island.
     readonly property var widgetKeys: ({
-        idle: ["workspaces", "tiledLayout", "activeWindow", "media", "clock", "weather", "tray", "clipboard", "statusIndicators", "launcher"],
+        idle: ["workspaces", "tiledLayout", "activeWindow", "media", "clock", "weather", "tray", "clipboard", "statusIndicators", "launcher", "focusTimer"],
         peek: ["workspaces", "tiledLayout", "activeWindow", "clock", "weather", "tray", "clipboard", "statusIndicators", "launcher"]
     })
     readonly property var idleWidgetLayout: root._sanitizeLayout("idle", settingsAdapter.idleLayout)
@@ -400,8 +401,9 @@ QtObject {
         showIdleActiveWindow: { value: false },
         showIdleTray: { value: false },
         showIdleStatusIndicators: { value: false },
+        showIdleFocusTimer: { value: true },
         showIdleClipboard: { value: false },
-        idleLayout: { value: ["workspaces", "tiledLayout", "activeWindow", "media", "clock", "weather", "tray", "clipboard", "statusIndicators", "|"] },
+        idleLayout: { value: ["workspaces", "tiledLayout", "activeWindow", "media", "clock", "focusTimer", "weather", "tray", "clipboard", "statusIndicators", "|"] },
         peekLayout: { value: ["workspaces", "tiledLayout", "activeWindow", "|", "clock", "weather", "tray", "clipboard", "statusIndicators"] },
 
         workspaceIndicatorStyle: { value: "dots", choices: ["dots", "numbers", "custom"] },
@@ -599,6 +601,7 @@ QtObject {
             property bool showIdleActiveWindow: root.options.showIdleActiveWindow.value
             property bool showIdleTray: root.options.showIdleTray.value
             property bool showIdleStatusIndicators: root.options.showIdleStatusIndicators.value
+            property bool showIdleFocusTimer: root.options.showIdleFocusTimer.value
             property bool showIdleClipboard: root.options.showIdleClipboard.value
             property var idleLayout: root.options.idleLayout.value
             property var peekLayout: root.options.peekLayout.value

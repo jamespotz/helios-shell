@@ -1,0 +1,6 @@
+#!/usr/bin/env python3
+import os, sys
+from pathlib import Path
+if Path(os.environ['HELIOS_CLIP_TEST'], 'fail-copy').exists():
+    sys.exit(1)
+Path(os.environ['HELIOS_CLIP_TEST'], 'copied').write_bytes(sys.stdin.buffer.read())

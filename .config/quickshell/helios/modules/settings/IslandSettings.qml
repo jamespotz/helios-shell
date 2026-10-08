@@ -13,6 +13,7 @@ SettingsPreviewPage {
     previewComponent: Component { IslandPreview {} }
 
     readonly property var widgetMeta: ({
+        focusTimer: { icon: "timer", label: qsTr("Focus timer") },
         launcher: { icon: "apps", label: "Launcher" },
         media: { icon: "music_note", label: "Now-playing cover" },
         clock: { icon: "schedule", label: "Clock" },
