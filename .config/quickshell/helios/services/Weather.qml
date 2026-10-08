@@ -156,8 +156,11 @@ QtObject {
         root._scheduleRetry();
     }
 
+    // Open-Meteo sometimes accepts a connection and then never reads from it,
+    // so a request with no answer after 8s is retried on a fresh connection
+    // instead of waited on.
     property Timer requestTimer: Timer {
-        interval: 20000
+        interval: 8000
         onTriggered: {
             ++root._forecastGeneration;
             if (root._forecastRequest) root._forecastRequest.abort();
@@ -237,13 +240,9 @@ QtObject {
         }
     }
 
-    // A cold start (shell/network just came up) can hit a geolocation/
-    // geocoding/forecast request before DNS or the network is fully ready,
-    // or a provider can blip — with no retry, that single failure used to
-    // stick until the next scheduled refresh 20 minutes later, so the
-    // widget could go dark for most of that window over a purely transient
-    // hiccup. A few short, bounded retries smooth that over without
-    // hammering the API if something's genuinely down.
+    // Failed fetches retry with backoff until one succeeds. Provider stalls
+    // can outlast a few quick retries, and giving up until the next scheduled
+    // refresh left the Island without weather for up to 20 minutes.
     property int _retryCount: 0
     property Timer retryTimer: Timer {
         interval: 15000
@@ -251,9 +250,36 @@ QtObject {
         onTriggered: root.refresh()
     }
     function _scheduleRetry() {
-        if (root._retryCount >= 3) { root._retryCount = 0; return; }
+        const delays = [15, 30, 60, 120, 300];
+        root.retryTimer.interval = delays[Math.min(root._retryCount, delays.length - 1)] * 1000;
         root._retryCount++;
         root.retryTimer.restart();
+    }
+
+    // The last good forecast, shown on start while the first fetch is in
+    // flight, as long as it is recent and for the same location.
+    property FileView cacheFile: FileView {
+        path: Quickshell.statePath("weather-cache.json")
+        blockLoading: true
+        printErrors: false
+    }
+
+    function _saveCache() {
+        const weather = {};
+        for (const key of ["tempC", "feelsLikeC", "condition", "isDay", "location", "latitude", "longitude",
+                "minTempC", "maxTempC", "humidity", "windKmph", "uvIndex", "sunrise", "sunset", "hourly", "daily", "lastUpdated"])
+            weather[key] = root[key];
+        root.cacheFile.setText(JSON.stringify({ override: settingsAdapter.locationOverride, weather: weather }));
+    }
+
+    function _restoreCache() {
+        if (root.available) return;
+        let cache;
+        try { cache = JSON.parse(root.cacheFile.text()); } catch (e) { return; }
+        if (!cache || !cache.weather || cache.override !== settingsAdapter.locationOverride) return;
+        if (!(Date.now() - cache.weather.lastUpdated < 3 * 3600000)) return;
+        for (const key in cache.weather) root[key] = cache.weather[key];
+        root.available = true;
     }
 
     // No override set — resolve the requester's IP to a lat/long.
@@ -387,6 +413,7 @@ QtObject {
                 root.error = "";
                 root.lastUpdated = Date.now();
                 root._retryCount = 0;
+                root._saveCache();
         });
     }
 
@@ -400,8 +427,8 @@ QtObject {
         watchChanges: true
         // Wait for the persisted location (if any) to load before the first
         // fetch, rather than fetching once with the default then again.
-        onLoaded: root.refresh()
-        onLoadFailed: root.refresh()
+        onLoaded: { root._restoreCache(); root.refresh(); }
+        onLoadFailed: { root._restoreCache(); root.refresh(); }
 
         JsonAdapter {
             id: settingsAdapter

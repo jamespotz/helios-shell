@@ -9,9 +9,10 @@
 -- here — there's no sensible default to hardcode, so drive those from the matching island tab
 -- instead. `island appearance(...)`/`liquidGlass(enabled)` are config knobs
 -- meant to be set once from the theme tab UI, not toggled from a hotkey.
-
+local is_uwsm = os.getenv('UWSM_FINALIZE_VARNAMES')
+local run_app = is_uwsm and "uwsm app -t scope -- " or ""
 local mainMod = "SUPER"
-local helios = "quickshell -c helios ipc call"
+local helios  = "quickshell -c helios ipc call"
 
 -- Core -----------------------------------------------------------------
 
@@ -90,7 +91,7 @@ hl.bind(mainMod .. " + SHIFT + C", hl.dsp.exec_cmd(helios .. " recorder toggle")
 -- didn't run it, even though the identical string worked fine run directly
 -- or via a live `hyprctl dispatch`.
 hl.bind(mainMod .. " + SHIFT + R",
-  hl.dsp.exec_cmd("sh ~/.config/hypr/helios-reload.sh"),
+  hl.dsp.exec_cmd(run_app .. "sh ~/.config/hypr/helios-reload.sh"),
   { description = "Reload/relaunch helios" })
 
 
@@ -103,7 +104,8 @@ hl.bind(mainMod .. " + SHIFT + R",
 -- makes Hyprland focus the update window instead of opening a hidden tab in an
 -- existing Ghostty window. --wait-after-command keeps errors visible.
 hl.bind(mainMod .. " + SHIFT + U",
-  hl.dsp.exec_cmd("ghostty --gtk-single-instance=false --wait-after-command=true -e sh ~/.config/hypr/helios-topgrade.sh"),
+  hl.dsp.exec_cmd(
+    "ghostty --gtk-single-instance=false --wait-after-command=true -e sh ~/.config/hypr/helios-topgrade.sh"),
   { description = "Run topgrade with Island progress" })
 
 
