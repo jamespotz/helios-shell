@@ -65,19 +65,53 @@ ShellRoot {
         }
     }
     readonly property Timer motionCheck: Timer {
-        interval: Config.animFast + Config.animSlow + 180
+        interval: 1800
         onTriggered: {
             try {
                 root.verify(satellite.x + satellite.width <= anchor.x - satellite.restGap + 0.5,
                     "blob settles beside the Island with the configured gap");
+                Config.setOption("reducedMotion", true);
                 satellite.active = false;
                 satellite.onRight = true;
+                Config.setOption("reducedMotion", false);
                 satellite.active = true;
                 root.verify(satellite.x >= anchor.x && satellite.x < anchor.x + anchor.width,
                     "right Satellite emerges from inside the Idle Island");
                 Config.setOption("reducedMotion", true);
                 root.verify(satellite.x >= anchor.x + anchor.width + satellite.restGap - 0.5,
-                    "enabling reduced motion interrupts emergence and settles immediately");
+                    "enabling reduced motion interrupts emergence and settles immediately: x=" + satellite.x + " progress=" + satellite.entranceProgress + " anchor=" + satellite.animatedAnchorX + " desired=" + satellite.desiredAnchorX);
+                surface.width = 500;
+                anchor.x = 150;
+                satellite.expanded = true;
+                const x = satellite.x;
+                const y = satellite.y;
+                Config.setOption("reducedMotion", false);
+                satellite.expanded = false;
+                root.verify(Math.abs(satellite.x - x) < 0.1 && Math.abs(satellite.y - y) < 0.1,
+                    "collapse from below starts at the current position");
+                root.narrowReversal.start();
+                return;
+            } catch (error) { console.error("ISLAND_SATELLITE_UI_TEST_FAIL:", error.toString()); }
+            root.terminateDelay.start();
+        }
+    }
+    readonly property Timer narrowReversal: Timer {
+        interval: 80
+        onTriggered: {
+            try {
+                const x = satellite.x;
+                const y = satellite.y;
+                const width = satellite.width;
+                const height = satellite.height;
+                satellite.expanded = true;
+                root.verify(Math.abs(satellite.x - x) < 0.1 && Math.abs(satellite.y - y) < 0.1
+                    && Math.abs(satellite.width - width) < 0.1 && Math.abs(satellite.height - height) < 0.1,
+                    "reversing collapse preserves current position and size");
+                Config.setOption("reducedMotion", true);
+                root.verify(satellite.below && satellite.y >= anchor.y + anchor.height,
+                    "reduced motion settles the reversed destination below the Island");
+                root.verify(satellite.x >= 0 && satellite.x + satellite.width <= surface.width,
+                    "reversed destination stays inside the narrow surface");
                 console.warn("ISLAND_SATELLITE_UI_TEST_PASS");
             } catch (error) { console.error("ISLAND_SATELLITE_UI_TEST_FAIL:", error.toString()); }
             root.terminateDelay.start();

@@ -40,17 +40,48 @@ ShellRoot {
             samples++;
             maxGapError = Math.max(maxGapError, Math.abs(anchor.x - satellite.x - satellite.width - satellite.restGap));
             maxGapError = Math.max(maxGapError, Math.abs(rightSatellite.x - anchor.x - anchor.width - rightSatellite.restGap));
-            if (samples * sampling.interval < Config.animFast + 80) return;
+            if (samples * sampling.interval < 1800) return;
             try {
                 if (maxGapError > 2) throw new Error("closing loses anchor gap by " + maxGapError.toFixed(1) + "px");
-                if (Math.abs(satellite.width - satellite.badgeWidth) > 1) throw new Error("closing still unsettled after fast transition: width " + satellite.width);
+                if (Math.abs(satellite.width - satellite.badgeWidth) > 1) throw new Error("closing still unsettled after spring settles: width " + satellite.width);
                 if (Math.abs(rightSatellite.width - rightSatellite.badgeWidth) > 1
                     || Math.abs(satellite.height - satellite.badgeSize) > 1
                     || Math.abs(rightSatellite.height - rightSatellite.badgeSize) > 1)
-                    throw new Error("closing size still unsettled after fast transition");
+                    throw new Error("closing size still unsettled after spring settles");
+                satellite.active = false;
+                rightSatellite.active = false;
+                exitCheck.start();
+            } catch (e) { console.error("SATELLITE_CLOSE_MOTION_TEST_FAIL:", e.toString()); terminator.running = true; }
+            sampling.stop();
+        }
+    }
+    Timer {
+        id: exitCheck; interval: 80
+        onTriggered: {
+            try {
+                if (satellite.x + satellite.width <= anchor.x - satellite.restGap + 1
+                    || rightSatellite.x >= anchor.x + anchor.width + rightSatellite.restGap - 1)
+                    throw new Error("dismissal does not retract toward the Island");
+                const leftX = satellite.x;
+                const rightX = rightSatellite.x;
+                satellite.active = true;
+                rightSatellite.active = true;
+                if (Math.abs(satellite.x - leftX) > 0.1 || Math.abs(rightSatellite.x - rightX) > 0.1)
+                    throw new Error("reopening jumps instead of reversing from current position");
+                reversalCheck.start();
+            } catch (e) { console.error("SATELLITE_CLOSE_MOTION_TEST_FAIL:", e.toString()); terminator.running = true; }
+        }
+    }
+    Timer {
+        id: reversalCheck; interval: 1800
+        onTriggered: {
+            try {
+                if (Math.abs(anchor.x - satellite.x - satellite.width - satellite.restGap) > 1
+                    || Math.abs(rightSatellite.x - anchor.x - anchor.width - rightSatellite.restGap) > 1)
+                    throw new Error("reversal does not settle beside the Island");
                 console.warn("SATELLITE_CLOSE_MOTION_TEST_PASS", "max gap error", maxGapError);
             } catch (e) { console.error("SATELLITE_CLOSE_MOTION_TEST_FAIL:", e.toString()); }
-            sampling.stop(); terminator.running = true;
+            terminator.running = true;
         }
     }
     Component.onCompleted: { Config.setOption("reducedMotion", true); satellite.expanded = true; rightSatellite.expanded = true; }
