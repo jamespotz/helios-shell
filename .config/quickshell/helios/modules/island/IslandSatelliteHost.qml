@@ -25,7 +25,7 @@ IslandSatellite {
     active: !!root.definition && root.definition.active()
     interactive: true
     expanded: root.activityId.length > 0 && IslandNavigation.satelliteOpenFor(root.targetScreen, root.activityId)
-    onClicked: IslandNavigation.toggleSatellite(root.targetScreen, root.activityId)
+    onClicked: IslandNavigation.toggle(root.targetScreen, root.activityId)
     onCloseRequested: IslandNavigation.closeSatellite(root.targetScreen)
 
     TextMetrics { id: timerMetrics; text: FocusTimer.remainingText; font.family: Config.fontFamily; font.pixelSize: Config.fontSize - 1; font.weight: Font.DemiBold }

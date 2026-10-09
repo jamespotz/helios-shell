@@ -363,7 +363,7 @@ ShellRoot {
         target: "focusTimer"
         function toggle() {
             const screen = Utils.focusedScreen(Quickshell.screens, Hyprland.focusedMonitor);
-            IslandNavigation.toggleSatellite(screen.name, "focus-timer");
+            IslandNavigation.toggle(screen.name, "focus-timer");
         }
         function start(minutes: int) { FocusTimer.start(minutes, "") }
         function startBreak(type: string) { FocusTimer.startBreak(type) }

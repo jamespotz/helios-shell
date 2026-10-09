@@ -54,6 +54,7 @@ ShellRoot {
         }
     }
     Component { id: focusComponent; IslandUI.FocusDestination {} }
+    Component { id: timerComponent; IslandUI.IslandDestinationHost { destinationId: "focus-timer"; targetScreen: "test" } }
     Component { id: cardComponent; IslandUI.FocusTimerCard {} }
     Component { id: clipboardComponent; IslandUI.ClipboardDestination {} }
     Component { id: audioComponent; IslandUI.VolumeDestination {} }
@@ -67,8 +68,8 @@ ShellRoot {
             try {
                 switch (phase) {
                 case 0: press("25 minutes"); press("Start focus"); verify(FocusTimer.active && FocusTimer.state.presetId === "", "keyboard starts timer without preset"); break;
-                case 1: verify(countdown.active && !countdown.onRight && countdown.activityId === "focus-timer" && countdown.width > Config.satelliteBadgeSize, "countdown uses a wide left Satellite"); countdown.clicked(); verify(IslandNavigation.satelliteOpenFor("test", "focus-timer"), "countdown opens timer Satellite"); press("Pause"); capture("focus"); verify(FocusTimer.state.status === "paused", "keyboard pause"); break;
-                case 2: { verify(find(countdown, "Stop timer") !== null, "expanded left Satellite loads timer controls"); IslandNavigation.close(); const before = FocusTimer.remainingMs; press("+5 minutes"); verify(FocusTimer.remainingMs === before + 300000, "keyboard extend"); press("Resume"); verify(FocusTimer.state.status === "running", "resume"); break; }
+                case 1: verify(countdown.active && !countdown.onRight && countdown.activityId === "focus-timer" && countdown.width > Config.satelliteBadgeSize, "countdown uses a wide left Satellite"); countdown.clicked(); verify(IslandNavigation.panelOpenFor("test") && IslandNavigation.destinationId === "focus-timer" && !IslandNavigation.satelliteOpen, "countdown opens timer in main Island"); surface.sourceComponent = timerComponent; press("Pause"); capture("focus"); verify(FocusTimer.state.status === "paused", "keyboard pause"); break;
+                case 2: { verify(!countdown.expanded && find(countdown, "Stop timer") === null && find(surface.item, "Stop timer") !== null, "timer controls load in Island while countdown stays compact"); IslandNavigation.close(); const before = FocusTimer.remainingMs; press("+5 minutes"); verify(FocusTimer.remainingMs === before + 300000, "keyboard extend"); press("Resume"); verify(FocusTimer.state.status === "running", "resume"); break; }
                 case 3: press("Stop timer"); verify(!FocusTimer.active, "stop"); surface.sourceComponent = clipboardComponent; Clipboard.refresh(); break;
                 case 4: press("Pin text"); break;
                 case 5: if (Clipboard.favoriteBusy) return; verify(Clipboard.favorites.length === 1, "pin through UI"); capture("clipboard"); break;
