@@ -25,7 +25,6 @@ Item {
 
     function shows(key) {
         if (!Config.widgetShown("idle", key)) return false;
-        if (key === "focusTimer") return FocusTimer.active;
         if (key === "media") return root.mediaPlaying;
         if (key === "weather") return Weather.available;
         return true;
@@ -47,7 +46,7 @@ Item {
     readonly property var widgets: ({
         workspaces: workspacesWidget, tiledLayout: tiledLayoutWidget, activeWindow: activeWindowWidget,
         media: mediaWidget, clock: clockWidget, weather: weatherWidget, tray: trayWidget,
-        focusTimer: focusTimerWidget, clipboard: clipboardWidget, statusIndicators: statusWidget, launcher: launcherWidget
+        clipboard: clipboardWidget, statusIndicators: statusWidget, launcher: launcherWidget
     })
 
     // Inline components can't reach this file's ids, so the pill is passed in.
@@ -187,6 +186,5 @@ Item {
         id: statusWidget
         StatusWidget { targetScreen: root.targetScreen }
     }
-    Component { id: focusTimerWidget; FocusTimerWidget { targetScreen: root.targetScreen } }
 
 }

@@ -141,6 +141,9 @@ hl.bind(mainMod .. " + SHIFT + D", hl.dsp.exec_cmd(helios .. " dnd toggle"),
 hl.bind(mainMod .. " + SHIFT + F", hl.dsp.exec_cmd(helios .. " idle caffeine"),
   { description = "helios: Toggle caffeine mode" })
 
+hl.bind(mainMod .. " + ALT + F", hl.dsp.exec_cmd(helios .. " focusTimer toggle"),
+  { description = "helios: Toggle Focus timer satellite" })
+
 -- New island tabs
 hl.bind(mainMod .. " + ALT + D", hl.dsp.exec_cmd(helios .. " island toggle display"),
   { description = "helios: Toggle display settings island" })

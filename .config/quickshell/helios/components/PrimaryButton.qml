@@ -18,6 +18,7 @@ Rectangle {
     default property alias trailing: trailingRow.data
 
     signal clicked()
+    onClicked: AlertSounds.play("tap")
 
     implicitHeight: 44
     radius: Colors.radiusSmall

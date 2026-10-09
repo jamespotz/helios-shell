@@ -16,6 +16,18 @@ Item {
     signal moved(real value)
     signal released()
 
+    // A tick each time a drag or key step crosses a tenth of the range, like
+    // a detent. Follows the value while idle so outside changes (volume keys)
+    // don't tick on the next drag.
+    property int _detent: Math.round(root.value * 10)
+    onValueChanged: if (!dragArea.pressed) root._detent = Math.round(root.value * 10)
+    function _move(v) {
+        const detent = Math.round(v * 10);
+        if (detent !== root._detent) AlertSounds.play("tick");
+        root._detent = detent;
+        root.moved(v);
+    }
+
     implicitWidth: 18
     width: implicitWidth
     opacity: root.enabled ? 1 : 0.4
@@ -90,17 +102,17 @@ Item {
         function posToValue(my) {
             return Math.max(0, Math.min(1, 1 - my / root.height));
         }
-        onPressed: mouse => { root.forceActiveFocus(); root.moved(posToValue(mouse.y)); }
-        onPositionChanged: mouse => { if (pressed) root.moved(posToValue(mouse.y)); }
+        onPressed: mouse => { root.forceActiveFocus(); root._move(posToValue(mouse.y)); }
+        onPositionChanged: mouse => { if (pressed) root._move(posToValue(mouse.y)); }
         onReleased: root.released()
     }
 
     Accessible.role: Accessible.Slider
     Accessible.name: root.label
-    Accessible.onIncreaseAction: root.moved(Math.min(1, root.value + 0.05))
-    Accessible.onDecreaseAction: root.moved(Math.max(0, root.value - 0.05))
+    Accessible.onIncreaseAction: root._move(Math.min(1, root.value + 0.05))
+    Accessible.onDecreaseAction: root._move(Math.max(0, root.value - 0.05))
 
     activeFocusOnTab: root.enabled
-    Keys.onUpPressed: if (root.enabled) root.moved(Math.min(1, root.value + 0.05))
-    Keys.onDownPressed: if (root.enabled) root.moved(Math.max(0, root.value - 0.05))
+    Keys.onUpPressed: if (root.enabled) root._move(Math.min(1, root.value + 0.05))
+    Keys.onDownPressed: if (root.enabled) root._move(Math.max(0, root.value - 0.05))
 }

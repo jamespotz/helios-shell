@@ -139,13 +139,17 @@ QtObject {
 
     // Which alert cards may take over the island, the Bluetooth low-battery
     // threshold, whether critical notifications wait to be dismissed, and
-    // alert sounds — user-tunable from Settings > Island > Alerts.
+    // alert and interface sounds — user-tunable from Settings > Island > Alerts.
     readonly property bool showTaskAlerts: settingsAdapter.showTaskAlerts
     readonly property bool showMeetingAlerts: settingsAdapter.showMeetingAlerts
     readonly property bool showBatteryAlerts: settingsAdapter.showBatteryAlerts
     readonly property int batteryAlertThreshold: settingsAdapter.batteryAlertThreshold
     readonly property bool keepCriticalAlerts: settingsAdapter.keepCriticalAlerts
     readonly property bool alertSounds: settingsAdapter.alertSounds
+    readonly property bool interfaceSounds: settingsAdapter.interfaceSounds
+    readonly property int shortBreakMinutes: settingsAdapter.shortBreakMinutes
+    readonly property int longBreakMinutes: settingsAdapter.longBreakMinutes
+    readonly property int extendedBreakMinutes: settingsAdapter.extendedBreakMinutes
 
     // Screen names the island is turned off on. An island panel opened on
     // one of them (keybind/IPC) still shows until it closes.
@@ -240,7 +244,6 @@ QtObject {
     readonly property bool showIdleActiveWindow: settingsAdapter.showIdleActiveWindow
     readonly property bool showIdleTray: settingsAdapter.showIdleTray
     readonly property bool showIdleStatusIndicators: settingsAdapter.showIdleStatusIndicators
-    readonly property bool showIdleFocusTimer: settingsAdapter.showIdleFocusTimer
     readonly property bool showIdleClipboard: settingsAdapter.showIdleClipboard
 
     // Widget order and side for the idle pill and the hover row. Each list
@@ -248,7 +251,7 @@ QtObject {
     // on the left, after it on the right. Whether a widget shows is still
     // its show*/showIdle* toggle above. Set from Settings > Island.
     readonly property var widgetKeys: ({
-        idle: ["workspaces", "tiledLayout", "activeWindow", "media", "clock", "weather", "tray", "clipboard", "statusIndicators", "launcher", "focusTimer"],
+        idle: ["workspaces", "tiledLayout", "activeWindow", "media", "clock", "weather", "tray", "clipboard", "statusIndicators", "launcher"],
         peek: ["workspaces", "tiledLayout", "activeWindow", "clock", "weather", "tray", "clipboard", "statusIndicators", "launcher"]
     })
     readonly property var idleWidgetLayout: root._sanitizeLayout("idle", settingsAdapter.idleLayout)
@@ -379,6 +382,10 @@ QtObject {
         batteryAlertThreshold: { value: 20, range: [5, 50], step: 5 },
         keepCriticalAlerts: { value: true },
         alertSounds: { value: false },
+        interfaceSounds: { value: false },
+        shortBreakMinutes: { value: 5, range: [1, 30] },
+        longBreakMinutes: { value: 15, range: [1, 60] },
+        extendedBreakMinutes: { value: 20, range: [1, 60] },
 
         showWorkspaces: { value: true },
         showTiledLayout: { value: false },
@@ -401,9 +408,8 @@ QtObject {
         showIdleActiveWindow: { value: false },
         showIdleTray: { value: false },
         showIdleStatusIndicators: { value: false },
-        showIdleFocusTimer: { value: true },
         showIdleClipboard: { value: false },
-        idleLayout: { value: ["workspaces", "tiledLayout", "activeWindow", "media", "clock", "focusTimer", "weather", "tray", "clipboard", "statusIndicators", "|"] },
+        idleLayout: { value: ["workspaces", "tiledLayout", "activeWindow", "media", "clock", "weather", "tray", "clipboard", "statusIndicators", "|"] },
         peekLayout: { value: ["workspaces", "tiledLayout", "activeWindow", "|", "clock", "weather", "tray", "clipboard", "statusIndicators"] },
 
         workspaceIndicatorStyle: { value: "dots", choices: ["dots", "numbers", "custom"] },
@@ -601,7 +607,6 @@ QtObject {
             property bool showIdleActiveWindow: root.options.showIdleActiveWindow.value
             property bool showIdleTray: root.options.showIdleTray.value
             property bool showIdleStatusIndicators: root.options.showIdleStatusIndicators.value
-            property bool showIdleFocusTimer: root.options.showIdleFocusTimer.value
             property bool showIdleClipboard: root.options.showIdleClipboard.value
             property var idleLayout: root.options.idleLayout.value
             property var peekLayout: root.options.peekLayout.value
@@ -636,6 +641,10 @@ QtObject {
             property int batteryAlertThreshold: root.options.batteryAlertThreshold.value
             property bool keepCriticalAlerts: root.options.keepCriticalAlerts.value
             property bool alertSounds: root.options.alertSounds.value
+            property bool interfaceSounds: root.options.interfaceSounds.value
+            property int shortBreakMinutes: root.options.shortBreakMinutes.value
+            property int longBreakMinutes: root.options.longBreakMinutes.value
+            property int extendedBreakMinutes: root.options.extendedBreakMinutes.value
             property var islandHiddenScreens: []
             property real islandSpringStiffness: root.options.islandSpringStiffness.value
             property real islandSpringDamping: root.options.islandSpringDamping.value

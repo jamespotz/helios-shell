@@ -15,6 +15,21 @@ QtObject {
 
     property PwObjectTracker tracker: PwObjectTracker { objects: root.sinks.concat(root.sources) }
 
+    // Each Island owns its entry, so closing one screen cannot release another.
+    property var expandedIslandScreens: ({})
+    function setIslandExpanded(screenName, expanded) {
+        const next = Object.assign({}, root.expandedIslandScreens);
+        if (expanded) next[screenName] = true;
+        else delete next[screenName];
+        root.expandedIslandScreens = next;
+    }
+    readonly property bool interactionOpen: Object.keys(root.expandedIslandScreens).length > 0
+        || IslandNavigation.open || IslandNavigation.satelliteOpen || ShellState.settingsOpen
+    property Process bluetoothKeepalive: Process {
+        command: ["python3", Qt.resolvedUrl("bluetooth-audio-keepalive.py").toString().replace("file://", "")]
+        running: Config.interfaceSounds && root.interactionOpen
+    }
+
     property string preferredOutputName: ""
     property string error: ""
     readonly property bool _pipewireReady: Pipewire.ready

@@ -38,6 +38,7 @@ QtObject {
 
     signal errorOccurred(string action, string message)
     signal deviceAutoConnected(string name)
+    signal deviceConnectionChanged(bool connected)
 
     function _deviceForId(id) {
         return root.nativeDevices.find(device => device.address === id || device.dbusPath === id) || null;
@@ -380,6 +381,7 @@ QtObject {
 
                 function onConnectedChanged() {
                     const id = modelData.address || modelData.dbusPath;
+                    root.deviceConnectionChanged(modelData.connected);
                     if (modelData.connected) {
                         root._forgetUserDisconnect(id);
                         if (id === root._requestedId) root._requestedId = "";

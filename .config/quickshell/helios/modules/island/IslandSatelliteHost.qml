@@ -18,6 +18,8 @@ IslandSatellite {
     radiusLimit: root.recordingCard ? 16 * root.recordingScale : 18
     fillColor: root.recordingCard ? (Themes.isDark(Colors.background) ? "#12151f" : "#ffffff") : root.defaultFillColor
 
+    badgeWidth: root.activityId === "focus-timer" ? Math.max(Config.satelliteBadgeSize, timerMetrics.width + Config.fontSize + 6 + 20) : Config.satelliteBadgeSize
+
     onRight: root.definition ? root.definition.onRight : root.slotOnRight
     label: root.definition ? qsTr(root.definition.label) : ""
     active: !!root.definition && root.definition.active()
@@ -26,9 +28,30 @@ IslandSatellite {
     onClicked: IslandNavigation.toggleSatellite(root.targetScreen, root.activityId)
     onCloseRequested: IslandNavigation.closeSatellite(root.targetScreen)
 
+    TextMetrics { id: timerMetrics; text: FocusTimer.remainingText; font.family: Config.fontFamily; font.pixelSize: Config.fontSize - 1; font.weight: Font.DemiBold }
     badge: Component {
         Loader {
-            sourceComponent: root.activityId === "recording" ? recordingBadge : activityBadge
+            sourceComponent: root.activityId === "recording" ? recordingBadge : root.activityId === "focus-timer" ? timerBadge : activityBadge
+        }
+    }
+    Component {
+        id: timerBadge
+        Row {
+            spacing: 6
+            readonly property color timerColor: FocusTimer.state.status === "paused" ? Colors.subtext : Colors.accent
+            MaterialIcon {
+                icon: FocusTimer.state.kind === "focus" ? "timer" : "coffee"
+                font.pixelSize: Config.fontSize
+                color: parent.timerColor
+                anchors.verticalCenter: parent.verticalCenter
+            }
+            StyledText {
+                text: FocusTimer.remainingText
+                font.pixelSize: Config.fontSize - 1
+                font.weight: Font.DemiBold
+                color: parent.timerColor
+                anchors.verticalCenter: parent.verticalCenter
+            }
         }
     }
     Component {

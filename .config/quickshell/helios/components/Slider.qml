@@ -20,6 +20,18 @@ Item {
 
     signal moved(real value)
 
+    // A tick each time a drag or key step crosses a tenth of the range, like
+    // a detent. Follows the value while idle so outside changes (volume keys)
+    // don't tick on the next drag.
+    property int _detent: Math.round(root.fraction * 10)
+    onFractionChanged: if (!dragArea.pressed) root._detent = Math.round(root.fraction * 10)
+    function _move(v) {
+        const detent = Math.round((root.maxValue > 0 ? v / root.maxValue : 0) * 10);
+        if (detent !== root._detent) AlertSounds.play("tick");
+        root._detent = detent;
+        root.moved(v);
+    }
+
     readonly property real fraction: root.maxValue > 0 ? Math.max(0, Math.min(1, root.value / root.maxValue)) : 0
     readonly property bool showThumb: !root.thumbHoverOnly || trackHover.hovered || dragArea.pressed || root.activeFocus
 
@@ -88,17 +100,17 @@ Item {
         function posToValue(mx) {
             return Math.max(0, Math.min(1, mx / width)) * root.maxValue;
         }
-        onPressed: mouse => { root.forceActiveFocus(); root.moved(posToValue(mouse.x)); }
-        onPositionChanged: mouse => { if (pressed) root.moved(posToValue(mouse.x)); }
+        onPressed: mouse => { root.forceActiveFocus(); root._move(posToValue(mouse.x)); }
+        onPositionChanged: mouse => { if (pressed) root._move(posToValue(mouse.x)); }
     }
 
     Accessible.role: Accessible.Slider
     Accessible.name: root.label
-    Accessible.onIncreaseAction: root.moved(Math.min(root.maxValue, root.value + root._step))
-    Accessible.onDecreaseAction: root.moved(Math.max(0, root.value - root._step))
+    Accessible.onIncreaseAction: root._move(Math.min(root.maxValue, root.value + root._step))
+    Accessible.onDecreaseAction: root._move(Math.max(0, root.value - root._step))
 
     activeFocusOnTab: root.enabled
     readonly property real _step: root.maxValue > 0 ? root.maxValue / 20 : 0.05
-    Keys.onLeftPressed: if (root.enabled) root.moved(Math.max(0, root.value - root._step))
-    Keys.onRightPressed: if (root.enabled) root.moved(Math.min(root.maxValue, root.value + root._step))
+    Keys.onLeftPressed: if (root.enabled) root._move(Math.max(0, root.value - root._step))
+    Keys.onRightPressed: if (root.enabled) root._move(Math.min(root.maxValue, root.value + root._step))
 }

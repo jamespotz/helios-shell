@@ -67,7 +67,7 @@ ShellRoot {
             startTime: "10:00",
             endTime: "11:00",
             source: "Work",
-            links: ["https://meet.example.com/team"]
+            links: [{ url: "https://meet.example.com/team", label: "Join meeting" }]
         }];
         calendar._completeRefresh({ events: events, subscriptionErrors: [] });
         root.compare(calendar.state.eventsByDate["2026-09-03"][0].links, events[0].links);

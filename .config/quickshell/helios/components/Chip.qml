@@ -22,6 +22,7 @@ Rectangle {
     default property alias leading: leadingRow.data
 
     signal clicked()
+    onClicked: AlertSounds.play("tap")
 
     implicitWidth: content.implicitWidth + 16
     implicitHeight: 28

@@ -6,7 +6,7 @@ import "../../components"
 Item {
     id: root
     readonly property var event: Calendar.upcomingAlert
-    readonly property string joinUrl: root.event && root.event.links && root.event.links.length > 0 ? root.event.links[0] : ""
+    readonly property string joinUrl: root.event && root.event.links && root.event.links.length > 0 ? root.event.links[0].url : ""
     implicitWidth: 300
     implicitHeight: column.implicitHeight
     Column {

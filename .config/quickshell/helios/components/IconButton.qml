@@ -16,6 +16,7 @@ Rectangle {
     property string label: ""
 
     signal clicked()
+    onClicked: AlertSounds.play("tap")
 
     implicitWidth: 30
     implicitHeight: 30

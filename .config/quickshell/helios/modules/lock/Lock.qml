@@ -167,6 +167,7 @@ Loader {
                         if (result === PamResult.Success) {
                             lock.locked = false;
                         } else {
+                            AlertSounds.play("auth-failed");
                             pwInput.text = "";
                             pwInput.enabled = true;
                             pwInput.forceActiveFocus();

@@ -13,6 +13,7 @@ Rectangle {
     property string label: ""
 
     signal toggled(bool checked)
+    onToggled: checked => AlertSounds.play(checked ? "toggle-on" : "toggle-off")
 
     implicitWidth: 42
     implicitHeight: 24

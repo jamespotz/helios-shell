@@ -282,7 +282,11 @@ QtObject {
         onLoaded: {
             try {
                 const cached = JSON.parse(eventsFile.text());
-                if (cached && cached.result && Array.isArray(cached.result.events)) {
+                // Caches from before links carried labels hold bare URL
+                // strings; skip them and let the next refresh replace them.
+                const oldLinks = cached && cached.result && Array.isArray(cached.result.events)
+                    && cached.result.events.some(e => (e.links || []).some(l => typeof l === "string"));
+                if (!oldLinks && cached && cached.result && Array.isArray(cached.result.events)) {
                     root.lastRefreshAt = root._cachedRefreshTime(cached);
                     root._completeRefresh(cached.result);
                 }

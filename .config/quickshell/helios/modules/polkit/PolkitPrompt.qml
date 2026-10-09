@@ -43,8 +43,15 @@ PanelWindow {
 
             transform: Translate { id: shake }
 
+            // The error sound fires on the same change that starts the
+            // shake, so sound and motion land together.
+            Connections {
+                target: root.flow
+                function onFailedChanged() { if (root.flow.failed) AlertSounds.play("auth-failed"); }
+            }
+
             SequentialAnimation {
-                running: root.flow.failed
+                running: root.flow.failed && !Config.reducedMotion
                 NumberAnimation { target: shake; property: "x"; from: 0; to: -8; duration: 45 }
                 NumberAnimation { target: shake; property: "x"; from: -8; to: 8; duration: 45 }
                 NumberAnimation { target: shake; property: "x"; from: 8; to: -8; duration: 45 }

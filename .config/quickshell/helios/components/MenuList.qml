@@ -14,6 +14,7 @@ Item {
     property int currentIndex: -1
 
     signal triggered()
+    onTriggered: AlertSounds.play("tap")
     signal dismissed()
 
     function _run(index) {

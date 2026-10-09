@@ -3,13 +3,14 @@ import "../../services"
 import "../../components"
 
 // Satellites emerge from inside the Island, stretch as they separate, and
-// settle beside it. Expanded destinations keep the Island's spring sizing.
+// settle beside it. Destination sizing uses bounded, interruptible transitions.
 FocusScope {
     id: root
 
     // hitArea never animates its own width/height (see Island.qml's comment on
     // hitArea), so positioning off its edges directly would drag this
-    // satellite along in the same instant jump. x below springs instead.
+    // satellite along in the same instant jump. Animate the anchor edge instead
+    // of chasing the satellite's animated width with a second spring.
     required property Item anchorItem
     property bool onRight: false
     property real restGap: Config.satelliteRestGap
@@ -21,6 +22,7 @@ FocusScope {
     readonly property bool shown: root.active || root.expanded
 
     property int badgeSize: Config.satelliteBadgeSize
+    property real badgeWidth: root.badgeSize
     property real padH: Config.satellitePadH
     property real padV: Config.satellitePadV
 
@@ -64,47 +66,53 @@ FocusScope {
         ? parent.width - anchorItem.x - anchorItem.width - root.restGap
         : anchorItem.x - root.restGap
     readonly property bool below: root.expanded && root._expandedWidth > root.sideSpace
-    readonly property real desiredX: root.below
-        ? anchorItem.x + (anchorItem.width - root.width) / 2
-        : root.onRight ? anchorItem.x + anchorItem.width + gap : anchorItem.x - width - gap
-    property real animatedX: root.desiredX
-    // The spring may lag a growing Island. Clamp its position so the
-    // destination never crosses the Island's interactive bounds.
-    readonly property real separatedX: root.below ? root.animatedX
-        : root.onRight ? Math.max(root.animatedX, anchorItem.x + anchorItem.width + gap)
-        : Math.min(root.animatedX, anchorItem.x - root.width - gap)
+    readonly property real desiredAnchorX: root.below
+        ? anchorItem.x + anchorItem.width / 2
+        : root.onRight ? anchorItem.x + anchorItem.width : anchorItem.x
+    property real animatedAnchorX: root.desiredAnchorX
+    // Size and position share the same edge, so closing keeps a steady gap.
+    // Clamp against the current Island bounds while its anchor spring catches up.
+    readonly property real separatedX: root.below ? root.animatedAnchorX - root.width / 2
+        : root.onRight ? Math.max(root.animatedAnchorX, anchorItem.x + anchorItem.width) + gap
+        : Math.min(root.animatedAnchorX, anchorItem.x) - root.width - gap
     readonly property real emergenceX: anchorItem.x
-        + (root.onRight ? anchorItem.width - root.badgeSize : 0)
-        + (root.badgeSize - root.width) / 2
+        + (root.onRight ? anchorItem.width - root.badgeWidth : 0)
+        + (root.badgeWidth - root.width) / 2
     readonly property real emergenceY: anchorItem.y + Math.max(0, (anchorItem.height - root.badgeSize) / 2)
     readonly property real restingY: root.below ? anchorItem.y + anchorItem.height + root.restGap : anchorItem.y
     x: Math.max(0, Math.min(root.emergenceX + (root.separatedX - root.emergenceX) * root.entranceProgress,
         parent.width - root.width))
     y: root.emergenceY + (root.restingY - root.emergenceY) * root.entranceProgress
-    Behavior on animatedX {
+    Behavior on animatedAnchorX {
         enabled: !Config.reducedMotion
         SpringAnimation { spring: Config.satelliteSpringStiffness; damping: Config.satelliteSpringDamping }
     }
 
-    readonly property real _expandedWidth: expandedLoader.item ? expandedLoader.item.implicitWidth + root.padH * 2 : root.badgeSize
+    readonly property real _expandedWidth: expandedLoader.item ? expandedLoader.item.implicitWidth + root.padH * 2 : root.badgeWidth
     readonly property real _expandedHeight: expandedLoader.item ? expandedLoader.item.implicitHeight + root.padV * 2 : root.badgeSize
 
-    width: root.expanded ? Math.min(root._expandedWidth, Config.islandMaxWidth, parent.width) : root.badgeSize
+    width: root.expanded ? Math.min(root._expandedWidth, Config.islandMaxWidth, parent.width) : root.badgeWidth
     height: root.expanded ? Math.max(root.badgeSize, Math.min(root._expandedHeight, Config.islandMaxHeight, parent.height - root.y)) : root.badgeSize
     Behavior on width {
         enabled: !Config.reducedMotion
-        SpringAnimation { spring: Config.satelliteSpringStiffness; damping: Config.satelliteSpringDamping }
+        NumberAnimation {
+            duration: root.expanded ? Config.animSlow : Config.animFast
+            easing.type: Easing.OutCubic
+        }
     }
     Behavior on height {
         enabled: !Config.reducedMotion
-        SpringAnimation { spring: Config.satelliteSpringStiffness; damping: Config.satelliteSpringDamping }
+        NumberAnimation {
+            duration: root.expanded ? Config.animSlow : Config.animFast
+            easing.type: Easing.OutCubic
+        }
     }
 
     opacity: root.shown ? 1 : 0
     visible: opacity > 0.01
     Behavior on opacity {
         enabled: !Config.reducedMotion
-        NumberAnimation { duration: 180; easing.type: Easing.OutCubic }
+        NumberAnimation { duration: Config.animFast; easing.type: Easing.OutCubic }
     }
 
     transform: Scale {
@@ -185,7 +193,7 @@ FocusScope {
             active: !root.expanded
             sourceComponent: root.badge
             opacity: root.expanded ? 0 : 1
-            Behavior on opacity { enabled: !Config.reducedMotion; NumberAnimation { duration: 140; easing.type: Easing.OutCubic } }
+            Behavior on opacity { enabled: !Config.reducedMotion; NumberAnimation { duration: Config.animFast; easing.type: Easing.OutCubic } }
         }
 
         // Closed satellites must not instantiate destinations with background work.

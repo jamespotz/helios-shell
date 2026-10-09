@@ -72,6 +72,11 @@ ShellRoot {
         DockWindow {}
     }
 
+    Variants {
+        model: Quickshell.screens
+        CaptureFlash {}
+    }
+
     Osd {}
     Lock {}
     TrayMenu {}
@@ -352,6 +357,21 @@ ShellRoot {
             if (preset) FocusModes.apply(preset);
         }
         function off() { FocusModes.deactivate() }
+    }
+
+    IpcHandler {
+        target: "focusTimer"
+        function toggle() {
+            const screen = Utils.focusedScreen(Quickshell.screens, Hyprland.focusedMonitor);
+            IslandNavigation.toggleSatellite(screen.name, "focus-timer");
+        }
+        function start(minutes: int) { FocusTimer.start(minutes, "") }
+        function startBreak(type: string) { FocusTimer.startBreak(type) }
+        function pause() { FocusTimer.pause() }
+        function resume() { FocusTimer.resume() }
+        function extend(minutes: int) { FocusTimer.extend(minutes) }
+        function stop() { FocusTimer.stop() }
+        function status(): string { return JSON.stringify(FocusTimer.state) }
     }
 
     // Lets any shell script or keybind report progress on a long-running

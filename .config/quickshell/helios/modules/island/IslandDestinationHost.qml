@@ -74,7 +74,7 @@ Item {
                         from: 0
                         to: 1
                         duration: Config.animMedium
-                        easing.type: Easing.BezierSpline
+                        easing.type: Easing.OutCubic
                     }
                 }
             }

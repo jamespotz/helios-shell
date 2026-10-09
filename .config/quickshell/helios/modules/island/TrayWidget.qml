@@ -22,7 +22,7 @@ Row {
                 color: Colors.surfaceHigh
                 opacity: trayHover.hovered ? 0.6 : 0
 
-                Behavior on opacity { NumberAnimation { duration: 100; easing.type: Easing.OutCubic } }
+                Behavior on opacity { NumberAnimation { duration: Config.animFast; easing.type: Easing.OutCubic } }
             }
 
             Image {

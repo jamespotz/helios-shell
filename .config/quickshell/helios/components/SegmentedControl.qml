@@ -11,6 +11,7 @@ Rectangle {
     property var currentValue: null
 
     signal activated(var value)
+    onActivated: AlertSounds.play("tap")
 
     implicitHeight: 36
     implicitWidth: _naturalTotal + 6

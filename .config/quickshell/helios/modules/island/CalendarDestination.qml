@@ -49,6 +49,27 @@ Item {
     readonly property var eventsByDate: root.calendar.eventsByDate
     readonly property var selectedDayEvents: root.eventsByDate[root.dateKey(root.selectedDate)] || []
 
+    // "Today · 3 events" under the agenda title. While a refresh is still
+    // fetching (network subscriptions, up to 10s each), an empty day reads
+    // "Loading…" rather than "No events".
+    readonly property string agendaSummary: {
+        const n = root.selectedDayEvents.length;
+        if (n === 0 && !root.calendar.ready) return "Loading…";
+        const count = n === 0 ? "No events" : n === 1 ? "1 event" : n + " events";
+        const sel = root.selectedDate, now = root.today;
+        const days = Math.round((new Date(sel.getFullYear(), sel.getMonth(), sel.getDate())
+            - new Date(now.getFullYear(), now.getMonth(), now.getDate())) / 86400000);
+        const relative = days === 0 ? "Today" : days === 1 ? "Tomorrow" : days === -1 ? "Yesterday" : "";
+        return relative ? relative + " · " + count : count;
+    }
+
+    // The agenda has no scrollbar, so Tab focus scrolls the focused item into view.
+    function revealInAgenda(item) {
+        const y = item.mapToItem(eventsCol, 0, 0).y;
+        if (y < eventsFlick.contentY) eventsFlick.contentY = y;
+        else if (y + item.height > eventsFlick.contentY + eventsFlick.height) eventsFlick.contentY = y + item.height - eventsFlick.height;
+    }
+
     readonly property var dotPalette: [Colors.accent, Colors.success, Colors.tertiary, Colors.secondary, Colors.warning]
     function dotColor(id) {
         let hash = 0;
@@ -59,7 +80,7 @@ Item {
     Component.onCompleted: Calendar.setActive(true)
     Component.onDestruction: Calendar.setActive(false)
 
-    implicitWidth: 340
+    implicitWidth: 640
     implicitHeight: col.implicitHeight
 
     Column {
@@ -247,240 +268,343 @@ Item {
             }
         }
 
-        // --- Month header ------------------------------------------------------
-        Item {
-            width: parent.width
-            height: 28
-
-            IconButton {
-                anchors.left: parent.left
-                anchors.verticalCenter: parent.verticalCenter
-                icon: "chevron_left"
-                onClicked: root.shiftMonth(-1)
-            }
-            StyledText {
-                anchors.centerIn: parent
-                font.bold: true
-                text: root.viewDate.toLocaleDateString(Qt.locale(), "MMMM yyyy")
-            }
-            IconButton {
-                anchors.right: parent.right
-                anchors.verticalCenter: parent.verticalCenter
-                icon: "chevron_right"
-                onClicked: root.shiftMonth(1)
-            }
-        }
-
-        // --- Weekday labels ------------------------------------------------
+        // --- Agenda for selected day (left) | month grid (right) -------------
         Row {
             width: parent.width
-            Repeater {
-                model: ["S", "M", "T", "W", "T", "F", "S"]
-                StyledText {
-                    required property string modelData
-                    width: col.width / 7
-                    horizontalAlignment: Text.AlignHCenter
-                    text: modelData
-                    opacity: 0.5
-                    font.pixelSize: Config.fontSize - 3
+            spacing: 16
+
+            // --- Agenda for selected day -----------------------------------------
+            Column {
+                id: agendaCol
+                width: parent.width - monthCol.width - 1 - parent.spacing * 2
+                height: monthCol.height
+                spacing: 12
+
+                Column {
+                    id: agendaHeader
+                    width: parent.width
+                    spacing: 4
+
+                    StyledText {
+                        width: parent.width
+                        elide: Text.ElideRight
+                        font.pixelSize: Config.fontSize + 6
+                        font.weight: Font.Bold
+                        text: root.selectedDate.toLocaleDateString(Qt.locale(), "dddd, MMMM d")
+                    }
+                    StyledText {
+                        width: parent.width
+                        text: root.agendaSummary
+                        color: Colors.subtext
+                        font.pixelSize: Config.fontSize - 2
+                    }
                 }
-            }
-        }
 
-        // --- Day grid --------------------------------------------------------
-        Column {
-            width: parent.width
-            spacing: 1
+                // Capped to the month grid's height; scrolls without a visible bar.
+                Flickable {
+                    id: eventsFlick
+                    width: parent.width
+                    height: parent.height - agendaHeader.height - parent.spacing
+                    visible: root.selectedDayEvents.length > 0
+                    contentWidth: width
+                    contentHeight: eventsCol.implicitHeight
+                    clip: true
+                    boundsBehavior: Flickable.StopAtBounds
 
-            Repeater {
-                model: root.weeks
+                    Column {
+                        id: eventsCol
+                        width: parent.width
 
-                Row {
-                    required property var modelData
-                    width: col.width
+                        Repeater {
+                            model: root.selectedDayEvents
 
-                    Repeater {
-                        model: parent.modelData
+                            Item {
+                                id: eventRow
+                                required property var modelData
+                                required property int index
+                                readonly property var links: eventRow.modelData.links || []
+                                property bool linksOpen: false
 
-                        Item {
-                            id: cell
-                            required property int modelData
-                            readonly property date cellDate: new Date(root.viewDate.getFullYear(), root.viewDate.getMonth(), modelData || 1)
-                            readonly property string cellKey: root.dateKey(cell.cellDate)
-                            readonly property bool isToday: root.viewingCurrentMonth && modelData === root.today.getDate()
-                            readonly property bool isSelected: modelData > 0
-                                && cell.cellDate.getFullYear() === root.selectedDate.getFullYear()
-                                && cell.cellDate.getMonth() === root.selectedDate.getMonth()
-                                && cell.cellDate.getDate() === root.selectedDate.getDate()
-                            readonly property bool hasEvents: modelData > 0 && !!root.eventsByDate[cell.cellKey]
+                                width: parent.width
+                                height: eventBody.implicitHeight + 24
 
-                            width: col.width / 7
-                            height: width
-                            // Leading/trailing blank cells (modelData === 0)
-                            // must still occupy their column so day 1 lands
-                            // under the correct weekday — hiding them with
-                            // `visible` collapses them out of the Row
-                            // positioner and shifts the whole month left.
-                            opacity: modelData > 0 ? 1 : 0
-                            enabled: modelData > 0
+                                Rectangle {
+                                    visible: eventRow.index > 0
+                                    width: parent.width
+                                    height: 1
+                                    color: Colors.overlay
+                                    opacity: 0.15
+                                }
 
-                            // Today: solid accent circle
-                            Rectangle {
-                                visible: cell.isToday
-                                anchors.centerIn: parent
-                                width: Math.min(parent.width, parent.height) - 4
-                                height: width
-                                radius: width / 2
-                                color: Colors.accent
-                            }
+                                Row {
+                                    id: eventBody
+                                    y: 12
+                                    width: parent.width
+                                    spacing: 16
 
-                            // Selected day: outline ring
-                            Rectangle {
-                                visible: !cell.isToday && cell.isSelected
-                                anchors.centerIn: parent
-                                width: Math.min(parent.width, parent.height) - 3
-                                height: width
-                                radius: width / 2
-                                color: "transparent"
-                                border.width: 1
-                                border.color: Colors.accent
-                            }
+                                    StyledText {
+                                        width: 48
+                                        text: eventRow.modelData.allDay ? "All day" : (eventRow.modelData.startTime || "")
+                                        color: Colors.subtext
+                                        font.pixelSize: Config.fontSize - 1
+                                        font.family: Config.monoFontFamily
+                                    }
+                                    Column {
+                                        width: parent.width - 48 - parent.spacing
+                                        spacing: 8
 
-                            // Hover state
-                            Rectangle {
-                                visible: !cell.isToday && dayHover.hovered
-                                anchors.centerIn: parent
-                                width: Math.min(parent.width, parent.height) - 4
-                                height: width
-                                radius: width / 2
-                                color: Colors.overlay
-                                opacity: 0.2
-                            }
+                                        StyledText {
+                                            width: parent.width
+                                            wrapMode: Text.Wrap
+                                            maximumLineCount: 3
+                                            elide: Text.ElideRight
+                                            font.pixelSize: Config.fontSize + 1
+                                            font.weight: Font.DemiBold
+                                            text: eventRow.modelData.summary
+                                        }
 
-                            HoverHandler { id: dayHover }
+                                        // Links stay collapsed behind a count so long
+                                        // meeting invites don't bury the next event.
+                                        Item {
+                                            id: linksToggle
+                                            visible: eventRow.links.length > 0
+                                            width: linksToggleRow.implicitWidth
+                                            height: 22
+                                            activeFocusOnTab: true
+                                            opacity: linksHover.hovered || linksToggle.activeFocus ? 1 : 0.85
 
-                            MouseArea {
-                                anchors.fill: parent
-                                cursorShape: Qt.PointingHandCursor
-                                onClicked: root.selectedDate = cell.cellDate
-                            }
+                                            Row {
+                                                id: linksToggleRow
+                                                anchors.verticalCenter: parent.verticalCenter
+                                                spacing: 6
 
-                            StyledText {
-                                id: dayNumber
-                                anchors.centerIn: parent
-                                text: cell.modelData
-                                font.pixelSize: Config.fontSize - 3
-                                font.weight: Font.Bold
-                                color: cell.isToday ? Colors.accentText : Colors.text
-                            }
+                                                MaterialIcon {
+                                                    anchors.verticalCenter: parent.verticalCenter
+                                                    icon: eventRow.linksOpen ? "expand_less" : "chevron_right"
+                                                    font.pixelSize: 16
+                                                    color: Colors.subtext
+                                                }
+                                                StyledText {
+                                                    anchors.verticalCenter: parent.verticalCenter
+                                                    text: eventRow.links.length
+                                                    color: Colors.accent
+                                                    font.weight: Font.Bold
+                                                    font.pixelSize: Config.fontSize - 2
+                                                }
+                                                StyledText {
+                                                    anchors.verticalCenter: parent.verticalCenter
+                                                    text: eventRow.links.length === 1 ? "link" : "links"
+                                                    color: Colors.subtext
+                                                    font.pixelSize: Config.fontSize - 2
+                                                    font.underline: linksToggle.activeFocus
+                                                }
+                                            }
 
-                            // Event indicator dot
-                            Rectangle {
-                                visible: cell.hasEvents
-                                anchors.horizontalCenter: parent.horizontalCenter
-                                anchors.top: dayNumber.bottom
-                                anchors.topMargin: 1
-                                width: 4; height: 4; radius: 2
-                                color: cell.isToday ? Colors.accentText : Colors.accent
+                                            HoverHandler { id: linksHover; cursorShape: Qt.PointingHandCursor }
+                                            TapHandler { onTapped: eventRow.linksOpen = !eventRow.linksOpen }
+                                            Keys.onReturnPressed: eventRow.linksOpen = !eventRow.linksOpen
+                                            Keys.onSpacePressed: eventRow.linksOpen = !eventRow.linksOpen
+                                            onActiveFocusChanged: if (activeFocus) root.revealInAgenda(linksToggle)
+                                        }
+
+                                        Column {
+                                            width: parent.width
+                                            visible: eventRow.linksOpen
+
+                                            Repeater {
+                                                model: eventRow.linksOpen ? eventRow.links : []
+
+                                                Item {
+                                                    id: linkItem
+                                                    required property var modelData
+                                                    readonly property string host: linkItem.modelData.url.split("/")[2] || ""
+                                                    width: parent.width
+                                                    height: 28
+                                                    activeFocusOnTab: true
+
+                                                    StyledText {
+                                                        anchors.left: parent.left
+                                                        anchors.right: hostText.left
+                                                        anchors.rightMargin: 12
+                                                        anchors.verticalCenter: parent.verticalCenter
+                                                        elide: Text.ElideRight
+                                                        text: linkItem.modelData.label || linkItem.host
+                                                        font.pixelSize: Config.fontSize - 1
+                                                        font.underline: linkHover.hovered || linkItem.activeFocus
+                                                    }
+                                                    StyledText {
+                                                        id: hostText
+                                                        anchors.right: parent.right
+                                                        anchors.verticalCenter: parent.verticalCenter
+                                                        width: Math.min(implicitWidth, parent.width / 2)
+                                                        elide: Text.ElideLeft
+                                                        visible: !!linkItem.modelData.label
+                                                        text: linkItem.host
+                                                        color: Colors.subtext
+                                                        font.pixelSize: Config.fontSize - 2
+                                                    }
+
+                                                    HoverHandler { id: linkHover; cursorShape: Qt.PointingHandCursor }
+                                                    TapHandler {
+                                                        onTapped: Quickshell.execDetached(["xdg-open", linkItem.modelData.url])
+                                                    }
+                                                    Keys.onReturnPressed: Quickshell.execDetached(["xdg-open", linkItem.modelData.url])
+                                                    Keys.onSpacePressed: Quickshell.execDetached(["xdg-open", linkItem.modelData.url])
+                                                    onActiveFocusChanged: if (activeFocus) root.revealInAgenda(linkItem)
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
                 }
             }
-        }
 
-        Rectangle { width: parent.width; height: 1; color: Colors.overlay; opacity: 0.15 }
-
-        // --- Agenda for selected day -----------------------------------------
-        Column {
-            width: parent.width
-            spacing: 8
-
-            StyledText {
-                font.bold: true
-                text: root.selectedDate.toLocaleDateString(Qt.locale(), "dddd, MMMM d")
-            }
-
-            StyledText {
-                visible: root.selectedDayEvents.length === 0
-                // A refresh now involves real network fetches (up to 10s each,
-                // subscriptions fetched sequentially). Without this, an empty
-                // result during a slow refresh reads as "no events exist"
-                // rather than "still loading," even though local events sit
-                // in that same empty window.
-                text: root.calendar.ready ? "No events" : "Loading…"
-                opacity: 0.5
-                font.pixelSize: Config.fontSize - 2
-            }
+            Rectangle { width: 1; height: monthCol.height; color: Colors.overlay; opacity: 0.15 }
 
             Column {
-                width: parent.width
-                spacing: 6
-                visible: root.selectedDayEvents.length > 0
+                id: monthCol
+                width: 300
+                spacing: 14
 
-                Repeater {
-                    model: root.selectedDayEvents
+                // --- Month header ------------------------------------------------------
+                Item {
+                    width: parent.width
+                    height: 28
 
-                    Row {
-                        id: eventRow
-                        required property var modelData
-                        width: parent.width
-                        spacing: 10
+                    IconButton {
+                        anchors.left: parent.left
+                        anchors.verticalCenter: parent.verticalCenter
+                        icon: "chevron_left"
+                        onClicked: root.shiftMonth(-1)
+                    }
+                    StyledText {
+                        anchors.centerIn: parent
+                        font.bold: true
+                        text: root.viewDate.toLocaleDateString(Qt.locale(), "MMMM yyyy")
+                    }
+                    IconButton {
+                        anchors.right: parent.right
+                        anchors.verticalCenter: parent.verticalCenter
+                        icon: "chevron_right"
+                        onClicked: root.shiftMonth(1)
+                    }
+                }
 
+                // --- Weekday labels ------------------------------------------------
+                Row {
+                    width: parent.width
+                    Repeater {
+                        model: ["S", "M", "T", "W", "T", "F", "S"]
                         StyledText {
-                            width: 60
-                            text: modelData.allDay ? "All day" : (modelData.startTime || "")
-                            opacity: 0.6
+                            required property string modelData
+                            width: monthCol.width / 7
+                            horizontalAlignment: Text.AlignHCenter
+                            text: modelData
+                            opacity: 0.5
                             font.pixelSize: Config.fontSize - 3
-                            font.family: Config.monoFontFamily
                         }
-                        Column {
-                            width: parent.width - 70
-                            spacing: 3
+                    }
+                }
 
-                            StyledText {
-                                width: parent.width
-                                elide: Text.ElideRight
-                                text: eventRow.modelData.summary
-                            }
+                // --- Day grid --------------------------------------------------------
+                Column {
+                    width: parent.width
+                    spacing: 1
+
+                    Repeater {
+                        model: root.weeks
+
+                        Row {
+                            required property var modelData
+                            width: monthCol.width
 
                             Repeater {
-                                model: eventRow.modelData.links || []
+                                model: parent.modelData
 
                                 Item {
-                                    id: linkItem
-                                    required property string modelData
-                                    width: parent.width
-                                    height: 20
-                                    activeFocusOnTab: true
+                                    id: cell
+                                    required property int modelData
+                                    readonly property date cellDate: new Date(root.viewDate.getFullYear(), root.viewDate.getMonth(), modelData || 1)
+                                    readonly property string cellKey: root.dateKey(cell.cellDate)
+                                    readonly property bool isToday: root.viewingCurrentMonth && modelData === root.today.getDate()
+                                    readonly property bool isSelected: modelData > 0
+                                        && cell.cellDate.getFullYear() === root.selectedDate.getFullYear()
+                                        && cell.cellDate.getMonth() === root.selectedDate.getMonth()
+                                        && cell.cellDate.getDate() === root.selectedDate.getDate()
+                                    readonly property bool hasEvents: modelData > 0 && !!root.eventsByDate[cell.cellKey]
 
-                                    Row {
+                                    width: monthCol.width / 7
+                                    height: width
+                                    // Leading/trailing blank cells (modelData === 0)
+                                    // must still occupy their column so day 1 lands
+                                    // under the correct weekday — hiding them with
+                                    // `visible` collapses them out of the Row
+                                    // positioner and shifts the whole month left.
+                                    opacity: modelData > 0 ? 1 : 0
+                                    enabled: modelData > 0
+
+                                    // Today: solid accent circle
+                                    Rectangle {
+                                        visible: cell.isToday
+                                        anchors.centerIn: parent
+                                        width: Math.min(parent.width, parent.height) - 4
+                                        height: width
+                                        radius: width / 2
+                                        color: Colors.accent
+                                    }
+
+                                    // Selected day: outline ring
+                                    Rectangle {
+                                        visible: !cell.isToday && cell.isSelected
+                                        anchors.centerIn: parent
+                                        width: Math.min(parent.width, parent.height) - 3
+                                        height: width
+                                        radius: width / 2
+                                        color: "transparent"
+                                        border.width: 1
+                                        border.color: Colors.accent
+                                    }
+
+                                    // Hover state
+                                    Rectangle {
+                                        visible: !cell.isToday && dayHover.hovered
+                                        anchors.centerIn: parent
+                                        width: Math.min(parent.width, parent.height) - 4
+                                        height: width
+                                        radius: width / 2
+                                        color: Colors.overlay
+                                        opacity: 0.2
+                                    }
+
+                                    HoverHandler { id: dayHover }
+
+                                    MouseArea {
                                         anchors.fill: parent
-                                        spacing: 5
-
-                                        MaterialIcon {
-                                            anchors.verticalCenter: parent.verticalCenter
-                                            icon: "link"
-                                            font.pixelSize: 13
-                                            color: Colors.accent
-                                        }
-                                        StyledText {
-                                            anchors.verticalCenter: parent.verticalCenter
-                                            width: parent.width - 18
-                                            text: linkItem.modelData
-                                            color: Colors.accent
-                                            elide: Text.ElideMiddle
-                                            font.pixelSize: Config.fontSize - 3
-                                            font.underline: linkHover.hovered || linkItem.activeFocus
-                                        }
+                                        cursorShape: Qt.PointingHandCursor
+                                        onClicked: root.selectedDate = cell.cellDate
                                     }
 
-                                    HoverHandler { id: linkHover; cursorShape: Qt.PointingHandCursor }
-                                    TapHandler {
-                                        onTapped: Quickshell.execDetached(["xdg-open", linkItem.modelData])
+                                    StyledText {
+                                        id: dayNumber
+                                        anchors.centerIn: parent
+                                        text: cell.modelData
+                                        font.pixelSize: Config.fontSize - 3
+                                        font.weight: Font.Bold
+                                        color: cell.isToday ? Colors.accentText : Colors.text
                                     }
-                                    Keys.onReturnPressed: Quickshell.execDetached(["xdg-open", linkItem.modelData])
-                                    Keys.onSpacePressed: Quickshell.execDetached(["xdg-open", linkItem.modelData])
+
+                                    // Event indicator dot
+                                    Rectangle {
+                                        visible: cell.hasEvents
+                                        anchors.horizontalCenter: parent.horizontalCenter
+                                        anchors.top: dayNumber.bottom
+                                        anchors.topMargin: 1
+                                        width: 4; height: 4; radius: 2
+                                        color: cell.isToday ? Colors.accentText : Colors.accent
+                                    }
                                 }
                             }
                         }

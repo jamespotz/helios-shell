@@ -202,7 +202,7 @@ PanelWindow {
                     height: parent.height
                     radius: parent.radius
                     color: Colors.accent
-                    Behavior on width { NumberAnimation { duration: Config.animFast } }
+                    Behavior on width { enabled: !Config.reducedMotion; Spring {} }
                 }
             }
         }

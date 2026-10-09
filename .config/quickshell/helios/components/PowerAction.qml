@@ -11,6 +11,8 @@ Item {
 
     signal activated()
     signal armRequested()
+    onActivated: AlertSounds.play("tap")
+    onArmRequested: AlertSounds.play("tap")
 
     readonly property bool dangerActive: destructive && (armed || actionHover.hovered)
 

@@ -13,12 +13,18 @@ QtObject {
         const seconds = Math.ceil(remainingMs / 1000);
         return Math.floor(seconds / 60) + ":" + String(seconds % 60).padStart(2, "0");
     }
+    signal completed()
     property string error: ""
     property bool _restoring: true
     property bool _saving: false
     property bool _saveFailed: false
     property FocusTimerCore core: FocusTimerCore {
         onStateChanged: if (!root._restoring) root._save()
+        onCompleted: (kind, nextBreak) => {
+            if (kind === "focus" && nextBreak)
+                core.start(root.breakMinutes(nextBreak), "", typeof nextBreak === "number" ? "custom-break" : nextBreak + "-break");
+            root.completed();
+        }
     }
     property FileView stateFile: FileView {
         path: Quickshell.statePath("focus-timer.json")
@@ -44,12 +50,26 @@ QtObject {
         stateFile.setText(serialized);
     }
     function updateTime() { core.nowMs = Date.now(); core.tick(); }
-    function start(minutes, presetId) {
+    function start(minutes, presetId, customBreak) {
         updateTime();
-        if (!core.start(minutes, presetId)) return false;
+        if (!core.start(minutes, presetId, "focus", customBreak || (minutes === 25 ? "short" : minutes === 50 ? "long" : minutes === 90 ? "extended" : ""))) return false;
         const preset = FocusModes.presets.find(p => p.id === presetId);
         if (preset) FocusModes.apply(preset);
         return true;
+    }
+    function startCustom(minutes, breakMinutes, presetId) {
+        if (!Number.isInteger(minutes) || minutes < 1 || minutes > 180
+            || !Number.isInteger(breakMinutes) || breakMinutes < 1 || breakMinutes > 60) return false;
+        return root.start(minutes, presetId, breakMinutes);
+    }
+    function breakMinutes(type) {
+        if (typeof type === "number") return type;
+        return type === "short" ? Config.shortBreakMinutes : type === "long" ? Config.longBreakMinutes : Config.extendedBreakMinutes;
+    }
+    function startBreak(type) {
+        if (!["short", "long", "extended"].includes(type)) return false;
+        updateTime();
+        return core.start(root.breakMinutes(type), "", type + "-break");
     }
     function pause() { updateTime(); return core.pause(); }
     function resume() { updateTime(); return core.resume(); }

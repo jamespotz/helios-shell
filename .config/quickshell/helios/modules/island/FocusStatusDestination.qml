@@ -9,12 +9,6 @@ Item {
         id: column
         width: parent.width
         spacing: 12
-        Loader {
-            width: parent.width
-            active: FocusTimer.active
-            visible: active
-            sourceComponent: Component { FocusTimerControls { width: parent.width } }
-        }
         StyledText { text: qsTr("Focus mode"); font.weight: Font.DemiBold; font.pixelSize: Config.fontSize + 2 }
         Repeater {
             model: FocusModes.presets

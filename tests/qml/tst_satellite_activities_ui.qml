@@ -137,7 +137,7 @@ ShellRoot {
         Tasks.start("sync", "Sync");
         Tasks.progress("sync", 0.60, "Sync");
         const start = new Date(Date.now() + 3 * 60000);
-        Calendar.upcomingAlert = { date: Qt.formatDateTime(start, "yyyy-MM-dd"), startTime: Qt.formatDateTime(start, "HH:mm"), summary: "Standup", location: "Video call", links: ["https://example.com/meeting"] };
+        Calendar.upcomingAlert = { date: Qt.formatDateTime(start, "yyyy-MM-dd"), startTime: Qt.formatDateTime(start, "HH:mm"), summary: "Standup", location: "Video call", links: [{ url: "https://example.com/meeting", label: "" }] };
         IslandNavigation.show("test-screen", "calendar");
         IslandNavigation.showSatellite("test-screen", "privacy-status");
         advance.start();

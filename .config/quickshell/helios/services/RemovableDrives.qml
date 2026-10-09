@@ -9,12 +9,23 @@ QtObject {
     property bool busy: false
     property string error: ""
     property string _output: ""
+    // The watcher's first report is what's already plugged in, not an arrival.
+    property bool _loaded: false
+    signal driveAdded()
+    signal driveRemoved()
     readonly property string helper: Qt.resolvedUrl("../modules/island/removable-drives.py").toString().replace("file://", "")
     function accept(text, clearError) {
         try {
             const result = JSON.parse(text);
             if (!result.ok) { root.error = result.error || qsTr("Drive operation failed"); return; }
-            if (Array.isArray(result.drives)) root.drives = result.drives;
+            if (Array.isArray(result.drives)) {
+                const before = root.drives.map(drive => drive.path);
+                const after = result.drives.map(drive => drive.path);
+                root.drives = result.drives;
+                if (root._loaded && after.some(path => !before.includes(path))) root.driveAdded();
+                else if (root._loaded && before.some(path => !after.includes(path))) root.driveRemoved();
+                root._loaded = true;
+            }
             if (clearError) root.error = "";
         } catch (e) { root.error = qsTr("Could not read removable drives"); }
     }

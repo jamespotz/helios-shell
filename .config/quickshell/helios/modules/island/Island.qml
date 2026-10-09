@@ -23,6 +23,10 @@ PanelWindow {
     property bool hovering: false
     readonly property string mode: IslandNavigation.modeFor(modelData.name, hovering)
     readonly property bool expanded: IslandNavigation.expandedFor(modelData.name, hovering)
+    readonly property bool audioWakeActive: visible && expanded
+    onAudioWakeActiveChanged: Audio.setIslandExpanded(modelData.name, audioWakeActive)
+    Component.onCompleted: Audio.setIslandExpanded(modelData.name, audioWakeActive)
+    Component.onDestruction: Audio.setIslandExpanded(modelData.name, false)
     readonly property bool notifyMode: mode === "notify"
     readonly property bool taskMode: mode === "task"
     readonly property bool meetingMode: mode === "meeting"
@@ -378,7 +382,7 @@ PanelWindow {
                         property: "opacity"
                         from: 0
                         to: 1
-                        duration: 180
+                        duration: Config.animFast
                         easing.type: Easing.OutCubic
                     }
                 }

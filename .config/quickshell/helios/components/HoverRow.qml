@@ -13,6 +13,7 @@ Rectangle {
     readonly property bool hovering: hoverHandler.hovered
 
     signal clicked()
+    onClicked: AlertSounds.play("tap")
 
     height: 46
     radius: Colors.radiusSmall

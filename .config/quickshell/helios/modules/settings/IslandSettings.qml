@@ -13,7 +13,6 @@ SettingsPreviewPage {
     previewComponent: Component { IslandPreview {} }
 
     readonly property var widgetMeta: ({
-        focusTimer: { icon: "timer", label: qsTr("Focus timer") },
         launcher: { icon: "apps", label: "Launcher" },
         media: { icon: "music_note", label: "Now-playing cover" },
         clock: { icon: "schedule", label: "Clock" },
@@ -313,6 +312,18 @@ SettingsPreviewPage {
             ResetChip { keys: ["gestureScroll", "gestureMiddleClick", "gestureRightClick"] }
         }
 
+        Column {
+            width: parent.width
+            spacing: 10
+            SectionTitle { title: qsTr("Focus timer"); subtitle: qsTr("25-minute focus sessions start a short break; 50-minute sessions start a long break; 90-minute sessions start an extended break. Custom sessions use the focus and break durations entered in the timer.") }
+            SettingsCard {
+                ConfigSlider { option: "shortBreakMinutes"; icon: "coffee"; label: qsTr("Short break"); format: v => qsTr("%1 min").arg(Math.round(v)) }
+                ConfigSlider { option: "longBreakMinutes"; icon: "self_improvement"; label: qsTr("Long break"); format: v => qsTr("%1 min").arg(Math.round(v)) }
+                ConfigSlider { option: "extendedBreakMinutes"; icon: "self_improvement"; label: qsTr("Extended break"); format: v => qsTr("%1 min").arg(Math.round(v)); last: true }
+            }
+            ResetChip { keys: ["shortBreakMinutes", "longBreakMinutes", "extendedBreakMinutes"] }
+        }
+
         // --- Alerts --------------------------------------------------------
         Column {
             width: parent.width
@@ -344,7 +355,8 @@ SettingsPreviewPage {
                     format: v => Math.round(v) + "%"
                 }
                 ConfigToggle { option: "keepCriticalAlerts"; icon: "priority_high"; label: "Keep critical until dismissed" }
-                ConfigToggle { option: "alertSounds"; icon: "volume_up"; label: "Alert sounds"; last: true }
+                ConfigToggle { option: "alertSounds"; icon: "volume_up"; label: "Alert sounds" }
+                ConfigToggle { option: "interfaceSounds"; icon: "graphic_eq"; label: "Interface sounds"; last: true }
             }
 
             SettingsCard {
@@ -360,7 +372,7 @@ SettingsPreviewPage {
 
             ResetChip {
                 keys: ["showTaskAlerts", "showMeetingAlerts", "showBatteryAlerts", "batteryAlertThreshold",
-                    "keepCriticalAlerts", "alertSounds", "notifyWidth", "notifyDuration"]
+                    "keepCriticalAlerts", "alertSounds", "interfaceSounds", "notifyWidth", "notifyDuration"]
             }
         }
 

@@ -16,7 +16,7 @@ Rectangle {
     anchors.fill: parent
     color: Colors.shadow
     opacity: root.active ? root.dimOpacity : 0
-    Behavior on opacity { NumberAnimation { duration: Config.animMedium } }
+    Behavior on opacity { NumberAnimation { duration: Config.animMedium; easing.type: Easing.OutCubic } }
 
     MouseArea {
         anchors.fill: parent

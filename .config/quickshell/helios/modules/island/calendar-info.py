@@ -19,6 +19,7 @@ from gi.repository import EDataServer, ECal, ICalGLib  # noqa: E402
 import json
 import datetime
 import hashlib
+import html
 import os
 import re
 import urllib.parse
@@ -37,20 +38,67 @@ URL_PATTERN = re.compile(r"https?://[^\s<>\"']+")
 
 
 def event_links(component):
-    """Return unique web links from URL, description, and location fields."""
-    candidates = []
+    """Return labeled web links from URL, description, and location fields."""
+    texts = []
     url_property = component.get_first_property(ICalGLib.PropertyKind.URL_PROPERTY)
     if url_property is not None:
-        candidates.append(url_property.get_url() or "")
-    candidates.extend((component.get_description() or "", component.get_location() or ""))
+        texts.append(url_property.get_url() or "")
+    texts.extend((component.get_description() or "", component.get_location() or ""))
+    return links_in(texts)
 
-    links = []
-    for candidate in candidates:
-        for match in URL_PATTERN.findall(candidate):
-            link = match.rstrip(".,;:!?)]}")
-            if link and link not in links:
-                links.append(link)
-    return links
+
+def plain_text(text):
+    """Flatten an HTML description: <a> becomes its href, <br> a newline."""
+    text = re.sub(r'<a\s[^>]*href="([^"]*)"[^>]*>.*?</a>', r" \1 ", text, flags=re.I | re.S)
+    text = re.sub(r"<br\s*/?>", "\n", text, flags=re.I)
+    return html.unescape(re.sub(r"<[^>]+>", "", text))
+
+
+def unwrap_redirect(url):
+    """Google Calendar wraps description links in google.com/url?q=<target>."""
+    parts = urllib.parse.urlsplit(url)
+    if parts.netloc in ("google.com", "www.google.com") and parts.path == "/url":
+        target = urllib.parse.parse_qs(parts.query).get("q", [""])[0]
+        if URL_PATTERN.fullmatch(target):
+            return target
+    return url
+
+
+# Fixed English labels for links that calendar providers generate. Their
+# surrounding invite text follows the account's language, so labels come
+# only from the link type, never from the description.
+KNOWN_LINKS = [
+    (re.compile(r"^https://[\w.-]*zoom\.us/(j|w|my)/"), "Join Zoom meeting"),
+    (re.compile(r"^https://applications\.zoom\.us/addon/invitation/"), "Joining instructions"),
+    (re.compile(r"^https://[\w.-]*zoom\.us/meetings/\d+/invitations"), "Joining instructions"),
+    (re.compile(r"^https://support\.zoom\.us/"), "Zoom help"),
+    (re.compile(r"^https://[\w.-]*zoom\.us/launch/jc/"), "Zoom chat"),
+    (re.compile(r"^https://docs\.zoom\.us/agenda/"), "Meeting agenda"),
+    (re.compile(r"^https://meet\.google\.com/"), "Join Google Meet"),
+    (re.compile(r"^https://teams\.(microsoft|live)\.com/(l/meetup-join|meet)/"), "Join Teams meeting"),
+    (re.compile(r"^https://[\w.-]*webex\.com/"), "Join Webex meeting"),
+    (re.compile(r"^https://calendar\.google\.com/"), "Event details"),
+    (re.compile(r"^https://docs\.google\.com/document/"), "Google Doc"),
+    (re.compile(r"^https://docs\.google\.com/spreadsheets/"), "Google Sheet"),
+    (re.compile(r"^https://docs\.google\.com/presentation/"), "Google Slides"),
+]
+
+
+def known_label(url):
+    return next((label for pattern, label in KNOWN_LINKS if pattern.match(url)), "")
+
+
+def links_in(texts):
+    """Unique links, labeled by known_label(). Other links get no label and
+    the agenda shows their domain, so labels are never in the invite's
+    language."""
+    urls = []
+    for text in texts:
+        for match in URL_PATTERN.findall(plain_text(text)):
+            url = unwrap_redirect(match.rstrip(".,;:!?)]}"))
+            if url not in urls:
+                urls.append(url)
+    return [{"url": url, "label": known_label(url)} for url in urls]
 
 
 def fmt(dt):

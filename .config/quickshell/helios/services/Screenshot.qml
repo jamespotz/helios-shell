@@ -22,6 +22,12 @@ QtObject {
     property string lastError: ""
     property bool lastCopied: false
     property string extractedText: ""
+    // Geometry ("x,y wxh", layout coordinates) of the last capture; empty
+    // means every output.
+    property string lastGeometry: ""
+
+    // Fires with the shutter sound so CaptureFlash can flash the area.
+    signal captured(string geometry)
 
     // ponytail: session-only, resets on shell restart. Persist via
     // ShellState-style JsonAdapter if that's ever needed.
@@ -111,6 +117,7 @@ QtObject {
         const stamp = ts.getFullYear() + pad(ts.getMonth() + 1) + pad(ts.getDate())
             + "-" + pad(ts.getHours()) + pad(ts.getMinutes()) + pad(ts.getSeconds());
         root.lastPath = root.outputDir + "/Screen-" + stamp + ".png";
+        root.lastGeometry = geometry;
 
         // Paths go in as positional args, never spliced into the script, so
         // a picked folder like "Bob's Shots" can't break or inject the command.
@@ -139,6 +146,7 @@ QtObject {
         notificationProc.running = true;
         soundProc.command = ["canberra-gtk-play", "--id=screen-capture"];
         soundProc.running = true;
+        root.captured(root.lastGeometry);
     }
 
     // slurp for region selection

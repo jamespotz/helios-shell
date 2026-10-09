@@ -93,8 +93,8 @@ Item {
                     SequentialAnimation on opacity {
                         running: ScreenRecorder.recording && !Config.reducedMotion
                         loops: Animation.Infinite
-                        NumberAnimation { from: 1; to: 0.25; duration: 600 }
-                        NumberAnimation { from: 0.25; to: 1; duration: 600 }
+                        NumberAnimation { from: 1; to: 0.3; duration: 800; easing.type: Easing.InOutSine }
+                        NumberAnimation { from: 0.3; to: 1; duration: 800; easing.type: Easing.InOutSine }
                     }
                 }
 
