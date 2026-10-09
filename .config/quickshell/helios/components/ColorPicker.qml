@@ -238,9 +238,7 @@ Item {
                     onEditingFinished: {
                         const c = Qt.color(text.trim());
                         if (c.a > 0 || text.trim().length > 0) {
-                            root._internalUpdate = true;
                             root.value = c;
-                            root._internalUpdate = false;
                             root.colorChosen(c);
                         }
                         hexInput.text = root.value.toString();
@@ -278,9 +276,7 @@ Item {
                         cursorShape: Qt.PointingHandCursor
                         onClicked: {
                             const c = Qt.color(parent.modelData);
-                            root._internalUpdate = true;
                             root.value = c;
-                            root._internalUpdate = false;
                             root.colorChosen(c);
                         }
                     }
@@ -333,9 +329,7 @@ Item {
                     const g = bytes[i + 1];
                     const b = bytes[i + 2];
                     const c = Qt.rgba(r / 255, g / 255, b / 255, 1);
-                    root._internalUpdate = true;
                     root.value = c;
-                    root._internalUpdate = false;
                     root.colorChosen(c);
                 }
             }

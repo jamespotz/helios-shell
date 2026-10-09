@@ -53,6 +53,16 @@ Item {
                 readonly property bool isEditing: root.editingId === modelData.id
 
                 Rectangle {
+                    id: presetControl
+                    objectName: "focusPreset"
+                    signal clicked()
+                    onClicked: { AlertSounds.play("tap"); FocusModes.toggle(row.modelData); }
+                    activeFocusOnTab: enabled
+                    Keys.onReturnPressed: if (enabled) clicked()
+                    Keys.onSpacePressed: if (enabled) clicked()
+                    Accessible.role: Accessible.Button
+                    Accessible.name: row.modelData.name
+                    Accessible.onPressAction: if (enabled) clicked()
                     width: parent.width
                     height: 52
                     radius: Colors.radiusSmall
@@ -82,6 +92,7 @@ Item {
                             font.weight: Font.Medium
                             color: row.active ? Colors.accentText : Colors.text
                             elide: Text.ElideRight
+                            font.underline: presetControl.activeFocus
                         }
 
                         IconButton {
@@ -98,7 +109,7 @@ Item {
                         anchors.fill: parent
                         anchors.rightMargin: editBtn.width + 16
                         cursorShape: Qt.PointingHandCursor
-                        onClicked: FocusModes.toggle(row.modelData)
+                        onClicked: presetControl.clicked()
                     }
                 }
 

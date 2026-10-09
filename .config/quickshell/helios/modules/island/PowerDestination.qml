@@ -87,6 +87,15 @@ Item {
 
                     Item {
                         id: seg
+                        objectName: "powerProfile"
+                        signal clicked()
+                        onClicked: { AlertSounds.play("tap"); PowerProfiles.profile = seg.modelData.profile; }
+                        activeFocusOnTab: enabled
+                        Keys.onReturnPressed: if (enabled) clicked()
+                        Keys.onSpacePressed: if (enabled) clicked()
+                        Accessible.role: Accessible.Button
+                        Accessible.name: seg.modelData.label
+                        Accessible.onPressAction: if (enabled) clicked()
                         required property var modelData
                         required property int index
 
@@ -95,6 +104,7 @@ Item {
 
                         width: pill.segmentWidth
                         height: pill.height
+                        enabled: isEnabled
                         opacity: isEnabled ? 1 : 0.35
 
                         Rectangle {
@@ -124,11 +134,21 @@ Item {
 
                         HoverHandler { id: segHover; enabled: seg.isEnabled }
 
+                        Rectangle {
+                            anchors.fill: parent
+                            anchors.margins: 2
+                            radius: 8
+                            color: "transparent"
+                            border.width: 2
+                            border.color: Colors.accent
+                            visible: seg.activeFocus
+                        }
+
                         MouseArea {
                             anchors.fill: parent
                             enabled: seg.isEnabled
                             cursorShape: Qt.PointingHandCursor
-                            onClicked: PowerProfiles.profile = seg.modelData.profile
+                            onClicked: seg.clicked()
                         }
                     }
                 }

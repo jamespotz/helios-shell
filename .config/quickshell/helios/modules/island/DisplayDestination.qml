@@ -128,6 +128,7 @@ Item {
                 // monitor can report dozens of them.
                 Disclosure {
                     id: modeDisclosure
+                    objectName: "displayModes"
                     width: parent.width
                     title: "Change Resolution"
                     summary: monCol.modelData.width + "×" + monCol.modelData.height + "@" + Math.round(monCol.modelData.refreshRate) + "Hz"
@@ -155,6 +156,15 @@ Item {
 
                             delegate: Rectangle {
                                 id: modeRow
+                                objectName: "displayMode"
+                                signal clicked()
+                                onClicked: { AlertSounds.play("tap"); DisplaySettings.setResolutionMode(monCol.modelData.name, modeRow.modelData); }
+                                activeFocusOnTab: enabled
+                                Keys.onReturnPressed: if (enabled) clicked()
+                                Keys.onSpacePressed: if (enabled) clicked()
+                                Accessible.role: Accessible.Button
+                                Accessible.name: modeRow.modelData
+                                Accessible.onPressAction: if (enabled) clicked()
                                 required property string modelData
 
                                 readonly property bool active: modeRow.modelData.toLowerCase() === (
@@ -178,10 +188,20 @@ Item {
                                     color: modeRow.active ? Colors.accentText : Colors.text
                                 }
 
+                                Rectangle {
+                                    anchors.fill: parent
+                                    anchors.margins: 2
+                                    radius: 8
+                                    color: "transparent"
+                                    border.width: 2
+                                    border.color: Colors.accent
+                                    visible: modeRow.activeFocus
+                                }
+
                                 MouseArea {
                                     anchors.fill: parent
                                     cursorShape: Qt.PointingHandCursor
-                                    onClicked: DisplaySettings.setResolutionMode(monCol.modelData.name, modeRow.modelData)
+                                    onClicked: modeRow.clicked()
                                 }
                             }
                         }

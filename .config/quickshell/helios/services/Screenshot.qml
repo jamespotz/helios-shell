@@ -22,6 +22,7 @@ QtObject {
     property string lastError: ""
     property bool lastCopied: false
     property string extractedText: ""
+    property bool _lastCaptureWasText: false
     // Geometry ("x,y wxh", layout coordinates) of the last capture; empty
     // means every output.
     property string lastGeometry: ""
@@ -32,8 +33,6 @@ QtObject {
     // ponytail: session-only, resets on shell restart. Persist via
     // ShellState-style JsonAdapter if that's ever needed.
     property string outputDir: Quickshell.env("HOME") + "/Pictures/Screenshots"
-
-    readonly property string _ocrTextPath: "/tmp/helios-screenshot-ocr.txt"
 
     function capture(captureMode) {
         if (root.capturing) return;
@@ -73,8 +72,10 @@ QtObject {
     // Re-copy the last result on demand (the "Copy" chip after a capture).
     function copyLast() {
         if (!root.lastPath) return;
-        clipboardProc.command = ["sh", "-c", "wl-copy < \"$1\"", "_",
-            root.extractedText.length > 0 ? root._ocrTextPath : root.lastPath];
+        root.lastCopied = false;
+        clipboardProc.command = root._lastCaptureWasText
+            ? ["wl-copy"] : ["sh", "-c", "wl-copy < \"$1\"", "_", root.lastPath];
+        clipboardProc.stdinEnabled = root._lastCaptureWasText;
         clipboardProc.running = false;
         clipboardProc.running = true;
     }
@@ -112,6 +113,7 @@ QtObject {
     }
 
     function _shoot(geometry) {
+        root._lastCaptureWasText = root.mode === root.modeText;
         const ts = new Date();
         const pad = n => String(n).padStart(2, "0");
         const stamp = ts.getFullYear() + pad(ts.getMonth() + 1) + pad(ts.getDate())
@@ -121,16 +123,16 @@ QtObject {
 
         // Paths go in as positional args, never spliced into the script, so
         // a picked folder like "Bob's Shots" can't break or inject the command.
-        // $1 outputDir, $2 lastPath, $3 OCR text path, $4 geometry.
+        // $1 outputDir, $2 lastPath, $3 geometry.
         let cmd = "set -o pipefail; mkdir -p \"$1\" && grim";
-        if (geometry) cmd += " -g \"$4\"";
+        if (geometry) cmd += " -g \"$3\"";
         cmd += " \"$2\"";
         if (root.mode === root.modeText)
-            cmd += " && tesseract \"$2\" - -l eng 2>/dev/null > \"$3\" && wl-copy < \"$3\"";
+            cmd += " && tesseract \"$2\" - -l eng 2>/dev/null";
         else if (root.copyToClipboardEnabled)
             cmd += " && wl-copy < \"$2\"";
 
-        grimProc.command = ["sh", "-c", cmd, "_", root.outputDir, root.lastPath, root._ocrTextPath, geometry];
+        grimProc.command = ["sh", "-c", cmd, "_", root.outputDir, root.lastPath, geometry];
         grimProc.running = false;
         grimProc.running = true;
     }
@@ -138,7 +140,7 @@ QtObject {
     function _captureSucceeded() {
         root.capturing = false;
         root.lastCopied = true;
-        if (root.mode === root.modeText) ocrTextReader.running = true;
+        if (root._lastCaptureWasText) { root.lastCopied = false; root.copyLast(); }
 
         const fileName = root.lastPath.split("/").pop();
         notificationProc.command = ["notify-send", "--app-name=Helios", "--icon=camera-photo",
@@ -186,6 +188,11 @@ QtObject {
 
     // grim capture, tesseract OCR in text mode, optional wl-copy — all one shot
     property Process grimProc: Process {
+        stdout: StdioCollector {
+            onStreamFinished: {
+                if (root._lastCaptureWasText) root.extractedText = text;
+            }
+        }
         onExited: exitCode => {
             if (exitCode === 0) {
                 root._captureSucceeded();
@@ -194,13 +201,6 @@ QtObject {
                 root.lastError = "Screenshot failed (exit " + exitCode + ")";
                 root.lastPath = "";
             }
-        }
-    }
-
-    property Process ocrTextReader: Process {
-        command: ["cat", root._ocrTextPath]
-        stdout: StdioCollector {
-            onStreamFinished: root.extractedText = text.trim()
         }
     }
 
@@ -224,7 +224,15 @@ QtObject {
         }
     }
 
-    property Process clipboardProc: Process {}
+    property Process clipboardProc: Process {
+        onStarted: {
+            if (stdinEnabled) {
+                write(root.extractedText);
+                stdinEnabled = false;
+            }
+        }
+        onExited: exitCode => { root.lastCopied = exitCode === 0; }
+    }
     property Process folderOpener: Process {}
     property Process fileOpener: Process {}
     property Process notificationProc: Process {}

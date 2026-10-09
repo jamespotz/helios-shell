@@ -103,6 +103,15 @@ Item {
 
                 delegate: Rectangle {
                     id: histRow
+                    objectName: "historyNotification"
+                    signal clicked()
+                    onClicked: { AlertSounds.play("tap"); Notifications.open(histRow.modelData.id); }
+                    activeFocusOnTab: enabled
+                    Keys.onReturnPressed: if (enabled) clicked()
+                    Keys.onSpacePressed: if (enabled) clicked()
+                    Accessible.role: Accessible.Button
+                    Accessible.name: histRow.modelData.summary || "Notification"
+                    Accessible.onPressAction: if (enabled) clicked()
                     required property var modelData
                     required property int index
 
@@ -116,10 +125,20 @@ Item {
                     // Open app on click. A running window is focused first;
                     // otherwise its desktop entry is launched. The click is a
                     // no-op when neither target can be resolved.
-                    MouseArea {
+                        Rectangle {
+                            anchors.fill: parent
+                            anchors.margins: 2
+                            radius: 8
+                            color: "transparent"
+                            border.width: 2
+                            border.color: Colors.accent
+                            visible: histRow.activeFocus
+                        }
+
+                        MouseArea {
                         anchors.fill: parent
                         cursorShape: Qt.PointingHandCursor
-                        onClicked: Notifications.open(histRow.modelData.id)
+                        onClicked: histRow.clicked()
                     }
 
                     Row {

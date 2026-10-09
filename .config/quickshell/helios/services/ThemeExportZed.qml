@@ -2,6 +2,7 @@ pragma Singleton
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import "ThemeExportJsonc.js" as Jsonc
 import "../services"
 
 // Zed
@@ -215,19 +216,15 @@ QtObject {
     // mode/light/dark keys, same philosophy as mergeKdeGlobals in Themes.qml.
     function mergeZedSettings(existing, isDark) {
         const text = existing || "{\n}\n";
-        const modeVal = isDark ? "dark" : "light";
-        if (!/"theme"\s*:\s*\{/.test(text)) {
-            const insertion = "\n  \"theme\": {\n    \"mode\": \"" + modeVal + "\",\n    \"dark\": \"Helios\",\n    \"light\": \"Helios\"\n  },";
-            return text.replace(/\{/, "{" + insertion);
+        const mode = isDark ? "dark" : "light";
+        let theme = Jsonc.objectProperty(text, "theme");
+        if (theme === null) {
+            theme = JSON.stringify({ mode: mode, dark: "Helios", light: "Helios" }, null, 2);
+        } else {
+            theme = Jsonc.setProperty(theme, "mode", JSON.stringify(mode));
+            theme = Jsonc.setProperty(theme, mode, JSON.stringify("Helios"));
         }
-        return text.replace(/("theme"\s*:\s*\{)([\s\S]*?)(\n?\s*\})/, (m, open, body, close) => {
-            let b = body;
-            b = /"mode"\s*:\s*"[^"]*"/.test(b) ? b.replace(/"mode"\s*:\s*"[^"]*"/, "\"mode\": \"" + modeVal + "\"") : b + ",\n    \"mode\": \"" + modeVal + "\"";
-            const key = modeVal;
-            const re = new RegExp("\"" + key + "\"\\s*:\\s*\"[^\"]*\"");
-            b = re.test(b) ? b.replace(re, "\"" + key + "\": \"Helios\"") : b + ",\n    \"" + key + "\": \"Helios\"";
-            return open + b + close;
-        });
+        return Jsonc.setProperty(text, "theme", theme);
     }
 
     function writeZedTheme(p) {

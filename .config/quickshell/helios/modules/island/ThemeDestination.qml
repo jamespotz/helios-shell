@@ -130,6 +130,15 @@ Item {
 
                     Rectangle {
                         id: card
+                        objectName: "themePreset"
+                        signal clicked()
+                        onClicked: { AlertSounds.play("tap"); Themes.applyPreset(card.modelData); }
+                        activeFocusOnTab: enabled
+                        Keys.onReturnPressed: if (enabled) clicked()
+                        Keys.onSpacePressed: if (enabled) clicked()
+                        Accessible.role: Accessible.Button
+                        Accessible.name: card.palette.label
+                        Accessible.onPressAction: if (enabled) clicked()
                         required property string modelData
                         readonly property var palette: Themes.presets[modelData]
                         readonly property bool active: Themes.mode === "preset" && Themes.presetName === modelData
@@ -221,10 +230,20 @@ Item {
                             }
                         }
 
+                        Rectangle {
+                            anchors.fill: parent
+                            anchors.margins: 2
+                            radius: 8
+                            color: "transparent"
+                            border.width: 2
+                            border.color: Colors.accent
+                            visible: card.activeFocus
+                        }
+
                         MouseArea {
                             anchors.fill: parent
                             cursorShape: Qt.PointingHandCursor
-                            onClicked: Themes.applyPreset(card.modelData)
+                            onClicked: card.clicked()
                         }
                     }
                 }

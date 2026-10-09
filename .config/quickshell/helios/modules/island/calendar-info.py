@@ -110,6 +110,45 @@ def window():
     return now - datetime.timedelta(days=WINDOW_DAYS), now + datetime.timedelta(days=WINDOW_DAYS)
 
 
+def local_event(component, label):
+    """Render timed EDS events in the viewer's zone; dates/floating times stay local."""
+    start = component.get_dtstart()
+    if start is None:
+        return None
+    all_day = start.is_date()
+
+    def display_time(value, kind):
+        if value is None:
+            return None
+        prop = component.get_first_property(kind)
+        parameter = prop.get_first_parameter(ICalGLib.ParameterKind.TZID_PARAMETER) if prop else None
+        zone = value.get_timezone()
+        if parameter:
+            tzid = parameter.get_tzid()
+            zone = (ICalGLib.Timezone.get_builtin_timezone(tzid)
+                    or ICalGLib.Timezone.get_builtin_timezone_from_tzid(tzid)
+                    or zone)
+        if value.is_utc():
+            zone = ICalGLib.Timezone.get_utc_timezone()
+        if not all_day and (parameter or value.is_utc()):
+            return datetime.datetime.fromtimestamp(value.as_timet_with_zone(zone))
+        return datetime.datetime(value.get_year(), value.get_month(), value.get_day(),
+                                 0 if all_day else value.get_hour(),
+                                 0 if all_day else value.get_minute())
+
+    d = display_time(start, ICalGLib.PropertyKind.DTSTART_PROPERTY)
+    end = display_time(component.get_dtend(), ICalGLib.PropertyKind.DTEND_PROPERTY)
+    return {
+        "summary": component.get_summary() or "(no title)",
+        "date": d.strftime("%Y-%m-%d"),
+        "allDay": all_day,
+        "startTime": None if all_day else d.strftime("%H:%M"),
+        "endTime": None if all_day or end is None else end.strftime("%H:%M"),
+        "source": label,
+        "links": event_links(component),
+    }
+
+
 def collect_local_events():
     registry = EDataServer.SourceRegistry.new_sync(None)
     sources = registry.list_sources(EDataServer.SOURCE_EXTENSION_CALENDAR)
@@ -135,29 +174,9 @@ def collect_local_events():
             continue
         successful_sources += 1
         for comp in comps:
-            # get_dtstart()/get_dtend() return an ICalGLib.Time directly (not
-            # wrapped in an ECalComponentDateTime.value) and get_summary()
-            # returns a plain str directly — both confirmed against a real
-            # event in this system's calendar, not assumed from API docs.
-            t = comp.get_dtstart()
-            if t is None:
-                continue
-            is_all_day = t.is_date()
-            event = {
-                "summary": comp.get_summary() or "(no title)",
-                "date": "%04d-%02d-%02d" % (t.get_year(), t.get_month(), t.get_day()),
-                "allDay": is_all_day,
-                "startTime": None
-                if is_all_day
-                else "%02d:%02d" % (t.get_hour(), t.get_minute()),
-                "endTime": None,
-                "source": source.get_display_name(),
-                "links": event_links(comp),
-            }
-            te = comp.get_dtend()
-            if te is not None and not is_all_day:
-                event["endTime"] = "%02d:%02d" % (te.get_hour(), te.get_minute())
-            events.append(event)
+            event = local_event(comp, source.get_display_name())
+            if event is not None:
+                events.append(event)
 
     return events, not sources or successful_sources > 0
 

@@ -2,6 +2,7 @@ pragma Singleton
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import "ThemeExportJsonc.js" as Jsonc
 
 // VS Code
 //
@@ -46,13 +47,7 @@ QtObject {
     }
 
     function mergeVscodeSettings(existing, colors) {
-        const text = existing || "{\n}\n";
-        const body = JSON.stringify(colors, null, 4).replace(/^{\n|\n}$/g, "").split("\n").join("\n    ");
-        const block = "\"workbench.colorCustomizations\": {\n    " + body.trim() + "\n  }";
-        if (!/"workbench\.colorCustomizations"\s*:\s*\{/.test(text)) {
-            return text.replace(/\{/, "{\n  " + block + ",");
-        }
-        return text.replace(/"workbench\.colorCustomizations"\s*:\s*\{[\s\S]*?\n\s*\}/, block);
+        return Jsonc.setProperty(existing || "{\n}\n", "workbench.colorCustomizations", JSON.stringify(colors, null, 4));
     }
 
     function writeVscodeTheme(p) {

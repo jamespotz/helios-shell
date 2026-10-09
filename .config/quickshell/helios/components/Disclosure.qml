@@ -17,6 +17,17 @@ Column {
     spacing: 10
 
     Item {
+        id: header
+        objectName: "disclosureHeader"
+        signal clicked()
+        onClicked: { AlertSounds.play("tap"); root.open = !root.open; }
+        activeFocusOnTab: enabled
+        Keys.onReturnPressed: if (enabled) clicked()
+        Keys.onSpacePressed: if (enabled) clicked()
+        Accessible.role: Accessible.Button
+        Accessible.name: root.title
+        Accessible.description: root.open ? qsTr("Expanded") : qsTr("Collapsed")
+        Accessible.onPressAction: if (enabled) clicked()
         width: parent.width
         height: 22
 
@@ -34,6 +45,7 @@ Column {
 
             StyledText {
                 text: root.title
+                font.underline: header.activeFocus
                 font.pixelSize: Config.fontSize - 1
                 opacity: 0.8
                 anchors.verticalCenter: parent.verticalCenter
@@ -52,7 +64,7 @@ Column {
         MouseArea {
             anchors.fill: parent
             cursorShape: Qt.PointingHandCursor
-            onClicked: root.open = !root.open
+            onClicked: header.clicked()
         }
     }
 

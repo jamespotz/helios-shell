@@ -107,6 +107,23 @@ Item {
             }
 
             Rectangle {
+                id: captureButton
+                objectName: "recordCapture"
+                signal clicked()
+                onClicked: {
+                    AlertSounds.play("tap");
+                    // Release the Island's pointer grab before an external capture picker.
+                    const screen = IslandNavigation.screen;
+                    if (!ScreenRecorder.recording) IslandNavigation.close();
+                    ScreenRecorder.toggle(screen);
+                }
+                activeFocusOnTab: enabled
+                Keys.onReturnPressed: if (enabled) clicked()
+                Keys.onSpacePressed: if (enabled) clicked()
+                Accessible.role: Accessible.Button
+                Accessible.name: ScreenRecorder.recording ? qsTr("Stop recording") : qsTr("Start recording")
+                Accessible.onPressAction: if (enabled) clicked()
+                enabled: !ScreenRecorder.starting
                 width: 64
                 height: 64
                 radius: 32
@@ -128,27 +145,22 @@ Item {
                     opacity: recordHover.hovered ? 0.2 : 0
                 }
 
+                Rectangle {
+                    anchors.fill: parent
+                    anchors.margins: -4
+                    radius: 36
+                    color: "transparent"
+                    border.width: 2
+                    border.color: Colors.accent
+                    visible: captureButton.activeFocus
+                }
                 HoverHandler { id: recordHover }
 
                 MouseArea {
                     anchors.fill: parent
                     cursorShape: Qt.PointingHandCursor
                     enabled: !ScreenRecorder.starting
-                    onClicked: {
-                        // The island keeps a HyprlandFocusGrab active while open
-                        // (Island.qml, for "click outside closes it"), which was
-                        // contesting the pointer against slurp's own region-select
-                        // grab and swallowing the drag before slurp ever saw it —
-                        // that's what made Custom Area look like it did nothing.
-                        // Closing the island first (for every mode, not just
-                        // region — the portal picker and gsr itself shouldn't have
-                        // to fight it either) releases that grab before capture
-                        // starts.
-                        const screen = IslandNavigation.screen;
-                        const startingNew = !ScreenRecorder.recording;
-                        if (startingNew) IslandNavigation.close();
-                        ScreenRecorder.toggle(screen);
-                    }
+                    onClicked: captureButton.clicked()
                 }
             }
         }
