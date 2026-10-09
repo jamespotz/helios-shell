@@ -14,17 +14,25 @@ import "../../components"
 Item {
     id: root
 
-    readonly property var streams: Pipewire.nodes
+    readonly property var audioStreams: Pipewire.nodes
         ? Pipewire.nodes.values.filter(n => n.isStream && (n.type & PwNodeType.AudioOutStream) === PwNodeType.AudioOutStream)
         : []
+    readonly property var streams: root.audioStreams.filter(n => root.isAppStream(n))
     readonly property var sinks: Pipewire.nodes
         ? Pipewire.nodes.values.filter(n => n.isSink && !n.isStream && (n.type & PwNodeType.AudioSink) === PwNodeType.AudioSink)
         : []
 
-    PwObjectTracker { objects: root.streams.concat(root.sinks) }
+    PwObjectTracker { objects: root.audioStreams.concat(root.sinks) }
 
     // Which app's output-sink picker is expanded, if any.
     property string routingId: ""
+
+    function isAppStream(node) {
+        if (!node.isStream || (node.type & PwNodeType.AudioOutStream) !== PwNodeType.AudioOutStream) return false;
+        const props = node.properties || {};
+        return props["application.name"] !== "Helios audio keepalive"
+            && !String(props["media.name"] || "").startsWith("helios-");
+    }
 
     function appName(node) {
         return (node.properties && node.properties["application.name"]) || node.description || node.name;
@@ -101,119 +109,129 @@ Item {
                     spacing: 8
 
                     Repeater {
-                        model: root.streams
+                        // Keep delegates attached to the stable ObjectModel.
+                        // A filtered JS array resets every row when a tick or
+                        // another app adds/removes a stream, cancelling drags.
+                        model: Pipewire.nodes
 
-                        delegate: Column {
-                            id: appRow
+                        delegate: Loader {
+                            id: streamLoader
                             required property var modelData
                             width: listCol.width
-                            spacing: 6
+                            active: root.isAppStream(modelData)
+                            visible: active
+                            sourceComponent: Column {
+                                id: appRow
+                                readonly property var modelData: streamLoader.modelData
+                                width: listCol.width
+                                spacing: 6
 
-                            readonly property var currentSink: root.currentSinkFor(modelData)
-                            readonly property bool routing: root.routingId === root.serial(modelData)
+                                readonly property var currentSink: root.currentSinkFor(modelData)
+                                readonly property bool routing: root.routingId === root.serial(modelData)
 
-                            Rectangle {
-                                width: parent.width
-                                height: 60
-                                radius: Colors.radiusSmall
-                                color: Colors.surfaceHigh
+                                Rectangle {
+                                    width: parent.width
+                                    height: 60
+                                    radius: Colors.radiusSmall
+                                    color: Colors.surfaceHigh
 
-                                Row {
-                                    anchors.fill: parent
-                                    anchors.margins: 10
-                                    spacing: 10
+                                    Row {
+                                        anchors.fill: parent
+                                        anchors.margins: 10
+                                        spacing: 10
 
-                                    IconButton {
-                                        anchors.verticalCenter: parent.verticalCenter
-                                        icon: (appRow.modelData.audio && appRow.modelData.audio.muted) ? "volume_off" : "volume_up"
-                                        onClicked: if (appRow.modelData.audio) appRow.modelData.audio.muted = !appRow.modelData.audio.muted
-                                    }
-
-                                    Column {
-                                        width: parent.width - 30 - 10 - 30 - 10
-                                        anchors.verticalCenter: parent.verticalCenter
-                                        spacing: 4
-
-                                        StyledText {
-                                            width: parent.width
-                                            elide: Text.ElideRight
-                                            text: root.appName(appRow.modelData)
-                                            font.weight: Font.Medium
+                                        IconButton {
+                                            anchors.verticalCenter: parent.verticalCenter
+                                            icon: (appRow.modelData.audio && appRow.modelData.audio.muted) ? "volume_off" : "volume_up"
+                                            onClicked: if (appRow.modelData.audio) appRow.modelData.audio.muted = !appRow.modelData.audio.muted
                                         }
 
-                                        Slider {
-                                            width: parent.width
-                                            trackHeight: 6
-                                            value: appRow.modelData.audio ? (appRow.modelData.audio.muted ? 0 : appRow.modelData.audio.volume) : 0
-                                            maxValue: 1.5
-                                            markerAt: 1.0
-                                            onMoved: v => {
-                                                if (!appRow.modelData.audio) return;
-                                                appRow.modelData.audio.muted = false;
-                                                appRow.modelData.audio.volume = v;
-                                            }
-                                        }
-                                    }
-
-                                    IconButton {
-                                        anchors.verticalCenter: parent.verticalCenter
-                                        icon: "speaker_group"
-                                        active: appRow.routing
-                                        onClicked: root.routingId = appRow.routing ? "" : root.serial(appRow.modelData)
-                                    }
-                                }
-                            }
-
-                            StyledText {
-                                visible: !appRow.routing
-                                text: "Output: " + (appRow.currentSink ? (appRow.currentSink.description || appRow.currentSink.name) : "Unknown")
-                                font.pixelSize: Config.fontSize - 3
-                                color: Colors.subtext
-                                leftPadding: 6
-                            }
-
-                            // ─── Output picker ─────────────────────────────
-                            Column {
-                                width: parent.width
-                                visible: appRow.routing
-                                spacing: 2
-                                leftPadding: 6
-                                rightPadding: 6
-
-                                Repeater {
-                                    model: root.sinks
-
-                                    delegate: HoverRow {
-                                        id: sinkRow
-                                        required property var modelData
-
-                                        readonly property bool isCurrent: appRow.currentSink && appRow.currentSink.id === modelData.id
-
-                                        width: parent ? parent.width - 12 : 0
-                                        height: 32
-                                        highlighted: isCurrent
-                                        onClicked: root.moveOutput(appRow.modelData, sinkRow.modelData)
-
-                                        Row {
-                                            anchors.fill: parent
-                                            anchors.leftMargin: 8
-                                            anchors.rightMargin: 8
-                                            spacing: 8
+                                        Column {
+                                            width: parent.width - 30 - 10 - 30 - 10
+                                            anchors.verticalCenter: parent.verticalCenter
+                                            spacing: 4
 
                                             StyledText {
-                                                width: parent.width - 18
-                                                anchors.verticalCenter: parent.verticalCenter
+                                                width: parent.width
                                                 elide: Text.ElideRight
-                                                font.pixelSize: Config.fontSize - 2
-                                                text: sinkRow.modelData.description || sinkRow.modelData.name
+                                                text: root.appName(appRow.modelData)
+                                                font.weight: Font.Medium
                                             }
 
-                                            MaterialIcon {
-                                                anchors.verticalCenter: parent.verticalCenter
-                                                visible: sinkRow.isCurrent
-                                                icon: "check"
-                                                color: Colors.accent
-                                                font.pixelSize: 14
+                                            Slider {
+                                                width: parent.width
+                                                trackHeight: 6
+                                                value: appRow.modelData.audio ? (appRow.modelData.audio.muted ? 0 : appRow.modelData.audio.volume) : 0
+                                                maxValue: 1.5
+                                                markerAt: 1.0
+                                                onMoved: v => {
+                                                    if (!appRow.modelData.audio) return;
+                                                    appRow.modelData.audio.muted = false;
+                                                    appRow.modelData.audio.volume = v;
+                                                }
+                                            }
+                                        }
+
+                                        IconButton {
+                                            anchors.verticalCenter: parent.verticalCenter
+                                            icon: "speaker_group"
+                                            active: appRow.routing
+                                            onClicked: root.routingId = appRow.routing ? "" : root.serial(appRow.modelData)
+                                        }
+                                    }
+                                }
+
+                                StyledText {
+                                    visible: !appRow.routing
+                                    text: "Output: " + (appRow.currentSink ? (appRow.currentSink.description || appRow.currentSink.name) : "Unknown")
+                                    font.pixelSize: Config.fontSize - 3
+                                    color: Colors.subtext
+                                    leftPadding: 6
+                                }
+
+                                // ─── Output picker ─────────────────────────────
+                                Column {
+                                    width: parent.width
+                                    visible: appRow.routing
+                                    spacing: 2
+                                    leftPadding: 6
+                                    rightPadding: 6
+
+                                    Repeater {
+                                        model: root.sinks
+
+                                        delegate: HoverRow {
+                                            id: sinkRow
+                                            required property var modelData
+
+                                            readonly property bool isCurrent: appRow.currentSink && appRow.currentSink.id === modelData.id
+
+                                            width: parent ? parent.width - 12 : 0
+                                            height: 32
+                                            highlighted: isCurrent
+                                            onClicked: root.moveOutput(appRow.modelData, sinkRow.modelData)
+
+                                            Row {
+                                                anchors.fill: parent
+                                                anchors.leftMargin: 8
+                                                anchors.rightMargin: 8
+                                                spacing: 8
+
+                                                StyledText {
+                                                    width: parent.width - 18
+                                                    anchors.verticalCenter: parent.verticalCenter
+                                                    elide: Text.ElideRight
+                                                    font.pixelSize: Config.fontSize - 2
+                                                    text: sinkRow.modelData.description || sinkRow.modelData.name
+                                                }
+
+                                                MaterialIcon {
+                                                    anchors.verticalCenter: parent.verticalCenter
+                                                    visible: sinkRow.isCurrent
+                                                    icon: "check"
+                                                    color: Colors.accent
+                                                    font.pixelSize: 14
+                                                }
                                             }
                                         }
                                     }

@@ -32,7 +32,11 @@ Item {
         root.moved(v);
     }
 
-    readonly property real fraction: root.maxValue > 0 ? Math.max(0, Math.min(1, root.value / root.maxValue)) : 0
+    // During a drag the pointer owns the display. Audio replies can arrive
+    // behind it; use the bound value again once the gesture ends.
+    property real _dragValue: 0
+    readonly property real fraction: root.maxValue > 0 ? Math.max(0, Math.min(1,
+        (dragArea.pressed ? root._dragValue : root.value) / root.maxValue)) : 0
     readonly property bool showThumb: !root.thumbHoverOnly || trackHover.hovered || dragArea.pressed || root.activeFocus
 
     implicitHeight: 24
@@ -97,11 +101,16 @@ Item {
         id: dragArea
         anchors.fill: parent
         enabled: root.enabled
+        preventStealing: true
+        function dragTo(mx) {
+            root._dragValue = posToValue(mx);
+            root._move(root._dragValue);
+        }
         function posToValue(mx) {
             return Math.max(0, Math.min(1, mx / width)) * root.maxValue;
         }
-        onPressed: mouse => { root.forceActiveFocus(); root._move(posToValue(mouse.x)); }
-        onPositionChanged: mouse => { if (pressed) root._move(posToValue(mouse.x)); }
+        onPressed: mouse => { root.forceActiveFocus(); dragTo(mouse.x); }
+        onPositionChanged: mouse => { if (pressed) dragTo(mouse.x); }
     }
 
     Accessible.role: Accessible.Slider

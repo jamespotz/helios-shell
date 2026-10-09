@@ -1,10 +1,28 @@
 import importlib.util
 from pathlib import Path
 import unittest
+import os
 
 helper = Path(__file__).resolve().parents[2] / ".config/quickshell/helios/services/bluetooth-audio-keepalive.py"
 
 class KeepaliveTest(unittest.TestCase):
+    def test_volume_event_burst_is_handled_as_one_update(self):
+        spec = importlib.util.spec_from_file_location("keepalive", helper)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        reader, writer = os.pipe()
+        try:
+            os.write(writer, b"Event 'change' on sink-input #4\n" * 40)
+            os.close(writer)
+            writer = None
+            with os.fdopen(reader, "rb") as stream:
+                batches = list(module.event_batches(stream))
+            self.assertEqual(len(batches), 1, "volume burst should cause one state query")
+            self.assertEqual(len(batches[0]), 40)
+        finally:
+            if writer is not None:
+                os.close(writer)
+
     def test_only_idle_default_bluetooth_output_is_woken(self):
         self.assertTrue(helper.exists(), "Bluetooth keepalive helper missing")
         spec = importlib.util.spec_from_file_location("keepalive", helper)
