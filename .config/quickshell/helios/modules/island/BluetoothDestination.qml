@@ -141,6 +141,14 @@ Item {
 
             Item {
                 id: scanLink
+                signal clicked()
+                onClicked: { AlertSounds.play("tap"); Bluetooth.setScanning(!root.bluetooth.scanning); }
+                activeFocusOnTab: enabled
+                Keys.onReturnPressed: if (enabled) scanLink.clicked()
+                Keys.onSpacePressed: if (enabled) scanLink.clicked()
+                Accessible.role: Accessible.Button
+                Accessible.name: root.bluetooth.scanning ? "Stop Scan" : "Scan"
+                Accessible.onPressAction: if (enabled) scanLink.clicked()
                 width: scanLinkRow.implicitWidth
                 height: scanLinkRow.implicitHeight
                 opacity: scanLinkHover.hovered ? 0.7 : 1
@@ -161,7 +169,8 @@ Item {
                         icon: "search"; font.pixelSize: 15; color: Colors.accent; anchors.verticalCenter: parent.verticalCenter
                     }
                     StyledText {
-                        text: "Scan"
+                        text: root.bluetooth.scanning ? "Stop Scan" : "Scan"
+                        font.underline: scanLink.activeFocus
                         color: Colors.accent
                         font.weight: Font.Medium
                         anchors.verticalCenter: parent.verticalCenter
@@ -172,12 +181,20 @@ Item {
                 MouseArea {
                     anchors.fill: parent
                     cursorShape: Qt.PointingHandCursor
-                    onClicked: Bluetooth.setScanning(!root.bluetooth.scanning)
+                    onClicked: scanLink.clicked()
                 }
             }
 
             Item {
                 id: discoverableLink
+                signal clicked()
+                onClicked: { AlertSounds.play("tap"); Bluetooth.setDiscoverable(!root.bluetooth.discoverable); }
+                activeFocusOnTab: enabled
+                Keys.onReturnPressed: if (enabled) discoverableLink.clicked()
+                Keys.onSpacePressed: if (enabled) discoverableLink.clicked()
+                Accessible.role: Accessible.Button
+                Accessible.name: root.bluetooth.discoverable ? "Discoverable" : "Make Discoverable"
+                Accessible.onPressAction: if (enabled) discoverableLink.clicked()
                 width: discoverableLinkRow.implicitWidth
                 height: discoverableLinkRow.implicitHeight
                 opacity: discoverableLinkHover.hovered ? 0.7 : 1
@@ -190,6 +207,7 @@ Item {
                     MaterialIcon { icon: "visibility"; font.pixelSize: 15; color: Colors.accent; anchors.verticalCenter: parent.verticalCenter }
                     StyledText {
                         text: root.bluetooth.discoverable ? "Discoverable" : "Make Discoverable"
+                        font.underline: discoverableLink.activeFocus
                         color: Colors.accent
                         font.weight: Font.Medium
                         anchors.verticalCenter: parent.verticalCenter
@@ -200,7 +218,7 @@ Item {
                 MouseArea {
                     anchors.fill: parent
                     cursorShape: Qt.PointingHandCursor
-                    onClicked: Bluetooth.setDiscoverable(!root.bluetooth.discoverable)
+                    onClicked: discoverableLink.clicked()
                 }
             }
         }

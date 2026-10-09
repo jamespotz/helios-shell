@@ -58,7 +58,7 @@ QtObject {
     }
 
     property Process listProc: Process {
-        command: ["nmcli", "-t", "-f", "IN-USE,SSID,SIGNAL,SECURITY", "device", "wifi", "list"]
+        command: ["nmcli", "-t", "-f", "IN-USE,SSID,SIGNAL,SECURITY", "device", "wifi", "list", "--rescan", "no"]
         stdout: StdioCollector {
             onStreamFinished: {
                 const byName = {};
@@ -160,6 +160,7 @@ QtObject {
     // wifi rescan` is what actually kicks NetworkManager into refreshing
     // its scan cache right away.
     function scan() {
+        if (root.scanning) return;
         if (root.wifiDevice) root.wifiDevice.scannerEnabled = true;
         root.scanning = true;
         scanProc.command = ["nmcli", "device", "wifi", "rescan"];
@@ -167,12 +168,23 @@ QtObject {
         scanProc.running = true;
     }
 
-    property Process scanProc: Process { onExited: scanTimer.restart() }
+    function stopScan() {
+        // Clear the state before terminating nmcli: its exit must not arm
+        // the settle timer again after the user has cancelled.
+        root.scanning = false;
+        root.scanTimer.stop();
+        root.scanProc.running = false;
+        if (root.wifiDevice) root.wifiDevice.scannerEnabled = false;
+    }
+
+    property Process scanProc: Process {
+        onExited: if (root.scanning) root.scanTimer.restart()
+    }
     // The rescan call returns almost immediately but the scan itself takes
     // a couple seconds; give it a moment before re-listing.
     property Timer scanTimer: Timer {
         interval: 2500
-        onTriggered: { root.scanning = false; root.refreshNetworks(); }
+        onTriggered: { root.stopScan(); root.refreshNetworks(); }
     }
 
     // Manually-entered networks (typically hidden, so they never show up in

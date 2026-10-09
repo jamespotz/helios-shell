@@ -347,6 +347,14 @@ Item {
 
         Item {
             id: scanLink
+            signal clicked()
+            onClicked: { AlertSounds.play("tap"); if (root.wn.scanning) root.wn.stopScan(); else root.wn.scan(); }
+            activeFocusOnTab: enabled
+            Keys.onReturnPressed: if (enabled) scanLink.clicked()
+            Keys.onSpacePressed: if (enabled) scanLink.clicked()
+            Accessible.role: Accessible.Button
+            Accessible.name: root.wn.scanning ? "Stop Scan" : "Scan"
+            Accessible.onPressAction: if (enabled) scanLink.clicked()
             visible: Networking.wifiEnabled
             width: scanLinkRow.implicitWidth
             height: visible ? scanLinkRow.implicitHeight : 0
@@ -371,7 +379,8 @@ Item {
                     anchors.verticalCenter: parent.verticalCenter
                 }
                 StyledText {
-                    text: "Scan"
+                    text: root.wn.scanning ? "Stop Scan" : "Scan"
+                    font.underline: scanLink.activeFocus
                     color: Colors.accent
                     font.weight: Font.Medium
                     anchors.verticalCenter: parent.verticalCenter
@@ -381,9 +390,8 @@ Item {
             HoverHandler { id: scanLinkHover }
             MouseArea {
                 anchors.fill: parent
-                enabled: !root.wn.scanning
                 cursorShape: Qt.PointingHandCursor
-                onClicked: root.wn.scan()
+                onClicked: scanLink.clicked()
             }
         }
 

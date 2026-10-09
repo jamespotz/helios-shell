@@ -367,6 +367,11 @@ Item {
                                         // meeting invites don't bury the next event.
                                         Item {
                                             id: linksToggle
+                                            Accessible.role: Accessible.Button
+                                            Accessible.name: eventRow.links.length + " links"
+                                            Accessible.onPressAction: linksToggle.clicked()
+                                            signal clicked()
+                                            onClicked: { AlertSounds.play("tap"); eventRow.linksOpen = !eventRow.linksOpen; }
                                             visible: eventRow.links.length > 0
                                             width: linksToggleRow.implicitWidth
                                             height: 22
@@ -401,9 +406,9 @@ Item {
                                             }
 
                                             HoverHandler { id: linksHover; cursorShape: Qt.PointingHandCursor }
-                                            TapHandler { onTapped: eventRow.linksOpen = !eventRow.linksOpen }
-                                            Keys.onReturnPressed: eventRow.linksOpen = !eventRow.linksOpen
-                                            Keys.onSpacePressed: eventRow.linksOpen = !eventRow.linksOpen
+                                            TapHandler { onTapped: linksToggle.clicked() }
+                                            Keys.onReturnPressed: linksToggle.clicked()
+                                            Keys.onSpacePressed: linksToggle.clicked()
                                             onActiveFocusChanged: if (activeFocus) root.revealInAgenda(linksToggle)
                                         }
 
@@ -416,6 +421,14 @@ Item {
 
                                                 Item {
                                                     id: linkItem
+                                                    Accessible.role: Accessible.Link
+                                                    Accessible.name: linkItem.modelData.label || linkItem.modelData.url
+                                                    Accessible.onPressAction: linkItem.clicked()
+                                                    signal clicked()
+                                                    onClicked: {
+                                                        AlertSounds.play("tap");
+                                                        Quickshell.execDetached(["xdg-open", linkItem.modelData.url]);
+                                                    }
                                                     required property var modelData
                                                     readonly property string host: linkItem.modelData.url.split("/")[2] || ""
                                                     width: parent.width
@@ -446,10 +459,10 @@ Item {
 
                                                     HoverHandler { id: linkHover; cursorShape: Qt.PointingHandCursor }
                                                     TapHandler {
-                                                        onTapped: Quickshell.execDetached(["xdg-open", linkItem.modelData.url])
+                                                        onTapped: linkItem.clicked()
                                                     }
-                                                    Keys.onReturnPressed: Quickshell.execDetached(["xdg-open", linkItem.modelData.url])
-                                                    Keys.onSpacePressed: Quickshell.execDetached(["xdg-open", linkItem.modelData.url])
+                                                    Keys.onReturnPressed: linkItem.clicked()
+                                                    Keys.onSpacePressed: linkItem.clicked()
                                                     onActiveFocusChanged: if (activeFocus) root.revealInAgenda(linkItem)
                                                 }
                                             }
@@ -526,6 +539,14 @@ Item {
 
                                 Item {
                                     id: cell
+                                    Accessible.role: Accessible.Button
+                                    Accessible.name: cell.cellDate.toLocaleDateString(Qt.locale(), "dddd, MMMM d")
+                                    Accessible.onPressAction: if (modelData > 0) cell.clicked()
+                                    signal clicked()
+                                    onClicked: { AlertSounds.play("tap"); root.selectedDate = cell.cellDate; }
+                                    activeFocusOnTab: visible && modelData > 0
+                                    Keys.onReturnPressed: cell.clicked()
+                                    Keys.onSpacePressed: cell.clicked()
                                     required property int modelData
                                     readonly property date cellDate: new Date(root.viewDate.getFullYear(), root.viewDate.getMonth(), modelData || 1)
                                     readonly property string cellKey: root.dateKey(cell.cellDate)
@@ -584,13 +605,14 @@ Item {
                                     MouseArea {
                                         anchors.fill: parent
                                         cursorShape: Qt.PointingHandCursor
-                                        onClicked: root.selectedDate = cell.cellDate
+                                        onClicked: cell.clicked()
                                     }
 
                                     StyledText {
                                         id: dayNumber
                                         anchors.centerIn: parent
                                         text: cell.modelData
+                                        font.underline: cell.activeFocus
                                         font.pixelSize: Config.fontSize - 3
                                         font.weight: Font.Bold
                                         color: cell.isToday ? Colors.accentText : Colors.text
