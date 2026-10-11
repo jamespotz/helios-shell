@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Keep idle Bluetooth playback ready while a shell interaction is open."""
+"""Keep idle audio playback ready while a shell interaction is open."""
 import ctypes
 import json
 import os
@@ -11,9 +11,9 @@ import time
 NAME = "Helios audio keepalive"
 
 
-def idle_bluetooth_output(default, sinks, inputs):
+def idle_output(default, sinks, inputs):
     sink = next((s for s in sinks if s["name"] == default), None)
-    if not sink or not sink["name"].startswith("bluez_output."):
+    if not sink:
         return ""
     for stream in inputs:
         props = stream.get("properties", {})
@@ -82,7 +82,7 @@ def main():
                 default = subprocess.check_output(["pactl", "get-default-sink"], text=True).strip()
                 sinks = json.loads(subprocess.check_output(["pactl", "-f", "json", "list", "sinks"]))
             inputs = json.loads(subprocess.check_output(["pactl", "-f", "json", "list", "sink-inputs"]))
-            wanted = idle_bluetooth_output(default, sinks, inputs)
+            wanted = idle_output(default, sinks, inputs)
             if wanted == target and (not wanted or player.poll() is None):
                 return
             stop(player)
@@ -106,7 +106,7 @@ def main():
             if refresh_outputs or any(" on sink-input " in event for event in events):
                 update(refresh_outputs)
     except (subprocess.SubprocessError, OSError, ValueError) as error:
-        print(f"Bluetooth audio keepalive: {error}", flush=True)
+        print(f"Audio keepalive: {error}", flush=True)
     finally:
         stop(player)
         stop(watcher)

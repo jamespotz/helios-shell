@@ -15,19 +15,12 @@ QtObject {
 
     property PwObjectTracker tracker: PwObjectTracker { objects: root.sinks.concat(root.sources) }
 
-    // Each Island owns its entry, so closing one screen cannot release another.
-    property var expandedIslandScreens: ({})
-    function setIslandExpanded(screenName, expanded) {
-        const next = Object.assign({}, root.expandedIslandScreens);
-        if (expanded) next[screenName] = true;
-        else delete next[screenName];
-        root.expandedIslandScreens = next;
-    }
-    readonly property bool interactionOpen: Object.keys(root.expandedIslandScreens).length > 0
-        || IslandNavigation.open || IslandNavigation.satelliteOpen || ShellState.settingsOpen
-    property Process bluetoothKeepalive: Process {
-        command: ["python3", Qt.resolvedUrl("bluetooth-audio-keepalive.py").toString().replace("file://", "")]
-        running: Config.interfaceSounds && root.interactionOpen
+    // HDMI and Bluetooth outputs mute while idle and clip or delay the
+    // first sound, so a silent stream keeps the default sink awake while
+    // interface sounds are on.
+    property Process audioKeepalive: Process {
+        command: ["python3", Qt.resolvedUrl("audio-keepalive.py").toString().replace("file://", "")]
+        running: Config.interfaceSounds
     }
 
     property string preferredOutputName: ""

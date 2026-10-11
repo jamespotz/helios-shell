@@ -3,7 +3,7 @@ from pathlib import Path
 import unittest
 import os
 
-helper = Path(__file__).resolve().parents[2] / ".config/quickshell/helios/services/bluetooth-audio-keepalive.py"
+helper = Path(__file__).resolve().parents[2] / ".config/quickshell/helios/services/audio-keepalive.py"
 
 class KeepaliveTest(unittest.TestCase):
     def test_volume_event_burst_is_handled_as_one_update(self):
@@ -23,16 +23,20 @@ class KeepaliveTest(unittest.TestCase):
             if writer is not None:
                 os.close(writer)
 
-    def test_only_idle_default_bluetooth_output_is_woken(self):
-        self.assertTrue(helper.exists(), "Bluetooth keepalive helper missing")
+    def test_only_idle_default_output_is_woken(self):
+        self.assertTrue(helper.exists(), "Audio keepalive helper missing")
         spec = importlib.util.spec_from_file_location("keepalive", helper)
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
         sinks = [{"index": 4, "name": "bluez_output.headset.1"}, {"index": 5, "name": "alsa_output.speaker"}]
-        choose = module.idle_bluetooth_output
+        choose = module.idle_output
         self.assertEqual(choose(sinks[0]["name"], sinks, []), "bluez_output.headset.1")
-        self.assertEqual(choose(sinks[1]["name"], sinks, []), "")
+        self.assertEqual(choose(sinks[1]["name"], sinks, []), "alsa_output.speaker")
         self.assertEqual(choose("missing", sinks, []), "")
+        wired_music = {"sink": 5, "corked": False, "properties": {"application.name": "Meeting"}}
+        self.assertEqual(choose(sinks[1]["name"], sinks, [wired_music]), "")
+        wired_music["corked"] = True
+        self.assertEqual(choose(sinks[1]["name"], sinks, [wired_music]), "alsa_output.speaker")
         music = {"sink": 4, "corked": False, "properties": {"application.name": "Music"}}
         self.assertEqual(choose(sinks[0]["name"], sinks, [music]), "")
         music["corked"] = True
