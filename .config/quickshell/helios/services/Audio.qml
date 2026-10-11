@@ -15,12 +15,25 @@ QtObject {
 
     property PwObjectTracker tracker: PwObjectTracker { objects: root.sinks.concat(root.sources) }
 
-    // HDMI and Bluetooth outputs mute while idle and clip or delay the
-    // first sound, so a silent stream keeps the default sink awake while
-    // interface sounds are on.
+    // Each Island owns its entry, so closing one screen cannot release another.
+    property var expandedIslandScreens: ({})
+    function setIslandExpanded(screenName, expanded) {
+        const next = Object.assign({}, root.expandedIslandScreens);
+        if (expanded) next[screenName] = true;
+        else delete next[screenName];
+        root.expandedIslandScreens = next;
+    }
+    readonly property bool interactionOpen: Object.keys(root.expandedIslandScreens).length > 0
+        || IslandNavigation.open || IslandNavigation.satelliteOpen || ShellState.settingsOpen
+    // Idle outputs delay or clip the first sound, so a silent stream keeps
+    // the default sink awake while interface sounds are on. Wired outputs
+    // stay awake throughout; Bluetooth only during an interaction, since a
+    // constant stream holds the headset's radio and drains its battery.
+    readonly property bool bluetoothOutput: !!Pipewire.defaultAudioSink
+        && Pipewire.defaultAudioSink.name.startsWith("bluez_")
     property Process audioKeepalive: Process {
         command: ["python3", Qt.resolvedUrl("audio-keepalive.py").toString().replace("file://", "")]
-        running: Config.interfaceSounds
+        running: Config.interfaceSounds && (!root.bluetoothOutput || root.interactionOpen)
     }
 
     property string preferredOutputName: ""
