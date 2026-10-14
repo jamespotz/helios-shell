@@ -42,6 +42,7 @@ singleton ThemeExportFuzzel 1.0 ThemeExportFuzzel.qml
 singleton ThemeExportFish 1.0 ThemeExportFish.qml
 singleton Cava 1.0 Cava.qml
 singleton Clipboard 1.0 Clipboard.qml
+singleton Keybinds 1.0 Keybinds.qml
 singleton WifiNetworks 1.0 WifiNetworks.qml
 singleton NetInfo 1.0 NetInfo.qml
 singleton ScreenRecorder 1.0 ScreenRecorder.qml

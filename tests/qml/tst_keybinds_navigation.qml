@@ -3,6 +3,7 @@ import QtQuick.Window
 import Quickshell
 import Quickshell.Io
 import "modules/island" as IslandModules
+import "services"
 
 ShellRoot {
     id: root
@@ -24,7 +25,7 @@ ShellRoot {
         interval: 120
         running: true
         onTriggered: {
-            keybinds.entries = [
+            Keybinds.entries = [
                 { description: "First", modmask: 64, key: "A" },
                 { description: "Second", modmask: 64, key: "B" },
                 { description: "Third", modmask: 64, key: "C" }

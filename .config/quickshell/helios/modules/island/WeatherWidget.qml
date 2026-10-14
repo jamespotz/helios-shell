@@ -50,6 +50,9 @@ Item {
         anchors.fill: parent
         anchors.margins: -6
         cursorShape: Qt.PointingHandCursor
-        onClicked: IslandNavigation.toggle(root.targetScreen.name, "weather")
+        onClicked: {
+            AlertSounds.play("tap");
+            IslandNavigation.toggle(root.targetScreen.name, "weather");
+        }
     }
 }

@@ -36,6 +36,19 @@ QtObject {
         running: Config.interfaceSounds && (!root.bluetoothOutput || root.interactionOpen)
     }
 
+    // Quickshell's Pipewire service has no "move this stream" call, so this
+    // shells out to pactl. pactl's sink-input and sink indexes equal
+    // PipeWire's object.serial, not object.id (node.id), so read the serial.
+    function moveStream(stream, sink) {
+        const from = stream.properties ? stream.properties["object.serial"] : null;
+        const to = sink.properties ? sink.properties["object.serial"] : null;
+        if (!from || !to) return;
+        streamMover.command = ["pactl", "move-sink-input", String(from), String(to)];
+        streamMover.running = false;
+        streamMover.running = true;
+    }
+    property Process streamMover: Process {}
+
     property string preferredOutputName: ""
     property string error: ""
     readonly property bool _pipewireReady: Pipewire.ready

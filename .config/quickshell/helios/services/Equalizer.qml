@@ -13,7 +13,7 @@ import Quickshell.Io
 QtObject {
     id: root
 
-    readonly property string eqScriptPath: Quickshell.env("HOME") + "/.config/quickshell/helios/modules/island/easyeffects-eq.py"
+    readonly property string eqScriptPath: Qt.resolvedUrl("easyeffects-eq.py").toString().replace("file://", "")
     readonly property var eqBandLabels: ["31", "63", "125", "250", "500", "1k", "2k", "4k", "8k", "16k"]
     readonly property var eqPresets: ({
         flat:    [0.50, 0.50, 0.50, 0.50, 0.50, 0.50, 0.50, 0.50, 0.50, 0.50],

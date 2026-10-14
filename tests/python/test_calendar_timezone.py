@@ -4,7 +4,7 @@ from pathlib import Path
 import time
 import unittest
 
-HELPER = Path(__file__).resolve().parents[2] / '.config/quickshell/helios/modules/island/calendar-info.py'
+HELPER = Path(__file__).resolve().parents[2] / '.config/quickshell/helios/services/calendar-info.py'
 spec = importlib.util.spec_from_file_location('calendar_timezone', HELPER)
 calendar = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(calendar)

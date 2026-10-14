@@ -40,6 +40,9 @@ Item {
     MouseArea {
         anchors.fill: parent
         cursorShape: Qt.PointingHandCursor
-        onClicked: IslandNavigation.toggle(root.targetScreen.name, "clipboard")
+        onClicked: {
+            AlertSounds.play("tap");
+            IslandNavigation.toggle(root.targetScreen.name, "clipboard");
+        }
     }
 }

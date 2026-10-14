@@ -6,7 +6,7 @@ import Quickshell.Io
 // Display settings service — queries Hyprland for monitor configuration
 // and provides controls for resolution, scale, and VRR.
 //
-// Persistence is handled by display-config.py (modules/island/): it locates
+// Persistence is handled by display-config.py (beside this file): it locates
 // the hl.monitor({...}) block for the target output across the user's
 // modular hyprland.lua (following both require() and utils.safe_load()),
 // edits that field in place, then runs `hyprctl reload` — so changes made
@@ -24,7 +24,7 @@ QtObject {
         return root.modeStates[monitorName] || { modes: [], loading: false };
     }
 
-    readonly property string _scriptPath: Quickshell.env("HOME") + "/.config/quickshell/helios/modules/island/display-config.py"
+    readonly property string _scriptPath: Qt.resolvedUrl("display-config.py").toString().replace("file://", "")
 
     function refresh() {
         root.loading = true;

@@ -2,7 +2,7 @@ import importlib.util
 from pathlib import Path
 import unittest
 
-HELPER = Path(__file__).resolve().parents[2] / '.config/quickshell/helios/modules/island/calendar-info.py'
+HELPER = Path(__file__).resolve().parents[2] / '.config/quickshell/helios/services/calendar-info.py'
 spec = importlib.util.spec_from_file_location('calendar_info', HELPER)
 calendar_info = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(calendar_info)

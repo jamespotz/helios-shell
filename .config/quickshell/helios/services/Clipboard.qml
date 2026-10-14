@@ -89,15 +89,35 @@ QtObject {
         }
     }
 
-    // Ids whose thumbnail has already been decoded to disk this session —
-    // ListView recycles/recreates delegates on scroll, and each delegate
-    // used to unconditionally spawn its own "decode if missing" shell
-    // process on creation; for an already-decoded image that's a wasted
-    // fork+exec every time it scrolls back into view. Delegates check this
-    // first and skip spawning entirely once an id is known-ready.
+    // Image entries decode to the thumbnail cache once per session, one at a
+    // time. ListView recreates delegates on scroll, so ready ids live here
+    // and an already-decoded image never spawns another process.
+    readonly property string thumbDir: Quickshell.env("HOME") + "/.cache/helios/clip-thumbs/"
     property var readyThumbs: ({})
-    function markThumbReady(id) {
-        root.readyThumbs = Object.assign({}, root.readyThumbs, { [id]: true });
+    property var _thumbQueue: []
+    function thumbSource(id) {
+        return root.readyThumbs[id] ? "file://" + root.thumbDir + id + ".img" : "";
+    }
+    function requestThumb(item) {
+        if (!item.isImage || root.readyThumbs[item.id] || root._thumbQueue.some(i => i.id === item.id)) return;
+        root._thumbQueue = root._thumbQueue.concat([item]);
+        if (!thumbDecoder.running) root._decodeNextThumb();
+    }
+    function _decodeNextThumb() {
+        const item = root._thumbQueue[0];
+        if (!item || thumbDecoder.running) return;
+        thumbDecoder.command = ["sh", "-c",
+            "[ -f \"$2\" ] || { mkdir -p \"$(dirname \"$2\")\" && printf '%s' \"$1\" | cliphist decode > \"$2\"; }",
+            "_", item.line, root.thumbDir + item.id + ".img"];
+        thumbDecoder.running = true;
+    }
+    property Process thumbDecoder: Process {
+        onExited: {
+            const item = root._thumbQueue[0];
+            root._thumbQueue = root._thumbQueue.slice(1);
+            root.readyThumbs = Object.assign({}, root.readyThumbs, { [item.id]: true });
+            Qt.callLater(root._decodeNextThumb);
+        }
     }
 
     function refresh() {

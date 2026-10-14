@@ -52,7 +52,7 @@ QtObject {
     }
 
     property Process infoProc: Process {
-        command: ["python3", "-u", Quickshell.env("HOME") + "/.config/quickshell/helios/modules/island/maintenance-info.py"]
+        command: ["python3", "-u", Qt.resolvedUrl("maintenance-info.py").toString().replace("file://", "")]
         stdout: StdioCollector {
             onStreamFinished: {
                 root.checking = false;

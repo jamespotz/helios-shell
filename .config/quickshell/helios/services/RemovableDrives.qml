@@ -13,7 +13,7 @@ QtObject {
     property bool _loaded: false
     signal driveAdded()
     signal driveRemoved()
-    readonly property string helper: Qt.resolvedUrl("../modules/island/removable-drives.py").toString().replace("file://", "")
+    readonly property string helper: Qt.resolvedUrl("removable-drives.py").toString().replace("file://", "")
     function accept(text, clearError) {
         try {
             const result = JSON.parse(text);

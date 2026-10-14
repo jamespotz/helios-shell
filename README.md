@@ -112,7 +112,7 @@ exec-once = quickshell -c helios
 
 ## Display settings
 
-Display changes update the active monitor and persist in Hyprland's Lua configuration through `modules/island/display-config.py`. The helper follows `require()` and `utils.safe_load()` imports, edits the matching `hl.monitor({...})` block, then reloads Hyprland.
+Display changes update the active monitor and persist in Hyprland's Lua configuration through `services/display-config.py`. The helper follows `require()` and `utils.safe_load()` imports, edits the matching `hl.monitor({...})` block, then reloads Hyprland.
 
 - Resolution choices come from the monitor's reported modelines.
 - Scale ranges from `1.00` to `2.00` in `0.01` steps. Only values producing whole-number logical width and height appear.

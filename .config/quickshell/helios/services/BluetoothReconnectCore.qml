@@ -42,4 +42,11 @@ QtObject {
     function anyDeviceNegotiating(devices) {
         return devices.some(device => device.pairing || device.state === QsBluetooth.BluetoothDeviceState.Connecting);
     }
+
+    // Takes BluetoothDeviceCore's state devices. Discovery shares the radio
+    // with a call's narrow-band link and makes it choppy, so the loop waits
+    // while any headset is in the call (HFP/HSP) profile.
+    function anyDeviceInCall(devices) {
+        return devices.some(device => device.connected && device.audio && device.audio.category === "call");
+    }
 }

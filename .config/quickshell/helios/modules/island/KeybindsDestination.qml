@@ -1,5 +1,4 @@
 import QtQuick
-import Quickshell.Io
 import "../../services"
 import "../../components"
 
@@ -10,7 +9,6 @@ Item {
 
     readonly property int listHeight: 380
 
-    property var entries: []
     readonly property bool searchFocused: searchField.inputActiveFocus
     property int selectedIndex: filtered.length > 0 ? 0 : -1
 
@@ -28,29 +26,15 @@ Item {
 
     readonly property var filtered: {
         const q = searchField.text.trim().toLowerCase();
-        if (!q) return entries;
-        return entries.filter(b => (b.description || "").toLowerCase().includes(q)
+        if (!q) return Keybinds.entries;
+        return Keybinds.entries.filter(b => (b.description || "").toLowerCase().includes(q)
             || root.comboLabel(b).toLowerCase().includes(q));
     }
 
     onFilteredChanged: selectedIndex = filtered.length > 0 ? 0 : -1
 
-    Process {
-        id: bindsProc
-        command: ["hyprctl", "binds", "-j"]
-        stdout: StdioCollector {
-            onStreamFinished: {
-                try {
-                    root.entries = JSON.parse(text).filter(b => b.description && b.description.length > 0);
-                } catch (e) {
-                    root.entries = [];
-                }
-            }
-        }
-    }
-
     Component.onCompleted: {
-        bindsProc.running = true;
+        Keybinds.refresh();
         focusSearchTimer.restart();
     }
 

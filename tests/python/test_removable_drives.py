@@ -4,7 +4,7 @@ from pathlib import Path
 import subprocess
 import unittest
 
-HELPER = Path(__file__).resolve().parents[2] / '.config/quickshell/helios/modules/island/removable-drives.py'
+HELPER = Path(__file__).resolve().parents[2] / '.config/quickshell/helios/services/removable-drives.py'
 spec = importlib.util.spec_from_file_location('removable_drives', HELPER)
 drives = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(drives)

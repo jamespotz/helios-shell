@@ -1,6 +1,4 @@
 import QtQuick
-import Quickshell
-import Quickshell.Io
 import "../../services"
 import "../../components"
 
@@ -118,33 +116,14 @@ Item {
                     required property var modelData
                     required property int index
 
-                    readonly property string thumbPath: Quickshell.env("HOME") + "/.cache/helios/clip-thumbs/" + modelData.id + ".img"
-                    property string thumbSource: ""
+                    readonly property string thumbSource: Clipboard.thumbSource(modelData.id)
 
                     width: clipList.width
                     height: 44
                     label: qsTr("Copy clipboard entry: %1").arg(modelData.preview)
                     onClicked: { Clipboard.copy(row.modelData.line); IslandNavigation.close(); }
 
-                    Process {
-                        id: thumbDecoder
-                        command: ["sh", "-c",
-                            "[ -f \"$2\" ] || { mkdir -p \"$(dirname \"$2\")\" && printf '%s' \"$1\" | cliphist decode > \"$2\"; }",
-                            "_", row.modelData.line, row.thumbPath]
-                        onExited: {
-                            row.thumbSource = "file://" + row.thumbPath;
-                            Clipboard.markThumbReady(row.modelData.id);
-                        }
-                    }
-
-                    Component.onCompleted: {
-                        if (!row.modelData.isImage) return;
-                        if (Clipboard.readyThumbs[row.modelData.id]) {
-                            row.thumbSource = "file://" + row.thumbPath;
-                        } else {
-                            thumbDecoder.running = true;
-                        }
-                    }
+                    Component.onCompleted: Clipboard.requestThumb(row.modelData)
 
                     Row {
                         anchors.fill: parent

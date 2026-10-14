@@ -5,7 +5,7 @@ import "systemmonitor"
 
 // Live system resource monitor — a grid of cards (storage, battery or GPU,
 // CPU, memory, network, temperature, controls) from systemmonitor/. Backed
-// by services/SystemStats.qml, which spawns modules/island/system-info.py
+// by services/SystemStats.qml, which spawns services/system-info.py
 // (psutil + nvidia-smi) only while this tab is open.
 Item {
     id: root

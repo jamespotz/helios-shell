@@ -1,5 +1,4 @@
 import QtQuick
-import Quickshell.Io
 import Quickshell.Services.Pipewire
 import "../../services"
 import "../../components"
@@ -8,9 +7,7 @@ import "../../components"
 // playing audio (a PipeWire AudioOutStream node), each with its own
 // volume/mute (PwNodeAudioIface, same API VolumeDestination.qml uses for the
 // system sink) and a picker to move that one app's output to a different
-// sink. Quickshell's Pipewire service has no "move this stream" call, so
-// routing shells out to `pactl move-sink-input` — same pattern Bluetooth.qml
-// already uses `pactl -f json list cards` for what's outside that API.
+// sink (Audio.moveStream).
 Item {
     id: root
 
@@ -38,15 +35,6 @@ Item {
         return (node.properties && node.properties["application.name"]) || node.description || node.name;
     }
 
-    // pactl's sink-input index and sink index both equal PipeWire's
-    // object.serial (verified live: `pactl -f json list sink-inputs`'s
-    // "index"/"sink" fields match the stream/sink's own "object.serial"
-    // property) — object.id (node.id here) is a different number and does
-    // NOT work with pactl, so routing must read object.serial specifically.
-    function serial(node) {
-        return node.properties ? node.properties["object.serial"] : null;
-    }
-
     function currentSinkFor(stream) {
         const groups = Pipewire.linkGroups.values;
         for (let i = 0; i < groups.length; i++) {
@@ -57,16 +45,9 @@ Item {
     }
 
     function moveOutput(stream, sink) {
-        const from = root.serial(stream);
-        const to = root.serial(sink);
-        if (!from || !to) return;
-        moveProc.command = ["pactl", "move-sink-input", String(from), String(to)];
-        moveProc.running = false;
-        moveProc.running = true;
+        Audio.moveStream(stream, sink);
         root.routingId = "";
     }
-
-    property Process moveProc: Process {}
 
     implicitWidth: 340
     implicitHeight: col.implicitHeight
@@ -127,7 +108,7 @@ Item {
                                 spacing: 6
 
                                 readonly property var currentSink: root.currentSinkFor(modelData)
-                                readonly property bool routing: root.routingId === root.serial(modelData)
+                                readonly property bool routing: root.routingId === String(modelData.id)
 
                                 Rectangle {
                                     width: parent.width
@@ -176,7 +157,7 @@ Item {
                                             anchors.verticalCenter: parent.verticalCenter
                                             icon: "speaker_group"
                                             active: appRow.routing
-                                            onClicked: root.routingId = appRow.routing ? "" : root.serial(appRow.modelData)
+                                            onClicked: root.routingId = appRow.routing ? "" : String(appRow.modelData.id)
                                         }
                                     }
                                 }

@@ -231,7 +231,7 @@ QtObject {
     }
 
     property Process proc: Process {
-        command: ["python3", "-u", Quickshell.env("HOME") + "/.config/quickshell/helios/modules/island/calendar-info.py"]
+        command: ["python3", "-u", Qt.resolvedUrl("calendar-info.py").toString().replace("file://", "")]
         stdout: StdioCollector {
             onStreamFinished: {
                 try {

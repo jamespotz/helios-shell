@@ -62,7 +62,7 @@ QtObject {
     }
 
     function _processCommand() {
-        const base = ["python3", "-u", Quickshell.env("HOME") + "/.config/quickshell/helios/modules/island/system-info.py"];
+        const base = ["python3", "-u", Qt.resolvedUrl("system-info.py").toString().replace("file://", "")];
         return root.fullProcessMode ? base.concat(["--full"]) : base;
     }
 
@@ -87,7 +87,7 @@ QtObject {
         const process = root.state.processes.find(candidate => candidate.pid === pid);
         if (!process || root.isProcessProtected(process)) return false;
         killProc.targetPid = pid;
-        killProc.command = ["python3", "-u", Quickshell.env("HOME") + "/.config/quickshell/helios/modules/island/system-info.py", "--signal", String(pid), action === "terminate" ? "terminate" : "forceStop"];
+        killProc.command = ["python3", "-u", Qt.resolvedUrl("system-info.py").toString().replace("file://", ""), "--signal", String(pid), action === "terminate" ? "terminate" : "forceStop"];
         killProc._errBuf = "";
         killProc.running = true;
         return true;

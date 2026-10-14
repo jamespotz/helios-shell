@@ -242,6 +242,20 @@ QtObject {
     // Set by connect(id); retried even when bonded, until it connects.
     property string _requestedId: ""
     readonly property BluetoothReconnectCore _reconnectCore: BluetoothReconnectCore {}
+    // Paused, not cancelled: the attempt count carries over, and the loop
+    // picks up again when the call ends.
+    readonly property bool _inCall: root._reconnectCore.anyDeviceInCall(root.state.devices)
+
+    function _pauseReconnect() {
+        reconnectTimer.stop();
+        reconnectFinalCheckTimer.stop();
+        root._stopAutoDiscovery();
+    }
+
+    on_InCallChanged: {
+        if (root._inCall) root._pauseReconnect();
+        else root._scheduleReconnect(false);
+    }
 
     function _forgetUserDisconnect(id) {
         if (!root._userDisconnectedIds[id]) return;
@@ -295,6 +309,7 @@ QtObject {
             // it fire would stop discovery mid-cycle and report a failure.
             reconnectFinalCheckTimer.stop();
         }
+        if (root._inCall) return;
         if (root.reconnectAttempt >= root.maxReconnectAttempts || reconnectTimer.running) return;
         reconnectTimer.interval = root.reconnectDelays[root.reconnectAttempt];
         reconnectTimer.start();
@@ -306,6 +321,7 @@ QtObject {
             root._cancelReconnect();
             return;
         }
+        if (root._inCall) { root._pauseReconnect(); return; }
 
         // A connect/pair attempt (ours or the user's) may still be in
         // flight — some devices (Soundcore R60i) take 15-20s to finish SDP.

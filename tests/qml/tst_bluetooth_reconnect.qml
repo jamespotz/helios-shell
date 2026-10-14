@@ -139,6 +139,15 @@ ShellRoot {
         root.verify(!core.anyDeviceNegotiating([{ pairing: false, state: QsBluetooth.BluetoothDeviceState.Connected }]));
     }
 
+    // A headset in a meeting switches to the call profile. The loop must
+    // hold off scanning until it switches back.
+    function test_anyDeviceInCallDetectsCallProfile() {
+        root.verify(core.anyDeviceInCall([{ connected: true, audio: { category: "call" } }]), "call profile");
+        root.verify(!core.anyDeviceInCall([{ connected: true, audio: { category: "music" } }]), "music profile");
+        root.verify(!core.anyDeviceInCall([{ connected: true, audio: null }]), "no audio node");
+        root.verify(!core.anyDeviceInCall([{ connected: false, audio: { category: "call" } }]), "stale node of a disconnected device");
+    }
+
     Component.onCompleted: {
         try {
             root.test_reconnectTargetExcludesUserDisconnectedIds();
@@ -153,6 +162,7 @@ ShellRoot {
             root.test_reconnectTargetOnlyRepairsAudioDevices();
             root.test_anyDeviceNegotiatingDetectsPairing();
             root.test_anyDeviceNegotiatingDetectsConnectingState();
+            root.test_anyDeviceInCallDetectsCallProfile();
             root.pass();
         } catch (error) {
             root.reportFailure(error);
