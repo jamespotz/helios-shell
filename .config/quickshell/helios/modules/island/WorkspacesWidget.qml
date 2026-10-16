@@ -71,7 +71,9 @@ Item {
 
         Repeater {
             id: repeater
-            model: Hyprland.workspaces
+            // Hyprland.workspaces keeps creation order, so workspace 3 opened
+            // before 2 would sit to its left.
+            model: Hyprland.workspaces.values.slice().sort((a, b) => a.id - b.id)
 
             delegate: Item {
                 id: dot
