@@ -81,15 +81,18 @@ QtObject {
         return DesktopEntries.applications.values.find(entry => !entry.noDisplay && entry.name === target.name) || null;
     }
 
-    // Under a UWSM session, apps go through `uwsm app` so each gets its own
+    // Under a UWSM session, apps go through uwsm so each gets its own
     // systemd scope instead of living in the compositor's cgroup.
     readonly property bool useUwsm: !!Quickshell.env("UWSM_FINALIZE_VARNAMES")
 
     // Single spawn path for launched apps. Strips the jemalloc LD_PRELOAD
     // helios-reload.sh sets for quickshell itself, so apps don't inherit it.
+    // `uwsm-app` asks uwsm's app daemon instead of starting Python each time
+    // (~10ms against ~55ms for `uwsm app`); it still runs the returned
+    // command itself, so the environment here carries over.
     function exec(command, workingDirectory) {
         Quickshell.execDetached({
-            command: (root.useUwsm ? ["uwsm", "app", "--"] : []).concat(command),
+            command: (root.useUwsm ? ["uwsm-app", "--"] : []).concat(command),
             environment: { LD_PRELOAD: null },
             workingDirectory: workingDirectory || ""
         });

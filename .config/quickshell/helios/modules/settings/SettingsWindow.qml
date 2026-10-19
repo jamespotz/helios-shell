@@ -70,6 +70,8 @@ PanelWindow {
           keywords: ["power profile", "battery", "performance", "balanced", "power saver"] },
         { id: "keyboard", label: "Keyboard", icon: "keyboard", group: "System", component: keyboardPage,
           keywords: ["shortcuts", "keybinds", "cheatsheet"] },
+        { id: "customcommands", label: "Custom Commands", icon: "keyboard_command_key", group: "System", component: customCommandsPage,
+          keywords: ["shortcuts", "keybinds", "hotkey", "key combo", "launch", "open app", "custom"] },
         { id: "systemmonitor", label: "System monitor", icon: "memory", group: "System", component: systemMonitorPage,
           keywords: ["cpu", "gpu", "ram", "memory", "processes", "disk", "network usage"] },
         { id: "automation", label: "Automation", icon: "settings_suggest", group: "System", component: automationPage,
@@ -427,6 +429,7 @@ PanelWindow {
     Component { id: lockscreenPage; IdleDestination {} }
     Component { id: powerPage; PowerDestination {} }
     Component { id: keyboardPage; KeybindsDestination {} }
+    Component { id: customCommandsPage; CustomCommandsSettings {} }
     Component { id: systemMonitorPage; SystemMonitorDestination {} }
     Component { id: automationPage; AutomationDestination {} }
     Component { id: defaultAppsPage; DefaultAppsSettings {} }
