@@ -15,8 +15,8 @@ ShellRoot {
         width: 600
         height: 300
 
-        IslandModules.WallpaperCarousel {
-            id: wallpaperCarousel
+        IslandModules.WallpaperPicker {
+            id: wallpaperPicker
             width: 480
             anchors.centerIn: parent
         }
@@ -34,8 +34,8 @@ ShellRoot {
         interval: 220
         running: true
         onTriggered: {
-            if (wallpaperCarousel.carouselFocused) console.warn("WALLPAPER_FOCUS_TEST_PASS");
-            else console.error("WALLPAPER_FOCUS_TEST_FAIL: carousel lost focus after window focus handoff");
+            if (wallpaperPicker.gridFocused) console.warn("WALLPAPER_FOCUS_TEST_PASS");
+            else console.error("WALLPAPER_FOCUS_TEST_FAIL: grid lost focus after window focus handoff");
             root.terminator.running = true;
         }
     }

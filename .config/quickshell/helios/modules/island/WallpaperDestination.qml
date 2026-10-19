@@ -3,8 +3,8 @@ import Quickshell.Io
 import "../../services"
 import "../../components"
 
-// Card carousel leads wallpaper selection. Folder path stays behind a
-// collapsed disclosure row so routine selection remains focused.
+// Preview and tile grid lead wallpaper selection. The folder path stays
+// behind the header's folder button so routine selection remains focused.
 Item {
     id: root
 
@@ -33,45 +33,24 @@ Item {
         spacing: 16
 
         // Header
-        Row {
-            spacing: 8
-            MaterialIcon { icon: "wallpaper"; font.pixelSize: 18; color: Colors.accent; anchors.verticalCenter: parent.verticalCenter }
-            StyledText { text: "Wallpaper"; font.weight: Font.DemiBold; font.pixelSize: Config.fontSize + 2; anchors.verticalCenter: parent.verticalCenter }
-        }
-
-        WallpaperCarousel {
+        Item {
             width: parent.width
-        }
-
-        // --- Folder (collapsed disclosure row) --------------------------------
-        HoverRow {
-            width: parent.width
-            height: 46
-            highlighted: root.folderEditorOpen
-            onClicked: root.folderEditorOpen = !root.folderEditorOpen
+            height: folderButton.height
 
             Row {
-                anchors.left: parent.left
-                anchors.leftMargin: 8
-                anchors.right: parent.right
-                anchors.rightMargin: 8
-                anchors.verticalCenter: parent.verticalCenter
                 spacing: 8
+                anchors.verticalCenter: parent.verticalCenter
+                MaterialIcon { icon: "wallpaper"; font.pixelSize: 18; color: Colors.accent; anchors.verticalCenter: parent.verticalCenter }
+                StyledText { text: "Wallpaper"; font.weight: Font.DemiBold; font.pixelSize: Config.fontSize + 2; anchors.verticalCenter: parent.verticalCenter }
+            }
 
-                MaterialIcon { icon: "folder"; font.pixelSize: 15; opacity: 0.7; anchors.verticalCenter: parent.verticalCenter }
-                StyledText {
-                    width: parent.width - 15 - 15 - 16
-                    elide: Text.ElideMiddle
-                    opacity: 0.8
-                    text: WallpaperLibrary.folderPath || "No folder set"
-                    anchors.verticalCenter: parent.verticalCenter
-                }
-                MaterialIcon {
-                    icon: root.folderEditorOpen ? "expand_less" : "chevron_right"
-                    font.pixelSize: 15
-                    opacity: 0.5
-                    anchors.verticalCenter: parent.verticalCenter
-                }
+            IconButton {
+                id: folderButton
+                anchors.right: parent.right
+                icon: "folder"
+                label: "Wallpaper folder"
+                active: root.folderEditorOpen
+                onClicked: root.folderEditorOpen = !root.folderEditorOpen
             }
         }
 
@@ -139,6 +118,10 @@ Item {
                     onClicked: WallpaperLibrary.setFolder(root.draftFolder)
                 }
             }
+        }
+
+        WallpaperPicker {
+            width: parent.width
         }
 
         StyledText {
