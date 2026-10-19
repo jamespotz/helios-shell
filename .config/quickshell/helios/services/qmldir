@@ -30,6 +30,7 @@ singleton ThemeExportNvim 1.0 ThemeExportNvim.qml
 singleton ThemeExportZed 1.0 ThemeExportZed.qml
 singleton ThemeExportBat 1.0 ThemeExportBat.qml
 singleton ThemeExportFirefox 1.0 ThemeExportFirefox.qml
+singleton ThemeExportVivaldi 1.0 ThemeExportVivaldi.qml
 singleton ThemeExportYazi 1.0 ThemeExportYazi.qml
 singleton ThemeExportAlacritty 1.0 ThemeExportAlacritty.qml
 singleton ThemeExportWezterm 1.0 ThemeExportWezterm.qml

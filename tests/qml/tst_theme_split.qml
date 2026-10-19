@@ -26,6 +26,7 @@ ShellRoot {
         console.assert(ThemeExportZed.buildZedTheme(p).name === "Helios", "zed builds");
         console.assert(ThemeExportBat.buildBatTheme(p).includes("<plist"), "bat builds");
         console.assert(ThemeExportFirefox.buildFirefoxCss(p).includes("helios-bg"), "firefox css builds");
+        console.assert(ThemeExportVivaldi.buildVivaldiCss(p).includes("--colorBg: " + p.surface + " !important;"), "vivaldi css builds");
         console.assert(ThemeExportYazi.buildYaziTheme(p).includes("[mgr]"), "yazi builds");
         console.assert(ThemeExportAlacritty.buildAlacrittyTheme(p).includes("[colors.primary]"), "alacritty builds");
         console.assert(ThemeExportWezterm.buildWeztermTheme(p).includes("[colors]"), "wezterm builds");

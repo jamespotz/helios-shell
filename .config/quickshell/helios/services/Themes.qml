@@ -5,7 +5,7 @@ import Quickshell.Io
 import "../services"
 
 // Theme presets + persistence + system app theming (GTK/KDE, Ghostty, Kitty,
-// btop, Neovim, Zed, Bat, Yazi, best-effort Firefox), and dynamic theme
+// btop, Neovim, Zed, Bat, Yazi, best-effort Firefox and Vivaldi), and dynamic theme
 // generation from the current wallpaper via matugen. Colors.qml holds the
 // live palette the shell UI binds to; this singleton owns picking one and
 // pushing it in.
@@ -470,6 +470,7 @@ QtObject {
             ["zed", () => ThemeExportZed.writeZedTheme(p)],
             ["bat", () => ThemeExportBat.writeBatTheme(p)],
             ["firefox", () => ThemeExportFirefox.writeFirefoxTheme(p)],
+            ["vivaldi", () => ThemeExportVivaldi.writeVivaldiTheme(p)],
             ["hyprland", () => ThemeExportHyprland.writeHyprlandTheme(p)],
             ["yazi", () => ThemeExportYazi.writeYaziTheme(p)],
             ["alacritty", () => ThemeExportAlacritty.writeAlacrittyTheme(p)],
