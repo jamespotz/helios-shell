@@ -5,7 +5,7 @@ import Quickshell.Services.Pipewire
 import Quickshell.Services.UPower
 
 // Plays freedesktop sounds for the shell. Alert sounds go with an alert card
-// appearing — new notification (not low urgency), meeting reminder, low
+// appearing — new notification (not low urgency) or GitHub notification, meeting reminder, low
 // device battery — and need Settings > Island > Alerts > Alert sounds.
 // Interface sounds confirm a direct change — volume keys, recording
 // start/stop, a drive or Bluetooth device arriving or leaving, the charger,
@@ -85,6 +85,10 @@ QtObject {
     property Connections _notifications: Connections {
         target: Notifications
         function onPopupAdded(record) { if (record.urgency !== 0) root.play("notify"); }
+    }
+    property Connections _github: Connections {
+        target: GitHub
+        function onPopupAdded(record) { root.play("notify"); }
     }
     property Connections _calendar: Connections {
         target: Calendar

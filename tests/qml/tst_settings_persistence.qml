@@ -153,7 +153,7 @@ ShellRoot {
                     }
                     break;
                 case "automations":
-                    for (const rule of ["Headphones", "BluetoothAudio", "Monitor", "Battery", "Ac", "Fullscreen"]) {
+                    for (const rule of ["Headphones", "Monitor", "Battery", "Ac", "Fullscreen"]) {
                         if (root.writing) Automations["set" + rule + "Rule"](true);
                         else root.compare(Automations[rule.charAt(0).toLowerCase() + rule.slice(1) + "Rule"], true, rule + " automation");
                     }

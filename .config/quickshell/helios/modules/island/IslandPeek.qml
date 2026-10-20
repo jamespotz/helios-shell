@@ -29,7 +29,7 @@ Item {
     readonly property var widgets: ({
         workspaces: workspacesWidget, tiledLayout: tiledLayoutWidget, activeWindow: activeWindowWidget,
         clock: clockWidget, weather: weatherWidget, tray: trayWidget,
-        clipboard: clipboardWidget, statusIndicators: statusWidget, launcher: launcherWidget
+        clipboard: clipboardWidget, github: githubWidget, statusIndicators: statusWidget, launcher: launcherWidget
     })
 
     // Inline components can't reach this file's ids, so the row is passed in.
@@ -122,6 +122,11 @@ Item {
     Component {
         id: clipboardWidget
         ClipboardWidget { targetScreen: root.targetScreen }
+    }
+
+    Component {
+        id: githubWidget
+        GitHubWidget { targetScreen: root.targetScreen }
     }
 
     Component {

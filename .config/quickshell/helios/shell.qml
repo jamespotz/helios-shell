@@ -240,6 +240,17 @@ ShellRoot {
     }
 
     IpcHandler {
+        target: "github"
+        function toggle() {
+            const screen = Utils.focusedScreen(Quickshell.screens, Hyprland.focusedMonitor);
+            IslandNavigation.toggle(screen.name, "github");
+        }
+        function refresh() { GitHub.refresh() }
+        function markAllRead() { GitHub.markAllRead() }
+        function unread(): int { return GitHub.items.length }
+    }
+
+    IpcHandler {
         target: "recorder"
         // Starts/stops against whichever monitor Hyprland currently has
         // focused — same "focused" convention as the `island` handler —

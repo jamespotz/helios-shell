@@ -226,6 +226,7 @@ QtObject {
     readonly property bool showTray: settingsAdapter.showTray
     readonly property bool showStatusIndicators: settingsAdapter.showStatusIndicators
     readonly property bool showClipboard: settingsAdapter.showClipboard
+    readonly property bool showGithub: settingsAdapter.showGithub
     readonly property bool showLauncher: settingsAdapter.showLauncher
     readonly property bool showIdleLauncher: settingsAdapter.showIdleLauncher
     readonly property string launcherIconMode: settingsAdapter.launcherIconMode
@@ -245,14 +246,15 @@ QtObject {
     readonly property bool showIdleTray: settingsAdapter.showIdleTray
     readonly property bool showIdleStatusIndicators: settingsAdapter.showIdleStatusIndicators
     readonly property bool showIdleClipboard: settingsAdapter.showIdleClipboard
+    readonly property bool showIdleGithub: settingsAdapter.showIdleGithub
 
     // Widget order and side for the idle pill and the hover row. Each list
     // holds every widget key once plus one "|" marker: keys before it sit
     // on the left, after it on the right. Whether a widget shows is still
     // its show*/showIdle* toggle above. Set from Settings > Island.
     readonly property var widgetKeys: ({
-        idle: ["workspaces", "tiledLayout", "activeWindow", "media", "clock", "weather", "tray", "clipboard", "statusIndicators", "launcher"],
-        peek: ["workspaces", "tiledLayout", "activeWindow", "clock", "weather", "tray", "clipboard", "statusIndicators", "launcher"]
+        idle: ["workspaces", "tiledLayout", "activeWindow", "media", "clock", "weather", "tray", "clipboard", "github", "statusIndicators", "launcher"],
+        peek: ["workspaces", "tiledLayout", "activeWindow", "clock", "weather", "tray", "clipboard", "github", "statusIndicators", "launcher"]
     })
     readonly property var idleWidgetLayout: root._sanitizeLayout("idle", settingsAdapter.idleLayout)
     readonly property var peekWidgetLayout: root._sanitizeLayout("peek", settingsAdapter.peekLayout)
@@ -395,6 +397,7 @@ QtObject {
         showTray: { value: true },
         showStatusIndicators: { value: true },
         showClipboard: { value: false },
+        showGithub: { value: true },
         showLauncher: { value: false },
         showIdleLauncher: { value: false },
         launcherIconMode: { value: "os", choices: ["os", "custom"] },
@@ -409,8 +412,9 @@ QtObject {
         showIdleTray: { value: false },
         showIdleStatusIndicators: { value: false },
         showIdleClipboard: { value: false },
-        idleLayout: { value: ["workspaces", "tiledLayout", "activeWindow", "media", "clock", "weather", "tray", "clipboard", "statusIndicators", "|"] },
-        peekLayout: { value: ["workspaces", "tiledLayout", "activeWindow", "|", "clock", "weather", "tray", "clipboard", "statusIndicators"] },
+        showIdleGithub: { value: false },
+        idleLayout: { value: ["workspaces", "tiledLayout", "activeWindow", "media", "clock", "weather", "tray", "clipboard", "github", "statusIndicators", "|"] },
+        peekLayout: { value: ["workspaces", "tiledLayout", "activeWindow", "|", "clock", "weather", "tray", "clipboard", "github", "statusIndicators"] },
 
         workspaceIndicatorStyle: { value: "dots", choices: ["dots", "numbers", "custom"] },
         showAllWorkspaces: { value: true },
@@ -595,6 +599,7 @@ QtObject {
             property bool showTray: root.options.showTray.value
             property bool showStatusIndicators: root.options.showStatusIndicators.value
             property bool showClipboard: root.options.showClipboard.value
+            property bool showGithub: root.options.showGithub.value
             property bool showLauncher: root.options.showLauncher.value
             property bool showIdleLauncher: root.options.showIdleLauncher.value
             property string launcherIconMode: root.options.launcherIconMode.value
@@ -608,6 +613,7 @@ QtObject {
             property bool showIdleTray: root.options.showIdleTray.value
             property bool showIdleStatusIndicators: root.options.showIdleStatusIndicators.value
             property bool showIdleClipboard: root.options.showIdleClipboard.value
+            property bool showIdleGithub: root.options.showIdleGithub.value
             property var idleLayout: root.options.idleLayout.value
             property var peekLayout: root.options.peekLayout.value
             property string workspaceIndicatorStyle: root.options.workspaceIndicatorStyle.value

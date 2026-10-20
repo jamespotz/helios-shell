@@ -128,9 +128,15 @@ Rectangle {
                         anchors.verticalCenter: parent.verticalCenter
                     }
                     MaterialIcon {
-                        visible: !widgetRow.marker
-                        icon: widgetRow.info.icon
+                        visible: !widgetRow.marker && !widgetRow.info.githubMark
+                        icon: widgetRow.info.icon || ""
                         font.pixelSize: 16
+                        opacity: 0.8
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+                    GitHubMark {
+                        visible: !widgetRow.marker && !!widgetRow.info.githubMark
+                        size: 16
                         opacity: 0.8
                         anchors.verticalCenter: parent.verticalCenter
                     }

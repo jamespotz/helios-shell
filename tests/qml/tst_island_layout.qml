@@ -20,13 +20,14 @@ ShellRoot {
             Config.setOption("launcherIconPath", "/tmp/logo.svg");
             root.verify(JSON.parse(Config._islandPreset()).options.launcherIconPath === "/tmp/logo.svg", "custom icon included in presets");
             Config.resetOptions(["showIdleLauncher", "launcherIconMode", "launcherIconPath"]);
-            root.verify(Config.idleWidgetLayout.filter(k => k !== "launcher").join(",") === "workspaces,tiledLayout,activeWindow,media,clock,weather,tray,clipboard,statusIndicators,|", "idle default keeps existing order");
-            root.verify(Config.peekWidgetLayout.filter(k => k !== "launcher").join(",") === "workspaces,tiledLayout,activeWindow,|,clock,weather,tray,clipboard,statusIndicators", "peek default matches clusters");
+            root.verify(Config.widgetShown("peek", "github") && !Config.widgetShown("idle", "github"), "GitHub widget shows on hover by default, opt-in when idle");
+            root.verify(Config.idleWidgetLayout.filter(k => k !== "launcher").join(",") === "workspaces,tiledLayout,activeWindow,media,clock,weather,tray,clipboard,github,statusIndicators,|", "idle default keeps existing order");
+            root.verify(Config.peekWidgetLayout.filter(k => k !== "launcher").join(",") === "workspaces,tiledLayout,activeWindow,|,clock,weather,tray,clipboard,github,statusIndicators", "peek default matches clusters");
 
             root.verify(Config._sanitizeLayout("peek", ["clock", "bogus", "|", "clock", "|", "tray"]).join(",")
-                === "clock,|,tray,workspaces,tiledLayout,activeWindow,weather,clipboard,statusIndicators,launcher", "drops unknown/duplicates, appends missing");
+                === "clock,|,tray,workspaces,tiledLayout,activeWindow,weather,clipboard,github,statusIndicators,launcher", "drops unknown/duplicates, appends missing");
             root.verify(Config._sanitizeLayout("peek", ["clock"]).slice(-1)[0] === "|", "missing marker goes last");
-            root.verify(Config._sanitizeLayout("idle", null).length === 11, "bad value falls back to default");
+            root.verify(Config._sanitizeLayout("idle", null).length === 12, "bad value falls back to default");
             root.verify(!Config._sanitizeLayout("peek", []).includes("media"), "media is idle-only");
 
             Config.moveWidget("idle", "clock", 0);

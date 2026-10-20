@@ -27,6 +27,7 @@ Item {
         if (!Config.widgetShown("idle", key)) return false;
         if (key === "media") return root.mediaPlaying;
         if (key === "weather") return Weather.available;
+        if (key === "github") return GitHub.items.length > 0;
         return true;
     }
 
@@ -46,7 +47,7 @@ Item {
     readonly property var widgets: ({
         workspaces: workspacesWidget, tiledLayout: tiledLayoutWidget, activeWindow: activeWindowWidget,
         media: mediaWidget, clock: clockWidget, weather: weatherWidget, tray: trayWidget,
-        clipboard: clipboardWidget, statusIndicators: statusWidget, launcher: launcherWidget
+        clipboard: clipboardWidget, github: githubWidget, statusIndicators: statusWidget, launcher: launcherWidget
     })
 
     // Inline components can't reach this file's ids, so the pill is passed in.
@@ -180,6 +181,11 @@ Item {
     Component {
         id: clipboardWidget
         ClipboardWidget { targetScreen: root.targetScreen }
+    }
+
+    Component {
+        id: githubWidget
+        GitHubWidget { targetScreen: root.targetScreen }
     }
 
     Component {

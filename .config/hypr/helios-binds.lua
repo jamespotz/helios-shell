@@ -149,6 +149,8 @@ hl.bind(mainMod .. " + ALT + D", hl.dsp.exec_cmd(helios .. " island toggle displ
   { description = "helios: Toggle display settings island" })
 hl.bind(mainMod .. " + ALT + H", hl.dsp.exec_cmd(helios .. " island toggle notifications"),
   { description = "helios: Toggle notification history island" })
+hl.bind(mainMod .. " + ALT + G", hl.dsp.exec_cmd(helios .. " github toggle"),
+  { description = "helios: Toggle GitHub island" })
 hl.bind(mainMod .. " + ALT + L", hl.dsp.exec_cmd(helios .. " island toggle nightlight"),
   { description = "helios: Toggle night light island" })
 hl.bind(mainMod .. " + ALT + B", hl.dsp.exec_cmd(helios .. " island toggle idlelock"),

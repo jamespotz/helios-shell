@@ -22,7 +22,8 @@ SettingsPreviewPage {
         activeWindow: { icon: "web_asset", label: "Active window" },
         tray: { icon: "widgets", label: "Tray icons" },
         statusIndicators: { icon: "sensors", label: "Status icons" },
-        clipboard: { icon: "content_paste", label: "Clipboard" }
+        clipboard: { icon: "content_paste", label: "Clipboard" },
+        github: { githubMark: true, label: "GitHub" }
     })
     readonly property var idleWidgetKeys: Config.widgetKeys.idle.map(k => Config.widgetOption("idle", k)).concat(["idleLayout"])
     readonly property var peekWidgetKeys: Config.widgetKeys.peek.map(k => Config.widgetOption("peek", k)).concat(["peekLayout"])

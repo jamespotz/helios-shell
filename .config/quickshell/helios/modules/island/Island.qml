@@ -28,6 +28,7 @@ PanelWindow {
     Component.onCompleted: Audio.setIslandExpanded(modelData.name, audioWakeActive)
     Component.onDestruction: Audio.setIslandExpanded(modelData.name, false)
     readonly property bool notifyMode: mode === "notify"
+    readonly property bool githubMode: mode === "github"
     readonly property bool taskMode: mode === "task"
     readonly property bool meetingMode: mode === "meeting"
     readonly property bool focusTimerMode: mode === "focus-timer"
@@ -224,7 +225,7 @@ PanelWindow {
         // Loader). A sibling of `visual` never sees keys typed into it.
         Keys.onEscapePressed: {
             IslandNavigation.dismiss(bar.modelData.name, bar.mode);
-            if (!bar.panelOpen && !bar.notifyMode && !bar.meetingMode && !bar.batteryMode && !bar.focusTimerMode)
+            if (!bar.panelOpen && !bar.notifyMode && !bar.githubMode && !bar.meetingMode && !bar.batteryMode && !bar.focusTimerMode)
                 bar.hovering = false;
         }
 
@@ -373,7 +374,7 @@ PanelWindow {
                     anchors.topMargin: bar.padV
                     anchors.horizontalCenter: parent.horizontalCenter
                     opacity: 0
-                    sourceComponent: bar.panelOpen ? panelComp : bar.notifyMode ? notifyComp : bar.taskMode ? taskComp : bar.meetingMode ? meetingComp : bar.batteryMode ? batteryComp : bar.focusTimerMode ? focusTimerComp : bar.hovering ? peekComp : idleComp
+                    sourceComponent: bar.panelOpen ? panelComp : bar.notifyMode ? notifyComp : bar.githubMode ? githubComp : bar.taskMode ? taskComp : bar.meetingMode ? meetingComp : bar.batteryMode ? batteryComp : bar.focusTimerMode ? focusTimerComp : bar.hovering ? peekComp : idleComp
                     onLoaded: contentFadeIn.restart()
 
                     NumberAnimation {
@@ -429,6 +430,10 @@ PanelWindow {
     Component {
         id: notifyComp
         NotificationCard {}
+    }
+    Component {
+        id: githubComp
+        GitHubCard {}
     }
     Component {
         id: taskComp

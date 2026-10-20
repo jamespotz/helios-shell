@@ -23,6 +23,7 @@ QtObject {
         root._destination("calendar", "Calendar", "CalendarDestination.qml"),
         root._destination("system", "System Monitor", "SystemMonitorDestination.qml"),
         root._destination("notifications", "Notifications", "NotificationHistoryDestination.qml"),
+        root._destination("github", "GitHub", "GitHubDestination.qml"),
         root._destination("nightlight", "Night Light", "NightLightDestination.qml"),
         root._destination("display", "Displays", "DisplayDestination.qml"),
         root._destination("idlelock", "Idle & Lock", "IdleDestination.qml"),
@@ -137,6 +138,11 @@ QtObject {
             mode: "notify",
             active: () => Notifications.state.popups.length > 0,
             dismiss: () => Notifications.dismissAll()
+        },
+        {
+            mode: "github",
+            active: () => GitHub.popups.length > 0,
+            dismiss: () => GitHub.hideAllPopups()
         },
         {
             mode: "battery",
