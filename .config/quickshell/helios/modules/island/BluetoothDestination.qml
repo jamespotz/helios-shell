@@ -7,8 +7,6 @@ Item {
 
     readonly property var bluetooth: Bluetooth.state
     readonly property var devices: root.bluetooth.devices
-    readonly property var connectedDevice: root.devices.find(d => d.connected) || null
-    readonly property var audioProfile: root.connectedDevice ? root.connectedDevice.audio : null
     // Trusted, not just Paired: some devices (confirmed for the Soundcore
     // R60i NC) never persist a real bond — BlueZ reports Paired: false the
     // moment they disconnect, even though Trusted (the actual "this is my
@@ -111,24 +109,6 @@ Item {
             font.pixelSize: Config.fontSize - 2
             wrapMode: Text.WordWrap
             width: parent.width
-        }
-
-        Item {
-            width: parent.width
-            height: profileSwitch.implicitHeight
-            visible: root.bluetooth.powered && !!root.audioProfile
-
-            SegmentedControl {
-                id: profileSwitch
-                width: 180
-                anchors.left: parent.left
-                model: [
-                    { value: "music", label: "Audio", icon: "" },
-                    { value: "call", label: "Calls", icon: "" }
-                ]
-                currentValue: root.audioProfile ? root.audioProfile.category : null
-                onActivated: value => Bluetooth.setAudioProfile(root.connectedDevice.id, value)
-            }
         }
 
         // Scan/Refresh + Pairing/Discoverable + My Devices / Nearby

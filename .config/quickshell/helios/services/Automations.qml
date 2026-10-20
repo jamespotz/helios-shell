@@ -17,21 +17,19 @@ QtObject {
     id: root
 
     property bool headphonesRule: false
-    property bool bluetoothAudioRule: false
     property bool monitorRule: false
     property bool batteryRule: false
     property bool acRule: false
     property bool fullscreenRule: false
 
     function setHeadphonesRule(v) { root.headphonesRule = v; root._save(); }
-    function setBluetoothAudioRule(v) { root.bluetoothAudioRule = v; root._save(); }
     function setMonitorRule(v) { root.monitorRule = v; root._save(); }
     function setBatteryRule(v) { root.batteryRule = v; root._save(); if (v) root._checkBattery(); }
     function setAcRule(v) { root.acRule = v; root._save(); }
     function setFullscreenRule(v) { root.fullscreenRule = v; root._save(); root._setFullscreen(v && root.focusedFullscreen); }
 
     function _save() {
-        settingsFile.setText(JSON.stringify({ headphones: root.headphonesRule, bluetoothAudio: root.bluetoothAudioRule, monitor: root.monitorRule, battery: root.batteryRule, ac: root.acRule, fullscreen: root.fullscreenRule }));
+        settingsFile.setText(JSON.stringify({ headphones: root.headphonesRule, monitor: root.monitorRule, battery: root.batteryRule, ac: root.acRule, fullscreen: root.fullscreenRule }));
     }
 
     property FileView settingsFile: FileView {
@@ -45,7 +43,6 @@ QtObject {
                 const parsed = JSON.parse(settingsFile.text());
                 if (parsed) {
                     root.headphonesRule = !!parsed.headphones;
-                    root.bluetoothAudioRule = !!parsed.bluetoothAudio;
                     root.monitorRule = !!parsed.monitor;
                     root.batteryRule = !!parsed.battery;
                     root.acRule = !!parsed.ac;
@@ -78,7 +75,7 @@ QtObject {
         if (screen) IslandNavigation.toggle(screen, "media");
     }
 
-    // ─── Rule: Bluetooth audio connects → make it default output ─────
+    // ─── Bluetooth audio reconnects → restore preferred output ─────
     // Keyed on the BlueZ connection, not the audio node: switching between
     // music (A2DP) and call (HFP) — WirePlumber does this whenever an app
     // like Zoom opens the mic — tears the sink down and recreates it. Routing
@@ -112,7 +109,7 @@ QtObject {
         }
         const step = root._bluetoothAudioStep(root._bluetoothAudioState, root.connectedBluetoothIds, root.connectedBluetoothAudio);
         root._bluetoothAudioState = step.state;
-        if (step.route && (root.bluetoothAudioRule || Audio.preferredOutputName === step.route))
+        if (step.route && Audio.preferredOutputName === step.route)
             Audio.routeConnectedBluetoothOutput(step.route);
     }
 

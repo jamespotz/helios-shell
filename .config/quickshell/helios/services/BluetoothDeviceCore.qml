@@ -44,7 +44,6 @@ QtObject {
         if (!node) return null;
         const props = node.properties || {}, codec = props[root.codecPropertyKey], profile = props[root.profilePropertyKey];
         if (!codec && !profile) return null;
-        const category = String(profile || "").toLowerCase().startsWith("headset") ? "call" : "music";
-        return { codec: root._friendlyCodec(codec), profile: root._friendlyProfile(profile), category: category, nodeName: node.name || "" };
+        return { codec: root._friendlyCodec(codec), profile: root._friendlyProfile(profile), nodeName: node.name || "" };
     }
 }

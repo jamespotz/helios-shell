@@ -1,8 +1,6 @@
 pragma Singleton
 import QtQuick
-import Quickshell.Io
 import Quickshell.Services.Pipewire
-import Quickshell.Services.UPower
 import Quickshell.Bluetooth as QsBluetooth
 
 // Reactive Bluetooth state backed by Quickshell's native BlueZ integration.
@@ -17,7 +15,6 @@ QtObject {
 
     property bool active: false
     property string lastError: ""
-    property var cards: []
 
     readonly property var _audioSinks: Pipewire.nodes
         ? Pipewire.nodes.values.filter(n => n.isSink && !n.isStream && (n.type & PwNodeType.AudioSink) === PwNodeType.AudioSink)
@@ -37,7 +34,6 @@ QtObject {
     })
 
     signal errorOccurred(string action, string message)
-    signal deviceAutoConnected(string name)
     signal deviceConnectionChanged(bool connected)
 
     function _deviceForId(id) {
@@ -53,29 +49,16 @@ QtObject {
     function setActive(active) {
         if (root.active === active) return;
         root.active = active;
-        if (active) cardsProc.running = true;
         if (root.adapter && root.adapter.enabled) root.setScanning(active);
-        root._scheduleReconnect(false);
-    }
-
-    function refreshAll() {
-        // Native BlueZ objects update from D-Bus signals. Only PipeWire card
-        // profiles still need an external snapshot, and only while visible.
-        if (root.active) {
-            cardsProc.running = false;
-            cardsProc.running = true;
-        }
     }
 
     function setPowered(enabled) {
         if (!root.adapter) { root._reportError("power", "No Bluetooth adapter"); return; }
         root.adapter.enabled = enabled;
-        if (!enabled) root._cancelReconnect();
     }
 
     function setScanning(scanning) {
         if (!root.adapter) { root._reportError("discovery", "No Bluetooth adapter"); return; }
-        root._autoDiscovery = false;
         root.adapter.discovering = scanning;
     }
 
@@ -86,7 +69,6 @@ QtObject {
     }
 
     property string pendingPairId: ""
-    property string autoConnectId: ""
 
     function pair(id) {
         const device = root._deviceForId(id);
@@ -99,23 +81,13 @@ QtObject {
     function connect(id) {
         const device = root._deviceForId(id);
         if (!device) { root._reportError("connect", "Device is no longer available"); return false; }
-        root._forgetUserDisconnect(id);
-        // Retry-eligible without touching trust, so a flaky first connect
-        // (e.g. Soundcore R60i) doesn't die silently and the Auto-connect
-        // toggle keeps whatever the user set.
-        root._requestedId = id;
         device.connect();
-        root._scheduleReconnect(true);
         return true;
     }
 
     function disconnect(id) {
         const device = root._deviceForId(id);
         if (!device) { root._reportError("disconnect", "Device is no longer available"); return false; }
-        // Kept until the device connects again, so the reconnect loop
-        // doesn't undo a manual disconnect 5s later.
-        root._userDisconnectedIds = Object.assign({}, root._userDisconnectedIds, { [id]: true });
-        if (root._requestedId === id) root._requestedId = "";
         device.disconnect();
         return true;
     }
@@ -123,23 +95,15 @@ QtObject {
     function forget(id) {
         const device = root._deviceForId(id);
         if (!device) { root._reportError("forget", "Device is no longer available"); return false; }
-        if (root.autoConnectId === id) root._cancelReconnect();
-        root._forgetUserDisconnect(id);
-        if (root._requestedId === id) root._requestedId = "";
         device.forget();
         return true;
     }
 
+    // Auto-connect is BlueZ's Trusted flag; the reconnect pass below acts on it.
     function setAutoConnect(id, enabled) {
         const device = root._deviceForId(id);
         if (!device) { root._reportError("set trusted", "Device is no longer available"); return false; }
         device.trusted = enabled;
-        if (enabled) root._scheduleReconnect(true);
-        else if (root.autoConnectId === id) {
-            // Drop the in-flight attempt so it can't announce itself later.
-            root._cancelReconnect();
-            root._scheduleReconnect(false);
-        }
         return true;
     }
 
@@ -182,197 +146,44 @@ QtObject {
         onTriggered: root._scanLowBattery()
     }
 
-    // PipeWire's QML API does not expose card-profile changes, so this one
-    // action keeps pactl. Card enumeration happens only while this panel is
-    // active, never on an idle timer.
-    function setAudioProfile(id, category) {
-        const device = root._deviceForId(id);
-        if (!device || !device.address) return false;
-        const cardName = "bluez_card." + device.address.toUpperCase().replace(/:/g, "_");
-        const card = root.cards.find(candidate => candidate.name === cardName);
-        if (!card || !card.profiles) return false;
-        const prefix = category === "call" ? "headset-head-unit" : "a2dp-sink";
-        const candidates = Object.keys(card.profiles)
-            .filter(name => (name === prefix || name.startsWith(prefix + "-")) && card.profiles[name].available)
-            .sort((a, b) => card.profiles[b].priority - card.profiles[a].priority);
-        if (candidates.length === 0) return false;
-        profileProc.errText = "";
-        profileProc.command = ["pactl", "set-card-profile", cardName, candidates[0]];
-        profileProc.running = true;
-        return true;
-    }
-
-    property Process profileProc: Process {
-        property string errText: ""
-        stderr: StdioCollector { onStreamFinished: profileProc.errText = text }
-        onExited: exitCode => {
-            if (exitCode !== 0) root._reportError("audio profile", profileProc.errText.trim() || "Failed");
-            root.refreshAll();
-        }
-    }
-
-    property Process cardsProc: Process {
-        command: ["pactl", "-f", "json", "list", "cards"]
-        stdout: StdioCollector {
-            onStreamFinished: {
-                try { root.cards = JSON.parse(text) || []; }
-                catch (error) { root._reportError("audio profiles", "Invalid pactl response"); }
-            }
-        }
-    }
-
     property Timer errorClearTimer: Timer {
         interval: 6000
         onTriggered: root.lastError = ""
     }
 
-    // Exceptional reconnect path for trusted devices that do not retain a
-    // BlueZ bond, and for the device the user last asked to connect. Bonded
-    // devices reconnect on their own. Attempts are finite and increasingly
-    // spaced, and the budget resets only on events from a target device or
-    // a user action. On battery it runs only while the Bluetooth panel is
-    // open.
+    // BlueZ keeps paired devices trusted but never dials out to them, so
+    // audio devices stay disconnected until the host calls Connect(). At
+    // startup and whenever the adapter powers on, connect every paired,
+    // trusted device, retrying while the controller and devices settle.
+    // Drops later in the session are left to BlueZ and the device.
+    readonly property var reconnectDelays: [2000, 4000, 8000]
     property int reconnectAttempt: 0
-    readonly property int maxReconnectAttempts: 4
-    readonly property var reconnectDelays: [5000, 15000, 30000, 60000]
-    property bool _autoDiscovery: false
-    // Set by disconnect(id); excludes those devices from reconnect targeting
-    // until they connect again. See disconnect()/connect() and onConnectedChanged.
-    property var _userDisconnectedIds: ({})
-    // Set by connect(id); retried even when bonded, until it connects.
-    property string _requestedId: ""
-    readonly property BluetoothReconnectCore _reconnectCore: BluetoothReconnectCore {}
-    // Paused, not cancelled: the attempt count carries over, and the loop
-    // picks up again when the call ends.
-    readonly property bool _inCall: root._reconnectCore.anyDeviceInCall(root.state.devices)
 
-    function _pauseReconnect() {
-        reconnectTimer.stop();
-        reconnectFinalCheckTimer.stop();
-        root._stopAutoDiscovery();
+    function _needsReconnect(device) {
+        return device.paired && device.trusted && !device.connected;
     }
 
-    on_InCallChanged: {
-        if (root._inCall) root._pauseReconnect();
-        else root._scheduleReconnect(false);
-    }
-
-    function _forgetUserDisconnect(id) {
-        if (!root._userDisconnectedIds[id]) return;
-        const next = Object.assign({}, root._userDisconnectedIds);
-        delete next[id];
-        root._userDisconnectedIds = next;
-    }
-
-    function _isReconnectTarget(device) {
-        return root._reconnectCore.isTarget(device, root._userDisconnectedIds, root._requestedId);
-    }
-
-    function _reconnectTarget() {
-        return root._reconnectCore.reconnectTarget(root.nativeDevices, root._userDisconnectedIds, root._requestedId);
-    }
-
-    function _idleReconnectTarget() {
-        return root._reconnectCore.idleReconnectTarget(root.nativeDevices, root._userDisconnectedIds, root._requestedId, root.autoConnectId);
-    }
-
-    // True while any device is mid-pair or mid-connect, including one the
-    // user is connecting by hand. Toggling discovery then starves its SDP
-    // negotiation, so the reconnect loop backs off.
-    function _anyDeviceNegotiating() {
-        return root._reconnectCore.anyDeviceNegotiating(root.nativeDevices);
-    }
-
-    function _stopAutoDiscovery() {
-        if (root._autoDiscovery && root.adapter && root.adapter.discovering)
-            root.adapter.discovering = false;
-        root._autoDiscovery = false;
-    }
-
-    function _cancelReconnect() {
-        reconnectTimer.stop();
-        reconnectFinalCheckTimer.stop();
+    function _scheduleReconnect() {
         root.reconnectAttempt = 0;
-        root.autoConnectId = "";
-        root._stopAutoDiscovery();
+        root._armReconnect();
     }
 
-    function _scheduleReconnect(resetBudget) {
-        const device = root._reconnectTarget();
-        if (!root.adapter || !root.adapter.enabled || !device || (UPower.onBattery && !root.active)) {
-            root._cancelReconnect();
-            return;
-        }
-        if (resetBudget) {
-            root.reconnectAttempt = 0;
-            // A pending final check belongs to the previous budget; letting
-            // it fire would stop discovery mid-cycle and report a failure.
-            reconnectFinalCheckTimer.stop();
-        }
-        if (root._inCall) return;
-        if (root.reconnectAttempt >= root.maxReconnectAttempts || reconnectTimer.running) return;
+    function _armReconnect() {
+        if (!root.adapter || !root.adapter.enabled || root.reconnectAttempt >= root.reconnectDelays.length) return;
         reconnectTimer.interval = root.reconnectDelays[root.reconnectAttempt];
-        reconnectTimer.start();
-    }
-
-    function _attemptReconnect() {
-        const device = root._reconnectTarget();
-        if (!device || !root.adapter || !root.adapter.enabled || (UPower.onBattery && !root.active)) {
-            root._cancelReconnect();
-            return;
-        }
-        if (root._inCall) { root._pauseReconnect(); return; }
-
-        // A connect/pair attempt (ours or the user's) may still be in
-        // flight — some devices (Soundcore R60i) take 15-20s to finish SDP.
-        // Toggling discovery mid-attempt starves that negotiation and drops
-        // the link. Back off. This still uses up one attempt, so a device
-        // stuck negotiating can't stall the loop forever.
-        if (root._anyDeviceNegotiating()) {
-            if (root.reconnectAttempt >= root.maxReconnectAttempts) {
-                root._cancelReconnect();
-                return;
-            }
-            root.reconnectAttempt++;
-            root._scheduleReconnect(false);
-            return;
-        }
-
-        // Never null here: a target exists and none are negotiating.
-        const idleDevice = root._idleReconnectTarget();
-
-        if (!root.adapter.discovering) {
-            root._autoDiscovery = true;
-            root.adapter.discovering = true;
-        }
-
-        root.autoConnectId = idleDevice.address || idleDevice.dbusPath;
-        root.reconnectAttempt++;
-        if (idleDevice.paired) idleDevice.connect();
-        else {
-            root.pendingPairId = root.autoConnectId;
-            idleDevice.pair();
-        }
-        if (root.reconnectAttempt >= root.maxReconnectAttempts) {
-            // Give this last attempt its full window before declaring
-            // failure — it's still negotiating, not done yet.
-            reconnectFinalCheckTimer.restart();
-        } else {
-            root._scheduleReconnect(false);
-        }
-    }
-
-    property Timer reconnectFinalCheckTimer: Timer {
-        interval: root.reconnectDelays[root.reconnectDelays.length - 1]
-        onTriggered: {
-            root._stopAutoDiscovery();
-            const device = root._deviceForId(root.autoConnectId);
-            if (device && !device.connected) root._reportError("reconnect", "Could not reconnect to " + (device.name || device.deviceName || "device"));
-        }
+        reconnectTimer.restart();
     }
 
     property Timer reconnectTimer: Timer {
-        onTriggered: root._attemptReconnect()
+        onTriggered: {
+            if (!root.adapter || !root.adapter.enabled) return;
+            root.reconnectAttempt++;
+            for (const device of root.nativeDevices) {
+                if (root._needsReconnect(device) && device.state !== QsBluetooth.BluetoothDeviceState.Connecting)
+                    device.connect();
+            }
+            if (root.nativeDevices.some(root._needsReconnect)) root._armReconnect();
+        }
     }
 
     // Bound to the ObjectModel, not its values array, so discovery adding
@@ -396,48 +207,21 @@ QtObject {
                 }
 
                 function onConnectedChanged() {
-                    const id = modelData.address || modelData.dbusPath;
                     root.deviceConnectionChanged(modelData.connected);
-                    if (modelData.connected) {
-                        root._forgetUserDisconnect(id);
-                        if (id === root._requestedId) root._requestedId = "";
-                        if (id === root.autoConnectId) {
-                            root.deviceAutoConnected(modelData.name || modelData.deviceName);
-                            // The target is back. Fresh budget for any
-                            // other device that's still missing.
-                            root._cancelReconnect();
-                            root._scheduleReconnect(true);
-                        } else {
-                            // Another device's event must not refill the
-                            // budget of a target that stays unreachable.
-                            root._scheduleReconnect(false);
-                        }
-                    } else if (root._isReconnectTarget(modelData)) {
-                        root._scheduleReconnect(true);
-                    }
-                }
-
-                function onTrustedChanged() {
-                    if (modelData.trusted) root._scheduleReconnect(true);
                 }
             }
         }
     }
 
-    onNativeDevicesChanged: root._scheduleReconnect(false)
-
     property Connections adapterWatcher: Connections {
         target: root.adapter
         function onEnabledChanged() {
             if (root.active && root.adapter.enabled) root.setScanning(true);
-            root._scheduleReconnect(true);
+            if (root.adapter.enabled) root._scheduleReconnect();
         }
     }
 
-    property Connections batteryWatcher: Connections {
-        target: UPower
-        function onOnBatteryChanged() { root._scheduleReconnect(false); }
-    }
-
-    Component.onCompleted: root._scheduleReconnect(true)
+    // The adapter can appear after startup; the first pass waits for it.
+    onAdapterChanged: root._scheduleReconnect()
+    Component.onCompleted: root._scheduleReconnect()
 }

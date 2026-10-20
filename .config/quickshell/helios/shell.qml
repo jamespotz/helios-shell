@@ -52,7 +52,7 @@ ShellRoot {
             Themes.currentLabel();
             NightLight.enabled;    // restores persisted state + spawns wlsunset if needed
             IdleInhibit.enabled;   // restores persisted state + spawns hypridle if needed
-            Automations.bluetoothAudioRule; // rules only run once the singleton exists
+            Automations.headphonesRule; // rules only run once the singleton exists
             FocusTimer.state;
             Audio.preferredOutputName;
             AlertSounds.soundFor;   // listens for alerts from startup
