@@ -65,8 +65,11 @@ PanelWindow {
     WlrLayershell.namespace: "helios:bar"
     // IPC-opened panel content needs immediate keyboard focus for search
     // fields and shortcuts. Passive cards must never steal keyboard input
-    // from the active application when they appear.
-    WlrLayershell.keyboardFocus: bar.panelOpen && IslandNavigation.current && IslandNavigation.current.retainOnFocusLoss ? WlrKeyboardFocus.Exclusive : bar.panelOpen || bar.expanded || bar.satelliteOpen ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
+    // from the active application when they appear. `hovering`, not
+    // `expanded`: an alert expands the Island on its own, and Hyprland
+    // focuses a layer as soon as it turns interactive, which breaks a
+    // game's pointer lock.
+    WlrLayershell.keyboardFocus: bar.panelOpen && IslandNavigation.current && IslandNavigation.current.retainOnFocusLoss ? WlrKeyboardFocus.Exclusive : bar.panelOpen || bar.hovering || bar.satelliteOpen ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
     anchors.top: true
     // Reserves enough room for the *whole* idle bump plus a visible gap
     // below it, not just the top margin — otherwise a maximized window's
