@@ -77,6 +77,11 @@ Item {
         color: Colors.surface
         clip: true
 
+        // Behind the content; follows the selected day's condition.
+        WeatherEffectMini {
+            condition: root.condition
+        }
+
         StyledText {
             visible: !Weather.available
             anchors.centerIn: parent
