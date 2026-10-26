@@ -324,6 +324,21 @@ Item {
                         }
                     }
 
+                    // Audio/Call — only for connected devices with an audio sink.
+                    SegmentedControl {
+                        visible: myRow.modelData.connected && !!myRow.modelData.audio
+                        width: parent.width
+                        height: 30
+                        model: [
+                            { value: "audio", label: "Audio", icon: "headphones" },
+                            { value: "call", label: "Call", icon: "call" }
+                        ]
+                        currentValue: myRow.modelData.audio && myRow.modelData.audio.profile === "HFP/HSP" ? "call" : "audio"
+                        onActivated: value => {
+                            if (value !== currentValue) Bluetooth.setAudioMode(myRow.modelData.address, value);
+                        }
+                    }
+
                     Item {
                         visible: myRow.expanded
                         width: parent.width

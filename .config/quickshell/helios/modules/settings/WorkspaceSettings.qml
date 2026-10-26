@@ -9,6 +9,7 @@ Item {
 
     // Workspace whose icon picker is open (0 = none) — one at a time.
     property int editingWorkspace: 0
+    readonly property bool glyphStyle: !["dots", "pills"].includes(Config.workspaceIndicatorStyle)
     readonly property var workspaceIconSuggestions: [
         "terminal", "code", "language", "forum", "mail", "music_note", "movie", "sports_esports",
         "folder", "edit_note", "brush", "photo_camera", "work", "home", "school", "description"
@@ -38,17 +39,26 @@ Item {
                 last: Config.workspaceIndicatorStyle === "dots"
                 choices: [
                     { value: "dots", label: "Dots" },
+                    { value: "pills", label: "Pills" },
                     { value: "numbers", label: "Numbers" },
                     { value: "custom", label: "Custom" }
                 ]
             }
-            // Only meaningful for glyph styles — dots always show every workspace.
+            // Only meaningful for glyph styles — dots and pills always show every workspace.
             OptionToggle {
-                visible: Config.workspaceIndicatorStyle !== "dots"
+                visible: root.glyphStyle
                 target: Config
                 option: "showAllWorkspaces"
                 icon: "view_week"
                 label: "Show all workspaces"
+                last: true
+            }
+            OptionToggle {
+                visible: Config.workspaceIndicatorStyle === "pills"
+                target: Config
+                option: "workspacePillsSameHeight"
+                icon: "height"
+                label: "Same height"
                 last: true
             }
         }

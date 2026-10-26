@@ -4,7 +4,8 @@ import "../../components"
 import "../../services"
 
 // Apple-style workspace indicators. "dots" style: rounded pill for the
-// active workspace, small dots for others. "numbers" and "custom" styles:
+// active workspace, small dots for others. "pills" style: vertical
+// capsules, the active one taller. "numbers" and "custom" styles:
 // one glyph per workspace (counter_N, or the user's icon in custom) — a
 // filled badge slides to the active workspace, or, when only the current
 // workspace is shown, the glyph rolls like an odometer.
@@ -15,7 +16,8 @@ Item {
     readonly property var monitor: targetScreen ? Hyprland.monitorFor(targetScreen) : null
     readonly property var activeWs: monitor ? monitor.activeWorkspace : Hyprland.focusedWorkspace
     // Glyph styles — "numbers" and "custom" share layout and motion.
-    readonly property bool numbers: Config.workspaceIndicatorStyle !== "dots"
+    readonly property bool numbers: !["dots", "pills"].includes(Config.workspaceIndicatorStyle)
+    readonly property bool pills: Config.workspaceIndicatorStyle === "pills"
     readonly property bool custom: Config.workspaceIndicatorStyle === "custom"
     readonly property bool rolling: numbers && !Config.showAllWorkspaces
 
@@ -84,18 +86,19 @@ Item {
                     : root.numbers ? Colors.text : Colors.overlay
 
                 visible: root.monitor === null || modelData.monitor === root.monitor
-                width: root.numbers ? glyph.implicitWidth : (modelData.focused ? 22 : 7)
-                height: root.numbers ? glyph.implicitHeight : 7
+                width: root.numbers ? glyph.implicitWidth : root.pills ? 6 : (modelData.focused ? 22 : 7)
+                height: root.numbers ? glyph.implicitHeight : root.pills ? (modelData.focused || Config.workspacePillsSameHeight ? 16 : 9) : 7
                 anchors.verticalCenter: parent ? parent.verticalCenter : undefined
                 opacity: modelData.focused ? 1 : 0.6
 
                 Behavior on width { enabled: !Config.reducedMotion; Spring {} }
+                Behavior on height { enabled: !Config.reducedMotion; Spring {} }
                 Behavior on opacity { NumberAnimation { duration: Config.animFast } }
 
                 Rectangle {
                     anchors.fill: parent
                     visible: !root.numbers
-                    radius: height / 2
+                    radius: Math.min(width, height) / 2
                     color: dot.tint
                     Behavior on color { ColorAnimation { duration: Config.animFast } }
                 }
@@ -114,7 +117,7 @@ Item {
                 Rectangle {
                     anchors.fill: parent
                     anchors.margins: -2
-                    radius: height / 2
+                    radius: Math.min(width, height) / 2
                     color: "transparent"
                     border.width: 1
                     border.color: Colors.text

@@ -297,6 +297,7 @@ QtObject {
     }
 
     // Workspace indicator look — "dots" (pill for the focused workspace),
+    // "pills" (vertical capsules, the focused one taller),
     // "numbers" (Material Symbols counter_N glyphs), or "custom" (a
     // user-picked Material Symbol per workspace, counter_N when unset).
     // Set from Settings > Workspaces.
@@ -305,6 +306,8 @@ QtObject {
     readonly property var workspaceIcons: settingsAdapter.workspaceIcons
     // false = only the monitor's active workspace is shown.
     readonly property bool showAllWorkspaces: settingsAdapter.showAllWorkspaces
+    // "pills" style: every pill at full height; only color marks the focused one.
+    readonly property bool workspacePillsSameHeight: settingsAdapter.workspacePillsSameHeight
 
     // Empty icon clears the override. Reassigns a copy so bindings update.
     function setWorkspaceIcon(id, icon) {
@@ -416,8 +419,9 @@ QtObject {
         idleLayout: { value: ["workspaces", "tiledLayout", "activeWindow", "media", "clock", "weather", "tray", "clipboard", "github", "statusIndicators", "|"] },
         peekLayout: { value: ["workspaces", "tiledLayout", "activeWindow", "|", "clock", "weather", "tray", "clipboard", "github", "statusIndicators"] },
 
-        workspaceIndicatorStyle: { value: "dots", choices: ["dots", "numbers", "custom"] },
+        workspaceIndicatorStyle: { value: "dots", choices: ["dots", "pills", "numbers", "custom"] },
         showAllWorkspaces: { value: true },
+        workspacePillsSameHeight: { value: false },
 
         wallpaperTransitionStyle: { value: "any", choices: root.wallpaperTransitionStyles },
 
@@ -501,7 +505,7 @@ QtObject {
     // the global font, clock, workspace, wallpaper and motion options) as
     // JSON, copied and pasted through the clipboard.
     readonly property var islandKeys: Object.keys(root.options).filter(key => !key.startsWith("turntable") && ![
-        "fontFamily", "fontSize", "workspaceIndicatorStyle", "showAllWorkspaces",
+        "fontFamily", "fontSize", "workspaceIndicatorStyle", "showAllWorkspaces", "workspacePillsSameHeight",
         "wallpaperTransitionStyle", "use24HourClock", "clockAmPmUppercase", "reducedMotion"
     ].includes(key))
 
@@ -616,6 +620,7 @@ QtObject {
             property var peekLayout: root.options.peekLayout.value
             property string workspaceIndicatorStyle: root.options.workspaceIndicatorStyle.value
             property bool showAllWorkspaces: root.options.showAllWorkspaces.value
+            property bool workspacePillsSameHeight: root.options.workspacePillsSameHeight.value
             property var workspaceIcons: ({})
             property string wallpaperTransitionStyle: root.options.wallpaperTransitionStyle.value
             property bool use24HourClock: root.options.use24HourClock.value

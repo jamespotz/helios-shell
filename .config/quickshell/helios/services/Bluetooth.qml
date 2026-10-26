@@ -1,5 +1,6 @@
 pragma Singleton
 import QtQuick
+import Quickshell.Io
 import Quickshell.Services.Pipewire
 import Quickshell.Bluetooth as QsBluetooth
 
@@ -105,6 +106,41 @@ QtObject {
         if (!device) { root._reportError("set trusted", "Device is no longer available"); return false; }
         device.trusted = enabled;
         return true;
+    }
+
+    // Audio = A2DP with SBC-XQ, Call = HFP with mSBC. Each falls back to the
+    // bare profile, where PipeWire picks the codec, when the device or
+    // PipeWire build doesn't offer that exact one (PipeWire names the
+    // best HFP codec plain "headset-head-unit", so mSBC often lives there).
+    // Some headsets (JBL Tune 730BT) drop the A2DP link while in HFP, so
+    // the card stops offering A2DP at all: reconnect that BlueZ profile
+    // (uuid) and retry while PipeWire re-adds it.
+    readonly property var audioModes: ({
+        audio: { profiles: ["a2dp-sink-sbc_xq", "a2dp-sink"], uuid: "0000110b-0000-1000-8000-00805f9b34fb" },
+        call: { profiles: ["headset-head-unit-msbc", "headset-head-unit"], uuid: "0000111e-0000-1000-8000-00805f9b34fb" }
+    })
+
+    function setAudioMode(address, mode) {
+        const target = root.audioModes[mode];
+        const device = root._deviceForId(address);
+        if (!device || !target) { root._reportError("switch to " + mode, "Device is no longer available"); return false; }
+        profileSetter.mode = mode;
+        profileSetter.command = ["sh", "-c",
+            'set_profile() { pactl set-card-profile "$1" "$2" 2>/dev/null || pactl set-card-profile "$1" "$3" 2>/dev/null; }\n'
+            + 'set_profile "$1" "$2" "$3" && exit 0\n'
+            + 'busctl call org.bluez "$4" org.bluez.Device1 ConnectProfile s "$5" || exit 1\n'
+            + 'for i in 1 2 3 4 5; do sleep 1; set_profile "$1" "$2" "$3" && exit 0; done\n'
+            + 'exit 1',
+            "sh", "bluez_card." + address.replace(/:/g, "_"), target.profiles[0], target.profiles[1],
+            device.dbusPath, target.uuid];
+        profileSetter.running = false;
+        profileSetter.running = true;
+        return true;
+    }
+
+    property Process profileSetter: Process {
+        property string mode: ""
+        onExited: code => { if (code !== 0) root._reportError("switch to " + mode, "Profile not available"); }
     }
 
     // ─── Low-battery alert ───────────────────────────────────────────────
