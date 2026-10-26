@@ -246,12 +246,10 @@ QtObject {
     onPresetStatusChanged: if (root.presetStatus) root._presetStatusClear.restart()
     property Timer _presetStatusClear: Timer { interval: 4000; onTriggered: root.presetStatus = "" }
     function copyPreset() {
-        root._presetCopy.command = ["wl-copy", root._preset()];
-        root._presetCopy.running = true;
+        Clipboard.copyText(root._preset());
         root.presetStatus = "Copied Dock settings";
     }
     function pastePreset() { root._presetPaste.running = true; }
-    property Process _presetCopy: Process {}
     property Process _presetPaste: Process {
         command: ["wl-paste", "--no-newline"]
         stdout: StdioCollector {

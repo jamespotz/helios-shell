@@ -15,7 +15,7 @@ ShellRoot {
                 root.verify(!Tasks.items.some(t => t.id === "completed"), "completed task expires without opening its Satellite");
                 root.verify(Tasks.items.some(t => t.id === "failed"), "failed task stays available until dismissed");
                 Tasks.remove("failed");
-                IdleInhibit.inhibited = false;
+                IdleInhibit.caffeine = false;
                 root.verify(IslandNavigation.satelliteFor("screen-a", true) === null, "empty right slot disappears");
                 console.warn("ISLAND_SATELLITE_TEST_PASS");
             } catch (error) { console.error("ISLAND_SATELLITE_TEST_FAIL:", error.toString()); }
@@ -75,7 +75,7 @@ ShellRoot {
             Maintenance.dnfUpdates = 1;
             Tasks.start("build", "Build");
             FocusModes.activeId = "focus";
-            IdleInhibit.inhibited = true;
+            IdleInhibit.caffeine = true;
             root.verify(IslandNavigation.satelliteFor("screen-a", true).id === "tasks", "tasks take priority over maintenance, focus, and caffeine");
             const meetingStart = new Date(Date.now() + 3 * 60000);
             Calendar.upcomingAlert = { date: Qt.formatDateTime(meetingStart, "yyyy-MM-dd"), startTime: Qt.formatDateTime(meetingStart, "HH:mm"), summary: "Standup", links: [] };

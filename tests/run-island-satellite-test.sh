@@ -13,7 +13,7 @@ cp "$repo_root/tests/qml/tst_island_satellite.qml" "$test_root/helios/tst_island
 cat > "$test_root/helios/services/IdleInhibit.qml" <<'QML'
 pragma Singleton
 import QtQuick
-QtObject { property bool enabled: true; property bool inhibited: false }
+QtObject { property bool enabled: true; property bool caffeine: false; readonly property bool inhibited: caffeine }
 QML
 set +e
 output="$({

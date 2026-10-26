@@ -24,6 +24,7 @@ QtObject {
         root._action("dnd", "Toggle Do Not Disturb", "notifications", "dnd silence", () => { ShellState.toggleDnd(); return true; }),
         root._action("nightlight", "Toggle Night Light", "eco", "color temperature blue light", () => { NightLight.toggle(); return true; }),
         root._action("idle", "Toggle Caffeine (keep awake)", "bolt", "idle inhibit sleep", () => { IdleInhibit.toggleInhibit(); return true; }),
+        root._action("gamemode", "Toggle Game Mode", "sports_esports", "gaming performance", () => { GameMode.toggle(); return true; }),
         root._action("lock", "Lock Screen", "lock", "session", () => { ShellState.lock(); return true; }),
         root._destinationAction("powermenu", "Power Menu", "power_settings_new", "shutdown restart logout suspend"),
         root._destinationAction("keybinds", "Keybind Cheatsheet", "keyboard", "shortcuts binds"),
@@ -197,8 +198,7 @@ QtObject {
             root.recordLaunch(result.title);
             AppLaunch.launch(result.entry);
         } else if (activation.kind === "emoji" || activation.kind === "copy") {
-            copyProcess.command = ["sh", "-c", "printf '%s' \"$1\" | wl-copy", "_", activation.value];
-            copyProcess.running = false; copyProcess.running = true;
+            Clipboard.copyText(activation.value);
         } else if (activation.kind === "action") accepted = activation.execute() !== false;
         else accepted = false;
         const close = accepted && !activation.keepOpen;
@@ -236,7 +236,6 @@ QtObject {
         }}
     }
     property Process focusProcess: Process {}
-    property Process copyProcess: Process {}
     property FileView usageFile: FileView {
         path: Quickshell.statePath("launcher-app-usage.json"); printErrors: false; atomicWrites: true; preload: true; blockLoading: true
         onLoaded: { try { const parsed = JSON.parse(usageFile.text()); if (parsed && typeof parsed === "object") root.launchCounts = parsed; } catch (error) {} }

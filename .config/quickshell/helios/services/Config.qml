@@ -541,14 +541,12 @@ QtObject {
     property Timer _presetStatusClear: Timer { interval: 4000; onTriggered: root.presetStatus = "" }
 
     function copyIslandPreset() {
-        root._presetCopy.command = ["wl-copy", root._islandPreset()];
-        root._presetCopy.running = true;
+        Clipboard.copyText(root._islandPreset());
         root.presetStatus = "Copied Island settings";
     }
 
     function pasteIslandPreset() { root._presetPaste.running = true; }
 
-    property Process _presetCopy: Process {}
     property Process _presetPaste: Process {
         command: ["wl-paste", "--no-newline"]
         stdout: StdioCollector {

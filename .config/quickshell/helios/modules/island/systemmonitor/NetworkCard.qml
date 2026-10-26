@@ -1,5 +1,4 @@
 import QtQuick
-import Quickshell.Io
 import "../../../services"
 import "../../../components"
 
@@ -60,9 +59,7 @@ MonitorCard {
             label: "Copy local IP"
             enabled: !!root.network.local_ip
             onClicked: {
-                copyProc.command = ["sh", "-c", "printf '%s' \"$0\" | wl-copy", root.network.local_ip];
-                copyProc.running = false;
-                copyProc.running = true;
+                Clipboard.copyText(root.network.local_ip);
             }
         }
     }
@@ -79,6 +76,4 @@ MonitorCard {
         secondaryValues: root.stats.history.netSent
         minScale: 64
     }
-
-    Process { id: copyProc }
 }

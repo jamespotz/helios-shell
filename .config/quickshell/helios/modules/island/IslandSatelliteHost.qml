@@ -8,6 +8,11 @@ IslandSatellite {
     required property string targetScreen
     property bool slotOnRight: false
     readonly property string activityId: root.definition ? root.definition.id : ""
+    // A catalogue field that may be a value or a function; see IslandNavigation.satellites.
+    function field(name, fallback) {
+        const v = root.definition ? root.definition[name] : undefined;
+        return v === undefined ? fallback : typeof v === "function" ? v() : v;
+    }
     readonly property bool recordingCard: root.activityId === "recording" && root.expanded
     readonly property real recordingScale: Config.fontSize / 13
     property color defaultFillColor: Colors.surface
@@ -73,24 +78,13 @@ IslandSatellite {
         Item {
             implicitWidth: 22
             implicitHeight: 20
-            readonly property string value: root.activityId === "meeting" && Calendar.upcomingAlert
-                ? qsTr("%1m").arg(Calendar.upcomingMinutesUntil)
-                : root.activityId === "tasks" && Tasks.items.length > 1 ? String(Tasks.items.length)
-                : root.activityId === "tasks" && Tasks.items.length === 1 && Tasks.items[0].status === "running" && Tasks.items[0].progress >= 0
-                    ? Math.round(Math.max(0, Math.min(1, Tasks.items[0].progress)) * 100) + "%" : ""
+            readonly property string value: root.field("badge", "")
             MaterialIcon {
                 anchors.centerIn: parent
                 visible: parent.value.length === 0
                 font.pixelSize: 16
-                icon: root.activityId === "privacy-status" ? (CameraActivity.isSystemCameraActive ? "videocam" : "mic")
-                    : root.activityId === "caffeine" ? "coffee"
-                    : root.activityId === "focus-status" ? "center_focus_strong"
-                    : root.activityId === "meeting" ? "event"
-                    : root.activityId === "tasks" ? (Tasks.items.some(t => t.status === "error") ? "error" : "sync")
-                    : Maintenance.rebootRequired || Maintenance.failedUnits.length > 0 ? "error" : "download"
-                color: root.activityId === "privacy-status" || (root.activityId === "tasks" && Tasks.items.some(t => t.status === "error"))
-                    || (root.activityId === "maintenance" && (Maintenance.rebootRequired || Maintenance.failedUnits.length > 0)) ? Colors.danger
-                    : root.activityId === "caffeine" ? Colors.warning : Colors.accent
+                icon: root.field("icon", "")
+                color: root.field("color", Colors.accent)
             }
             StyledText {
                 anchors.centerIn: parent

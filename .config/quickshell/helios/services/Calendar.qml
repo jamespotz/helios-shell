@@ -112,9 +112,8 @@ QtObject {
 
     // ─── Upcoming-meeting alert ─────────────────────────────────────────
     // Surfaces one timed event at a time, starting 5 minutes before it
-    // begins, for the Island to auto-peek (see Island.qml's meetingMode,
-    // modeled on notifyMode/taskMode) independent of whether the Calendar
-    // tab is open. Rather than polling, alertTimer sleeps until the next
+    // begins, for the meeting Satellite (IslandNavigation.satellites),
+    // independent of whether the Calendar destination is open. Rather than polling, alertTimer sleeps until the next
     // event's alert time and is rescheduled whenever events change.
     property var upcomingAlert: null
     property var _alertedKeys: ({})

@@ -1,7 +1,6 @@
 import QtQuick
 import Quickshell
 import Quickshell.Wayland
-import Quickshell.Hyprland
 import Quickshell.Services.Pam
 import "../../services"
 import "../../components"
@@ -267,15 +266,9 @@ Loader {
                     ]
 
                     function run(id) {
-                        if (id === "logout")
-                            // See PowerMenuDestination.qml: this Hyprland config wraps
-                            // dispatch payloads through a Lua plugin, so the
-                            // bare "exit" dispatcher name fails silently.
-                            Hyprland.dispatch("hl.dsp.exit()");
-                        else if (id === "restart")
-                            Quickshell.execDetached(["systemctl", "reboot"]);
-                        else if (id === "poweroff")
-                            Quickshell.execDetached(["systemctl", "poweroff"]);
+                        if (id === "logout") Session.logout();
+                        else if (id === "restart") Session.reboot();
+                        else if (id === "poweroff") Session.poweroff();
                     }
 
                     SurfaceBackground {

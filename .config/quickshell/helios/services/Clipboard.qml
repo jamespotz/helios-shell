@@ -131,6 +131,13 @@ QtObject {
         copier.running = true;
     }
 
+    // Plain text from the shell itself; cliphist records it like any copy.
+    function copyText(text) {
+        textCopier.command = ["wl-copy", "--", String(text)];
+        textCopier.running = false;
+        textCopier.running = true;
+    }
+
     function remove(line) {
         deleter.command = ["sh", "-c", "printf '%s' \"$1\" | cliphist delete", "_", line];
         deleter.running = false;
@@ -159,6 +166,7 @@ QtObject {
     }
 
     property Process copier: Process {}
+    property Process textCopier: Process {}
     property Process deleter: Process { onExited: root.refresh() }
     property Process wiper: Process { command: ["cliphist", "wipe"]; onExited: root.refresh() }
 }

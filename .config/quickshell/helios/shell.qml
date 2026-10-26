@@ -52,6 +52,7 @@ ShellRoot {
             Themes.currentLabel();
             NightLight.enabled;    // restores persisted state + spawns wlsunset if needed
             IdleInhibit.enabled;   // restores persisted state + spawns hypridle if needed
+            GameMode.enabled;      // restores persisted state + reapplies Hyprland perf config
             Automations.headphonesRule; // rules only run once the singleton exists
             FocusTimer.state;
             Audio.preferredOutputName;
@@ -293,6 +294,13 @@ ShellRoot {
         function toggle() { ShellState.toggleDnd() }
         function on() { ShellState.setDndEnabled(true) }
         function off() { ShellState.setDndEnabled(false) }
+    }
+
+    IpcHandler {
+        target: "gamemode"
+        function toggle() { GameMode.toggle() }
+        function on() { GameMode.setEnabled(true) }
+        function off() { GameMode.setEnabled(false) }
     }
 
     IpcHandler {

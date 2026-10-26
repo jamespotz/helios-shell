@@ -31,4 +31,12 @@ MonitorCard {
         checked: IdleInhibit.inhibited
         onToggled: IdleInhibit.toggleInhibit()
     }
+    ToggleRow {
+        width: parent.width
+        icon: "sports_esports"
+        title: "Game Mode"
+        subtitle: GameMode.enabled ? "Effects off, notifications silenced" : "Full desktop effects"
+        checked: GameMode.enabled
+        onToggled: GameMode.toggle()
+    }
 }

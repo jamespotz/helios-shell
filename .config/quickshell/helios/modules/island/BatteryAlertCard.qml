@@ -4,8 +4,8 @@ import "../../components"
 
 // Auto-peek card for a Bluetooth device dropping below Bluetooth.qml's
 // lowBatteryThreshold — device continuity's "warn only when action
-// matters" piece. Same shape as MeetingCard.qml/TaskCard.qml: Island.qml
-// surfaces it via batteryMode, this just renders Bluetooth.lowBatteryAlert.
+// matters" piece. IslandNavigation._alerts surfaces it as the "battery"
+// alert card; this just renders Bluetooth.lowBatteryAlert.
 Item {
     id: root
 

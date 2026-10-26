@@ -29,7 +29,7 @@ QtObject {
         root._destination("idlelock", "Idle & Lock", "IdleDestination.qml"),
         root._destination("wallpaper", "Wallpaper", "WallpaperDestination.qml"),
         root._destination("theme", "Theme", "ThemeDestination.qml"),
-        root._destination("power", "Power", "PowerDestination.qml"),
+        root._destination("power", "Power mode", "PowerDestination.qml"),
         root._destination("powermenu", "Power", "PowerMenuDestination.qml"),
         root._destination("keybinds", "Keybinds", "KeybindsDestination.qml")
     ].concat(root.satellites.map(s => root._destination(s.id, s.destinationLabel || s.label, s.file, 0, s.inIsland ? "" : s.id)), [
@@ -58,16 +58,29 @@ QtObject {
     // Each Satellite owns its Island destination; `destinations` derives them.
     // destinationLabel names it where the badge label would clash (Launcher).
     // inIsland opens the destination in the Island instead of the Satellite.
+    // icon, color and badge feed the collapsed badge; each is a value or a
+    // function. color defaults to the accent, badge text replaces the icon.
     readonly property var satellites: [
         { id: "recording", label: qsTr("Recording"), file: "RecordingDestination.qml", onRight: false, active: () => ScreenRecorder.recording },
-        { id: "privacy-status", label: qsTr("Privacy"), destinationLabel: "Privacy activity", file: "PrivacyStatusDestination.qml", onRight: false, active: () => MicActivity.isSystemMicActive || CameraActivity.isSystemCameraActive },
+        { id: "privacy-status", label: qsTr("Privacy"), destinationLabel: "Privacy activity", file: "PrivacyStatusDestination.qml", onRight: false,
+            icon: () => CameraActivity.isSystemCameraActive ? "videocam" : "mic", color: () => Colors.danger, active: () => MicActivity.isSystemMicActive || CameraActivity.isSystemCameraActive },
         { id: "focus-timer", label: qsTr("Focus timer"), file: "FocusTimerDestination.qml", inIsland: true, onRight: false, active: () => FocusTimer.active },
-        { id: "meeting", label: qsTr("Upcoming meeting"), file: "MeetingDestination.qml", onRight: true, alertScoped: true, active: () => Config.showMeetingAlerts && Calendar.upcomingAlert !== null },
-        { id: "tasks", label: qsTr("Background tasks"), file: "TasksDestination.qml", onRight: true, alertScoped: true, active: () => Config.showTaskAlerts && Tasks.items.length > 0 },
-        { id: "maintenance", label: qsTr("Maintenance"), file: "MaintenanceDestination.qml", onRight: true, active: () => Maintenance.hasAlert },
-        { id: "focus-status", label: qsTr("Focus mode"), destinationLabel: "Active focus mode", file: "FocusStatusDestination.qml", onRight: true, active: () => FocusModes.activeId.length > 0 },
-        { id: "caffeine", label: qsTr("Caffeine"), file: "CaffeineDestination.qml", onRight: true, active: () => IdleInhibit.inhibited }
+        { id: "meeting", label: qsTr("Upcoming meeting"), file: "MeetingDestination.qml", onRight: true, alertScoped: true,
+            icon: "event", badge: () => Calendar.upcomingAlert ? qsTr("%1m").arg(Calendar.upcomingMinutesUntil) : "", active: () => Config.showMeetingAlerts && Calendar.upcomingAlert !== null },
+        { id: "tasks", label: qsTr("Background tasks"), file: "TasksDestination.qml", onRight: true, alertScoped: true,
+            icon: () => root._tasksFailed() ? "error" : "sync", color: () => root._tasksFailed() ? Colors.danger : Colors.accent,
+            badge: () => Tasks.items.length > 1 ? String(Tasks.items.length)
+                : Tasks.items.length === 1 && Tasks.items[0].status === "running" && Tasks.items[0].progress >= 0
+                    ? Math.round(Math.max(0, Math.min(1, Tasks.items[0].progress)) * 100) + "%" : "", active: () => Config.showTaskAlerts && Tasks.items.length > 0 },
+        { id: "maintenance", label: qsTr("Maintenance"), file: "MaintenanceDestination.qml", onRight: true,
+            icon: () => root._maintenanceFailed() ? "error" : "download", color: () => root._maintenanceFailed() ? Colors.danger : Colors.accent, active: () => Maintenance.hasAlert },
+        { id: "focus-status", label: qsTr("Focus mode"), destinationLabel: "Active focus mode", file: "FocusStatusDestination.qml", onRight: true, icon: "center_focus_strong", active: () => FocusModes.activeId.length > 0 },
+        { id: "gamemode", label: qsTr("Game Mode"), file: "GameModeDestination.qml", onRight: true, icon: "sports_esports", active: () => GameMode.enabled },
+        { id: "caffeine", label: qsTr("Caffeine"), file: "CaffeineDestination.qml", onRight: true, icon: "coffee", color: () => Colors.warning, active: () => IdleInhibit.inhibited }
     ]
+
+    function _tasksFailed() { return Tasks.items.some(t => t.status === "error") }
+    function _maintenanceFailed() { return Maintenance.rebootRequired || Maintenance.failedUnits.length > 0 }
 
     // Catalogue order is priority. Each side owns one slot; an expanded
     // destination stays pinned while other activities change underneath it.
@@ -136,20 +149,23 @@ QtObject {
     readonly property var _alerts: [
         {
             mode: "notify",
+            card: "NotificationCard.qml",
             active: () => Notifications.state.popups.length > 0,
             dismiss: () => Notifications.dismissAll()
         },
         {
             mode: "github",
+            card: "GitHubCard.qml",
             active: () => GitHub.popups.length > 0,
             dismiss: () => GitHub.hideAllPopups()
         },
         {
             mode: "battery",
+            card: "BatteryAlertCard.qml",
             active: () => Config.showBatteryAlerts && Bluetooth.lowBatteryAlert !== null,
             dismiss: () => Bluetooth.dismissLowBattery()
         },
-        { mode: "focus-timer", active: () => FocusTimer.completionPending, dismiss: () => FocusTimer.dismissCompletion() }
+        { mode: "focus-timer", card: "FocusTimerCard.qml", active: () => FocusTimer.completionPending, dismiss: () => FocusTimer.dismissCompletion() }
     ]
 
     // Which screens show alert cards (Settings > Island > Screens): "all",
@@ -191,6 +207,12 @@ QtObject {
         const alert = root._alerts.find(a => a.mode === mode);
         if (alert && alert.dismiss)
             alert.dismiss();
+    }
+
+    // The alert card file for a mode, or "" when the mode isn't an alert.
+    function alertCardFor(mode) {
+        const alert = root._alerts.find(a => a.mode === mode);
+        return alert ? Qt.resolvedUrl("../modules/island/" + alert.card) : "";
     }
 
     function _destination(id, label, file, maxHeight, satelliteId, retainOnFocusLoss) {

@@ -53,6 +53,7 @@ singleton Screenshot 1.0 Screenshot.qml
 singleton NightLight 1.0 NightLight.qml
 singleton DisplaySettings 1.0 DisplaySettings.qml
 singleton IdleInhibit 1.0 IdleInhibit.qml
+singleton GameMode 1.0 GameMode.qml
 singleton Equalizer 1.0 Equalizer.qml
 singleton Emoji 1.0 Emoji.qml
 singleton SystemStats 1.0 SystemStats.qml
@@ -67,6 +68,7 @@ singleton Automations 1.0 Automations.qml
 singleton DefaultApps 1.0 DefaultApps.qml
 singleton CustomCommands 1.0 CustomCommands.qml
 singleton Maintenance 1.0 Maintenance.qml
+singleton Session 1.0 Session.qml
 singleton ColorPickerHistory 1.0 ColorPickerHistory.qml
 singleton AnnotateState 1.0 AnnotateState.qml
 FocusTimerCore 1.0 FocusTimerCore.qml

@@ -1,6 +1,5 @@
 import QtQuick
 import Quickshell
-import Quickshell.Hyprland
 import "../../services"
 import "../../components"
 
@@ -64,19 +63,14 @@ Item {
                 destructive: true
                 armed: root.pendingAction === label
                 onArmRequested: root.pendingAction = label
-                // This machine's Hyprland runs a lua-config plugin that wraps
-                // every `dispatch` payload as `hl.dispatch(<payload>)` and
-                // evaluates it as Lua — a bare dispatcher name like "exit" isn't
-                // valid Lua and fails silently. binds.lua already uses the
-                // working form for the same dispatcher: hl.dsp.exit().
-                onActivated: { Hyprland.dispatch("hl.dsp.exit()"); IslandNavigation.close(); }
+                onActivated: { Session.logout(); IslandNavigation.close(); }
             }
             PowerAction {
                 id: suspendAction
                 icon: "dark_mode"
                 label: "Suspend"
                 keyHint: "3"
-                onActivated: { Quickshell.execDetached(["systemctl", "suspend"]); IslandNavigation.close(); }
+                onActivated: { Session.suspend(); IslandNavigation.close(); }
             }
             PowerAction {
                 id: restartAction
@@ -86,7 +80,7 @@ Item {
                 destructive: true
                 armed: root.pendingAction === label
                 onArmRequested: root.pendingAction = label
-                onActivated: { Quickshell.execDetached(["systemctl", "reboot"]); IslandNavigation.close(); }
+                onActivated: { Session.reboot(); IslandNavigation.close(); }
             }
             PowerAction {
                 id: poweroffAction
@@ -96,7 +90,7 @@ Item {
                 destructive: true
                 armed: root.pendingAction === label
                 onArmRequested: root.pendingAction = label
-                onActivated: { Quickshell.execDetached(["systemctl", "poweroff"]); IslandNavigation.close(); }
+                onActivated: { Session.poweroff(); IslandNavigation.close(); }
             }
         }
     }

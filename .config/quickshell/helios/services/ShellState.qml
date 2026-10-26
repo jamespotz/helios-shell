@@ -7,7 +7,7 @@ QtObject {
     id: root
     property bool locked: false
 
-    readonly property bool dndEnabled: liquidGlassAdapter.dndEnabled || root.automaticDndEnabled
+    readonly property bool dndEnabled: liquidGlassAdapter.dndEnabled || root.automaticDndEnabled || GameMode.enabled
     // Fullscreen automation is temporary; only manual DND is persisted.
     property bool automaticDndEnabled: false
 

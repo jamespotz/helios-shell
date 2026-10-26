@@ -133,13 +133,15 @@ hl.bind(mainMod .. " + SHIFT + A", hl.dsp.exec_cmd(helios .. " annotate toggle")
 hl.bind(mainMod .. " + SHIFT + P", hl.dsp.exec_cmd(helios .. " colorpicker toggle"),
   { description = "helios: Toggle color picker" })
 
--- Night light / Do Not Disturb / Caffeine toggles
+-- Night light / Do Not Disturb / Caffeine / Game Mode toggles
 hl.bind(mainMod .. " + SHIFT + N", hl.dsp.exec_cmd(helios .. " nightlight toggle"),
   { description = "helios: Toggle night light" })
 hl.bind(mainMod .. " + SHIFT + D", hl.dsp.exec_cmd(helios .. " dnd toggle"),
   { description = "helios: Toggle Do Not Disturb" })
 hl.bind(mainMod .. " + SHIFT + F", hl.dsp.exec_cmd(helios .. " idle caffeine"),
   { description = "helios: Toggle caffeine mode" })
+hl.bind(mainMod .. " + SHIFT + G", hl.dsp.exec_cmd(helios .. " gamemode toggle"),
+  { description = "helios: Toggle Game Mode" })
 
 hl.bind(mainMod .. " + ALT + F", hl.dsp.exec_cmd(helios .. " focusTimer toggle"),
   { description = "helios: Toggle Focus timer satellite" })

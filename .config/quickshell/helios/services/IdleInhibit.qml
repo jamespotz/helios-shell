@@ -20,7 +20,10 @@ QtObject {
     property alias lockTimeout: adapter.lockTimeout      // seconds before lock (0 = never)
     property alias dpmsTimeout: adapter.dpmsTimeout      // seconds before DPMS off (0 = never)
     property alias dimTimeout: adapter.dimTimeout        // seconds before dimming (0 = never)
-    property alias inhibited: adapter.inhibited          // caffeine mode
+    property alias caffeine: adapter.inhibited           // the user's caffeine toggle
+    readonly property bool inhibited: root.caffeine || GameMode.enabled
+    // Before load, onLoaded does the first sync with the restored timeouts.
+    onInhibitedChanged: if (root.settingsFile.loaded) root._sync()
 
     readonly property string configPath: Quickshell.env("HOME") + "/.config/hypr/hypridle-helios.conf"
     readonly property string helios: "quickshell -c helios ipc call"
@@ -46,8 +49,7 @@ QtObject {
     }
 
     function toggleInhibit() {
-        root.inhibited = !root.inhibited;
-        root._sync();
+        root.caffeine = !root.caffeine;
     }
 
     function _sync() {
