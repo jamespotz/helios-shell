@@ -16,6 +16,8 @@ done
 # shell.qml's icon-theme watcher outlives a killed instance; the new one
 # starts its own.
 pkill -f '^(/usr/bin/)?gsettings monitor org\.gnome\.desktop\.interface icon-theme$' 2>/dev/null
+# Same for services/Bluetooth.qml's BlueZ owner watcher.
+pkill -f '^(/usr/bin/)?gdbus monitor --system --dest org\.freedesktop\.DBus --object-path /org/freedesktop/DBus$' 2>/dev/null
 # glibc malloc fragments under the QML engine's alloc/free churn and never
 # hands the pages back, so RSS creeps up over a session (confirmed: ~1.1GB+
 # and still climbing after a few minutes without this). jemalloc doesn't

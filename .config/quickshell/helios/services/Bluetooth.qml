@@ -1,5 +1,6 @@
 pragma Singleton
 import QtQuick
+import Quickshell
 import Quickshell.Io
 import Quickshell.Services.Pipewire
 import Quickshell.Bluetooth as QsBluetooth
@@ -254,6 +255,20 @@ QtObject {
         function onEnabledChanged() {
             if (root.active && root.adapter.enabled) root.setScanning(true);
             if (root.adapter.enabled) root._scheduleReconnect();
+        }
+    }
+
+    // Quickshell enumerates BlueZ once per process, so a bluetoothd that starts
+    // after the shell (late boot, or a restart after a crash) is never seen and
+    // the adapter stays missing. Relaunch when org.bluez gains an owner.
+    property Process bluezWatcher: Process {
+        running: true
+        command: ["gdbus", "monitor", "--system", "--dest", "org.freedesktop.DBus", "--object-path", "/org/freedesktop/DBus"]
+        stdout: SplitParser {
+            onRead: line => {
+                if (line.includes("NameOwnerChanged ('org.bluez', '', ':"))
+                    Quickshell.execDetached(["sh", Quickshell.env("HOME") + "/.config/hypr/helios-reload.sh"]);
+            }
         }
     }
 
