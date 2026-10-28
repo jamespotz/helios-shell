@@ -32,6 +32,10 @@ _Avoid_: Bubble, mini island
 The Island expanded to show one event that needs attention: a notification, meeting, task, or low battery.
 _Avoid_: Toast, popup
 
+**Headset mode**:
+Whether a Bluetooth headset plays high-quality audio (Audio) or uses its microphone (Call).
+_Avoid_: Profile, A2DP/HFP
+
 **Launcher**:
 The searchable collection of applications, open windows, shell actions, and emoji results.
 _Avoid_: Command palette, app search

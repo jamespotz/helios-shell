@@ -18,6 +18,8 @@ QtObject {
     property bool active: false
     property string lastError: ""
 
+    // Its own sink list rather than Audio.sinks: Audio reads Bluetooth.state,
+    // so reading Audio here would make the two singletons wait on each other.
     readonly property var _audioSinks: Pipewire.nodes
         ? Pipewire.nodes.values.filter(n => n.isSink && !n.isStream && (n.type & PwNodeType.AudioSink) === PwNodeType.AudioSink)
         : []
@@ -134,14 +136,13 @@ QtObject {
             + 'exit 1',
             "sh", "bluez_card." + address.replace(/:/g, "_"), target.profiles[0], target.profiles[1],
             device.dbusPath, target.uuid];
-        profileSetter.running = false;
-        profileSetter.running = true;
+        profileSetter.run();
         return true;
     }
 
-    property Process profileSetter: Process {
+    property Command profileSetter: Command {
         property string mode: ""
-        onExited: code => { if (code !== 0) root._reportError("switch to " + mode, "Profile not available"); }
+        onFinished: result => { if (result.error) root._reportError("switch to " + mode, "Profile not available"); }
     }
 
     // ─── Low-battery alert ───────────────────────────────────────────────

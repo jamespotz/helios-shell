@@ -40,7 +40,7 @@ ShellRoot {
             Config.setOption("idleBumpWidth", 222);
             Config.moveWidget("idle", "clock", 0);
             Config.setDestinationHidden("weather", true);
-            const text = Config._islandPreset();
+            const text = Config.store.presetText();
             const parsed = JSON.parse(text);
             root.verify(parsed.helios === "island" && parsed.version === 1, "header");
             root.verify(!("fontFamily" in parsed.options), "global option not exported");
@@ -48,22 +48,22 @@ ShellRoot {
             Config.resetOptions(Config.islandKeys);
             root.verify(Config.idleBumpWidth === 140 && Config.idleWidgetLayout[0] !== "clock", "reset all");
 
-            root.verify(Config._applyIslandPreset(text) === Config.islandKeys.length, "applies every key");
+            root.verify(Config.store.applyPreset(text) === Config.islandKeys.length, "applies every key");
             root.verify(Config.idleBumpWidth === 222 && Config.idleWidgetLayout[0] === "clock" && Config.destinationHidden("weather"), "round trip");
 
-            root.verify(Config._applyIslandPreset("hello") === -1, "non-JSON rejected");
-            root.verify(Config._applyIslandPreset(JSON.stringify({ helios: "island", version: 1, options: null })) === -1, "null options rejected");
-            root.verify(Config._applyIslandPreset(JSON.stringify({ helios: "island", version: 1, options: [] })) === -1, "array options rejected");
-            root.verify(Config._applyIslandPreset(JSON.stringify({ helios: "dock", version: 1, options: {} })) === -1, "wrong header rejected");
-            const n = Config._applyIslandPreset(JSON.stringify({ helios: "island", version: 1,
+            root.verify(Config.store.applyPreset("hello") === -1, "non-JSON rejected");
+            root.verify(Config.store.applyPreset(JSON.stringify({ helios: "island", version: 1, options: null })) === -1, "null options rejected");
+            root.verify(Config.store.applyPreset(JSON.stringify({ helios: "island", version: 1, options: [] })) === -1, "array options rejected");
+            root.verify(Config.store.applyPreset(JSON.stringify({ helios: "dock", version: 1, options: {} })) === -1, "wrong header rejected");
+            const n = Config.store.applyPreset(JSON.stringify({ helios: "island", version: 1,
                 options: { bogus: 1, idleBumpWidth: "wide", hiddenDestinations: "all", notifyWidth: 5000, fontFamily: "Comic" } }));
             root.verify(n === 1 && Config.notifyWidth === 600, "only valid island keys applied, clamped");
             root.verify(Config.idleBumpWidth === 222 && Array.isArray(Config.hiddenDestinations) && Config.fontFamily === "Inter", "invalid values ignored");
 
             Config.resetOptions(Config.islandKeys);
-            Config._applyIslandPreset(JSON.stringify({ helios: "island", version: 1, options: { islandCornerRadius: 27 } }));
+            Config.store.applyPreset(JSON.stringify({ helios: "island", version: 1, options: { islandCornerRadius: 27 } }));
             root.verify(Config.islandIdleCornerRadius === 27 && Config.islandExpandedCornerRadius === 27, "legacy radius preset initializes both states");
-            Config._applyIslandPreset(JSON.stringify({ helios: "island", version: 1,
+            Config.store.applyPreset(JSON.stringify({ helios: "island", version: 1,
                 options: { islandCornerRadius: 22, islandIdleCornerRadius: 7 } }));
             root.verify(Config.islandIdleCornerRadius === 7 && Config.islandExpandedCornerRadius === 22, "explicit state radius overrides legacy preset");
             Config.resetOptions(Config.islandKeys);

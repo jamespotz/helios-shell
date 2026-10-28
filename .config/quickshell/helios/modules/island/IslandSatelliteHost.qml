@@ -13,66 +13,32 @@ IslandSatellite {
         const v = root.definition ? root.definition[name] : undefined;
         return v === undefined ? fallback : typeof v === "function" ? v() : v;
     }
-    readonly property bool recordingCard: root.activityId === "recording" && root.expanded
-    readonly property real recordingScale: Config.fontSize / 13
+    // A plain card (see IslandNavigation.satellites) brings its own look and
+    // sits on the screen background rather than the Island's material.
+    readonly property bool plainCard: root.field("card", "") === "plain" && root.expanded
+    readonly property real plainScale: Config.fontSize / 13
     property color defaultFillColor: Colors.surface
 
-    padH: root.recordingCard ? 24 * root.recordingScale : Config.satellitePadH
-    padV: root.recordingCard ? 24 * root.recordingScale : Config.satellitePadV
-    plainSurface: root.recordingCard
-    radiusLimit: root.recordingCard ? 16 * root.recordingScale : 18
-    fillColor: root.recordingCard ? (Themes.isDark(Colors.background) ? "#12151f" : "#ffffff") : root.defaultFillColor
+    padH: root.plainCard ? 24 * root.plainScale : Config.satellitePadH
+    padV: root.plainCard ? 24 * root.plainScale : Config.satellitePadV
+    plainSurface: root.plainCard
+    radiusLimit: root.plainCard ? 16 * root.plainScale : 18
+    fillColor: root.plainCard ? Colors.background : root.defaultFillColor
 
-    badgeWidth: root.activityId === "focus-timer" ? Math.max(Config.satelliteBadgeSize, timerMetrics.width + Config.fontSize + 6 + 20) : Config.satelliteBadgeSize
+    // A catalogue badgeFile replaces the icon/text badge; its badgeWidth, if
+    // any, widens the collapsed badge to fit.
+    readonly property string badgeFile: root.field("badgeFile", "")
+    badge: root.badgeFile ? Qt.createComponent(root.badgeFile) : activityBadge
+    badgeWidth: Math.max(Config.satelliteBadgeSize, root.badgeItem && root.badgeItem.badgeWidth || 0)
 
     onRight: root.definition ? root.definition.onRight : root.slotOnRight
     label: root.definition ? qsTr(root.definition.label) : ""
-    active: !!root.definition && root.definition.active()
+    active: !!root.definition && IslandNavigation.shows(root.definition)
     interactive: true
     expanded: root.activityId.length > 0 && IslandNavigation.satelliteOpenFor(root.targetScreen, root.activityId)
     onClicked: IslandNavigation.toggle(root.targetScreen, root.activityId)
     onCloseRequested: IslandNavigation.closeSatellite(root.targetScreen)
 
-    TextMetrics { id: timerMetrics; text: FocusTimer.remainingText; font.family: Config.fontFamily; font.pixelSize: Config.fontSize - 1; font.weight: Font.DemiBold }
-    badge: Component {
-        Loader {
-            sourceComponent: root.activityId === "recording" ? recordingBadge : root.activityId === "focus-timer" ? timerBadge : activityBadge
-        }
-    }
-    Component {
-        id: timerBadge
-        Row {
-            spacing: 6
-            readonly property color timerColor: FocusTimer.state.status === "paused" ? Colors.subtext : Colors.accent
-            MaterialIcon {
-                icon: FocusTimer.state.kind === "focus" ? "timer" : "coffee"
-                font.pixelSize: Config.fontSize
-                color: parent.timerColor
-                anchors.verticalCenter: parent.verticalCenter
-            }
-            StyledText {
-                text: FocusTimer.remainingText
-                font.pixelSize: Config.fontSize - 1
-                font.weight: Font.DemiBold
-                color: parent.timerColor
-                anchors.verticalCenter: parent.verticalCenter
-            }
-        }
-    }
-    Component {
-        id: recordingBadge
-        Row {
-            spacing: 6
-            RecordingDot { anchors.verticalCenter: parent.verticalCenter }
-            MaterialIcon {
-                visible: MicActivity.isSystemMicActive || CameraActivity.isSystemCameraActive
-                icon: CameraActivity.isSystemCameraActive ? "videocam" : "mic"
-                font.pixelSize: 14
-                color: Colors.danger
-                anchors.verticalCenter: parent.verticalCenter
-            }
-        }
-    }
     Component {
         id: activityBadge
         Item {

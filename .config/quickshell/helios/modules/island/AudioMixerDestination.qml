@@ -15,11 +15,9 @@ Item {
         ? Pipewire.nodes.values.filter(n => n.isStream && (n.type & PwNodeType.AudioOutStream) === PwNodeType.AudioOutStream)
         : []
     readonly property var streams: root.audioStreams.filter(n => root.isAppStream(n))
-    readonly property var sinks: Pipewire.nodes
-        ? Pipewire.nodes.values.filter(n => n.isSink && !n.isStream && (n.type & PwNodeType.AudioSink) === PwNodeType.AudioSink)
-        : []
+    readonly property var sinks: Audio.sinks
 
-    PwObjectTracker { objects: root.audioStreams.concat(root.sinks) }
+    PwObjectTracker { objects: root.audioStreams }
 
     // Which app's output-sink picker is expanded, if any.
     property string routingId: ""

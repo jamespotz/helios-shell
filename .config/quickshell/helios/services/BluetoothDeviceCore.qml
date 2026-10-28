@@ -28,22 +28,23 @@ QtObject {
         }))
     })
 
+    readonly property AudioOutputRuleCore _rule: AudioOutputRuleCore {}
+    // Headset mode from the raw BlueZ profile (headset-head-unit, -msbc,
+    // ...): "call" for HFP/HSP, "audio" otherwise.
+    function headsetMode(profile) { return String(profile || "").toLowerCase().startsWith("headset") ? "call" : "audio"; }
     function _normalizeAddress(address) { return String(address || "").toLowerCase().replace(/:/g, ""); }
     function _friendlyProfile(key) { return key ? (root.profileLabels[String(key).toLowerCase()] || String(key)) : ""; }
     function _friendlyCodec(key) { return key ? (root.codecLabels[String(key).toLowerCase()] || String(key).toUpperCase()) : ""; }
-    function _isBluetoothSink(properties) {
-        const p = properties || {};
-        return !!p[root.addressPropertyKey] || String(p["device.api"] || "").toLowerCase() === "bluez5" || String(p["device.bus"] || "").toLowerCase() === "bluetooth";
-    }
     function _profileForAddress(address) {
         const normalized = root._normalizeAddress(address);
         const node = normalized ? root.audioNodes.find(candidate => {
             const props = candidate.properties || {};
-            return root._isBluetoothSink(props) && root._normalizeAddress(props[root.addressPropertyKey]) === normalized;
+            return root._rule.isBluetoothSink(candidate.name, props) && root._normalizeAddress(props[root.addressPropertyKey]) === normalized;
         }) : null;
         if (!node) return null;
         const props = node.properties || {}, codec = props[root.codecPropertyKey], profile = props[root.profilePropertyKey];
         if (!codec && !profile) return null;
-        return { codec: root._friendlyCodec(codec), profile: root._friendlyProfile(profile), nodeName: node.name || "" };
+        return { codec: root._friendlyCodec(codec), profile: root._friendlyProfile(profile), nodeName: node.name || "",
+            mode: root.headsetMode(profile) };
     }
 }

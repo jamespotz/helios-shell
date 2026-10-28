@@ -47,6 +47,15 @@ ShellRoot {
         root.compare(devices.state.devices[0].audio.profile, "A2DP");
     }
 
+    function test_headsetModeFollowsRawProfile() {
+        for (const [profile, mode] of [["a2dp-sink", "audio"], ["a2dp-sink-sbc_xq", "audio"], ["headset-head-unit", "call"],
+                ["headset-head-unit-msbc", "call"], ["headset_head_unit", "call"], ["", "audio"]])
+            root.compare(devices.headsetMode(profile), mode, profile);
+        devices.devices = [{ path: "/device/five", address: "11:22" }];
+        devices.audioNodes = [{ properties: { "api.bluez5.address": "11:22", "api.bluez5.profile": "headset-head-unit-msbc" } }];
+        root.compare(devices.state.devices[0].audio.mode, "call");
+    }
+
     function test_friendlyProfileMapsKnownValues() {
         devices.devices = [{ path: "/device/one", address: "11:22", name: "Keyboard" }];
         devices.audioNodes = [];
@@ -109,6 +118,7 @@ ShellRoot {
             root.test_extractProfileCombinesCodecAndProfile();
             root.test_extractProfileHandlesCodecOnly();
             root.test_extractProfilePolishesCompoundCodecLabels();
+            root.test_headsetModeFollowsRawProfile();
             root.test_isBluetoothSinkPropsRecognizesRealBluez5Node();
             root.test_isBluetoothSinkPropsRecognizesDeviceBusFallback();
             root.test_isBluetoothSinkPropsRejectsNonBluetoothNodes();

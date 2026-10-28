@@ -92,11 +92,11 @@ QtObject {
     }
     property Connections _calendar: Connections {
         target: Calendar
-        function onUpcomingAlertChanged() { if (Calendar.upcomingAlert && Config.showMeetingAlerts) root.play("meeting"); }
+        function onUpcomingAlertChanged() { if (Calendar.upcomingAlert && IslandNavigation.alertEnabled("meeting")) root.play("meeting"); }
     }
     property Connections _bluetooth: Connections {
         target: Bluetooth
-        function onLowBatteryAlertChanged() { if (Bluetooth.lowBatteryAlert && Config.showBatteryAlerts) root.play("battery"); }
+        function onLowBatteryAlertChanged() { if (Bluetooth.lowBatteryAlert && IslandNavigation.alertEnabled("battery")) root.play("battery"); }
         function onDeviceConnectionChanged(connected) { root.play(connected ? "device-added" : "device-removed"); }
     }
 

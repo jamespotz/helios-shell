@@ -28,7 +28,12 @@ ShellRoot {
             root.verify(IslandNavigation.modeFor("DP-1", false) === "idle", "task alert hidden when off");
             root.verify(!IslandNavigation.satellitesFor("DP-1", true).some(s => s.id === "tasks"), "task Satellite honors alert setting");
             root.verify(Tasks.items.length === 1, "task still tracked");
-            Config.resetOptions(["showTaskAlerts", "batteryAlertThreshold"]);
+            root.verify(IslandNavigation.alertEnabled("notify") && IslandNavigation.alertEnabled("battery"), "alerts allowed by default");
+            Config.setOption("showBatteryAlerts", false);
+            Config.setOption("showMeetingAlerts", false);
+            root.verify(!IslandNavigation.alertEnabled("battery") && !IslandNavigation.alertEnabled("meeting"), "settings silence their alerts");
+            root.verify(!IslandNavigation.alertEnabled("unknown"), "unknown alert");
+            Config.resetOptions(["showTaskAlerts", "showBatteryAlerts", "showMeetingAlerts", "batteryAlertThreshold"]);
 
             console.warn("ISLAND_ALERTS_TEST_PASS");
         } catch (error) {

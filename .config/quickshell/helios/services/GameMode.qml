@@ -4,8 +4,8 @@ import Quickshell
 import Quickshell.Io
 import Quickshell.Hyprland
 
-// Game mode — strips Hyprland's eye candy (animations, blur, shadows, gaps,
-// rounding, inactive opacity). ShellState.dndEnabled and IdleInhibit.inhibited
+// Game mode — turns off Hyprland's blur and window transparency; gaps,
+// rounding, shadows and animations stay. ShellState.dndEnabled and IdleInhibit.inhibited
 // read `enabled`, so DND and caffeine hold for as long as it's on.
 // Turning it off reloads the Hyprland config. Feral gamemoded is left to per-game `gamemoderun`:
 // held shell-wide, its performance governor keeps the CPU at boost clocks.
@@ -17,10 +17,7 @@ QtObject {
     property alias enabled: adapter.enabled
 
     readonly property string _perfConfig: "hl.config({"
-        + " animations = { enabled = false },"
-        + " decoration = { rounding = 0, active_opacity = 1, inactive_opacity = 1,"
-        + " shadow = { enabled = false }, blur = { enabled = false } },"
-        + " general = { gaps_in = 0, gaps_out = 0 } })"
+        + " decoration = { active_opacity = 1, inactive_opacity = 1, blur = { enabled = false } } })"
 
     function toggle() { root.setEnabled(!root.enabled) }
 

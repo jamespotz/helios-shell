@@ -96,35 +96,26 @@ QtObject {
         else root.start(monitorName);
     }
 
-    // setsid + redirecting all stdio to /dev/null fully detaches the opened
-    // app from this Process: without it, some apps' own child processes
-    // (e.g. a video player that logs to stdout — LosslessCut's EPIPE crash)
-    // inherit our still-open pipe, and once xdg-open itself exits and
-    // Quickshell closes that pipe, the still-running app's next write to it
-    // dies with EPIPE.
-    function openFolder() {
-        folderOpener.command = ["sh", "-c", "setsid xdg-open \"$0\" >/dev/null 2>&1 </dev/null &", root.outputDir];
-        folderOpener.running = true;
-    }
-
-    function playLast() {
-        if (!root.lastOutputPath) return;
-        videoOpener.command = ["sh", "-c", "setsid xdg-open \"$0\" >/dev/null 2>&1 </dev/null &", root.lastOutputPath];
-        videoOpener.running = true;
-    }
-
+    function openFolder() { output.open(root.outputDir); }
+    function playLast() { output.open(root.lastOutputPath); }
     // Drop a completed result if its video was deleted outside the shell.
     function verifyLastOutputPath() {
-        if (!root.lastOutputPath || root.recording || root.starting) return;
-        existsCheck.checkedPath = root.lastOutputPath;
-        existsCheck.command = ["test", "-f", root.lastOutputPath];
-        existsCheck.running = false;
-        existsCheck.running = true;
+        if (!root.recording && !root.starting) output.checkExists(root.lastOutputPath);
+    }
+
+    property CaptureOutput output: CaptureOutput {
+        pickTitle: "Choose recordings folder"
+        onFolderPicked: path => root.outputDir = path
+        onMissing: path => {
+            if (path !== root.lastOutputPath) return;
+            root.lastOutputPath = "";
+            root.lastThumbnailPath = "";
+        }
     }
 
     function chooseOutputDir() {
         IslandNavigation.close();
-        dirPicker.running = true;
+        output.pickFolder();
     }
 
     // `source` is whatever gsr's -w flag takes directly: a monitor name,
@@ -221,29 +212,6 @@ QtObject {
         interval: 1000
         repeat: true
         onTriggered: root.elapsedSeconds += 1
-    }
-
-    property Process folderOpener: Process {}
-    property Process videoOpener: Process {}
-
-    property Process existsCheck: Process {
-        property string checkedPath: ""
-        onExited: exitCode => {
-            if (exitCode !== 0 && root.lastOutputPath === existsCheck.checkedPath) {
-                root.lastOutputPath = "";
-                root.lastThumbnailPath = "";
-            }
-        }
-    }
-
-    property Process dirPicker: Process {
-        command: ["zenity", "--file-selection", "--directory", "--title=Choose recordings folder"]
-        stdout: StdioCollector {
-            onStreamFinished: {
-                const picked = text.trim();
-                if (picked) root.outputDir = picked;
-            }
-        }
     }
 
     property FileView settingsFile: FileView {

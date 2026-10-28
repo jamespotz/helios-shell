@@ -225,28 +225,26 @@ QtObject {
 
     function refresh() {
         root._beginRefresh();
-        proc.running = false;
-        proc.running = true;
+        proc.run();
     }
 
-    property Process proc: Process {
+    property Command proc: Command {
         command: ["python3", "-u", Qt.resolvedUrl("calendar-info.py").toString().replace("file://", "")]
-        stdout: StdioCollector {
-            onStreamFinished: {
-                try {
-                    const parsed = JSON.parse(text);
-                    if (parsed.fetchSucceeded === false && parsed.events.length === 0) {
-                        root._cancelRefresh();
-                        return;
-                    }
-                    root._completeRefresh(parsed);
-                    root.lastRefreshAt = Date.now();
-                    eventsFile.setText(JSON.stringify({ savedAt: root.lastRefreshAt, result: parsed }));
-                } catch (e) {
-                    console.warn("[Calendar] failed to parse calendar-info.py output:", e);
-                    root._cancelRefresh();
-                }
+        parse: "json"
+        onFinished: result => {
+            const parsed = result.output;
+            if (!parsed || typeof parsed !== "object" || !Array.isArray(parsed.events)) {
+                console.warn("[Calendar] calendar-info.py failed:", result.error || "Unreadable output");
+                root._cancelRefresh();
+                return;
             }
+            if (parsed.fetchSucceeded === false && parsed.events.length === 0) {
+                root._cancelRefresh();
+                return;
+            }
+            root._completeRefresh(parsed);
+            root.lastRefreshAt = Date.now();
+            eventsFile.setText(JSON.stringify({ savedAt: root.lastRefreshAt, result: parsed }));
         }
     }
 

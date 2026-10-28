@@ -60,18 +60,21 @@ QtObject {
     // inIsland opens the destination in the Island instead of the Satellite.
     // icon, color and badge feed the collapsed badge; each is a value or a
     // function. color defaults to the accent, badge text replaces the icon.
+    // badgeFile replaces the whole badge with a component from modules/island.
+    // card: "plain" shows the destination on its own card, without the
+    // shared host's chrome.
     readonly property var satellites: [
-        { id: "recording", label: qsTr("Recording"), file: "RecordingDestination.qml", onRight: false, active: () => ScreenRecorder.recording },
+        { id: "recording", label: qsTr("Recording"), file: "RecordingDestination.qml", card: "plain", badgeFile: "RecordingBadge.qml", onRight: false, active: () => ScreenRecorder.recording },
         { id: "privacy-status", label: qsTr("Privacy"), destinationLabel: "Privacy activity", file: "PrivacyStatusDestination.qml", onRight: false,
             icon: () => CameraActivity.isSystemCameraActive ? "videocam" : "mic", color: () => Colors.danger, active: () => MicActivity.isSystemMicActive || CameraActivity.isSystemCameraActive },
-        { id: "focus-timer", label: qsTr("Focus timer"), file: "FocusTimerDestination.qml", inIsland: true, onRight: false, active: () => FocusTimer.active },
+        { id: "focus-timer", label: qsTr("Focus timer"), file: "FocusTimerDestination.qml", badgeFile: "FocusTimerBadge.qml", inIsland: true, onRight: false, active: () => FocusTimer.active },
         { id: "meeting", label: qsTr("Upcoming meeting"), file: "MeetingDestination.qml", onRight: true, alertScoped: true,
-            icon: "event", badge: () => Calendar.upcomingAlert ? qsTr("%1m").arg(Calendar.upcomingMinutesUntil) : "", active: () => Config.showMeetingAlerts && Calendar.upcomingAlert !== null },
+            icon: "event", badge: () => Calendar.upcomingAlert ? qsTr("%1m").arg(Calendar.upcomingMinutesUntil) : "", enabled: () => Config.showMeetingAlerts, active: () => Calendar.upcomingAlert !== null },
         { id: "tasks", label: qsTr("Background tasks"), file: "TasksDestination.qml", onRight: true, alertScoped: true,
             icon: () => root._tasksFailed() ? "error" : "sync", color: () => root._tasksFailed() ? Colors.danger : Colors.accent,
             badge: () => Tasks.items.length > 1 ? String(Tasks.items.length)
                 : Tasks.items.length === 1 && Tasks.items[0].status === "running" && Tasks.items[0].progress >= 0
-                    ? Math.round(Math.max(0, Math.min(1, Tasks.items[0].progress)) * 100) + "%" : "", active: () => Config.showTaskAlerts && Tasks.items.length > 0 },
+                    ? Math.round(Math.max(0, Math.min(1, Tasks.items[0].progress)) * 100) + "%" : "", enabled: () => Config.showTaskAlerts, active: () => Tasks.items.length > 0 },
         { id: "maintenance", label: qsTr("Maintenance"), file: "MaintenanceDestination.qml", onRight: true,
             icon: () => root._maintenanceFailed() ? "error" : "download", color: () => root._maintenanceFailed() ? Colors.danger : Colors.accent, active: () => Maintenance.hasAlert },
         { id: "focus-status", label: qsTr("Focus mode"), destinationLabel: "Active focus mode", file: "FocusStatusDestination.qml", onRight: true, icon: "center_focus_strong", active: () => FocusModes.activeId.length > 0 },
@@ -79,13 +82,23 @@ QtObject {
         { id: "caffeine", label: qsTr("Caffeine"), file: "CaffeineDestination.qml", onRight: true, icon: "coffee", color: () => Colors.warning, active: () => IdleInhibit.inhibited }
     ]
 
+    // Whether an alert or Satellite entry shows: enabled in Settings and active.
+    function shows(entry) { return (!entry.enabled || entry.enabled()) && entry.active(); }
+
+    // Whether the user allows an alert (by mode) or Satellite (by id);
+    // AlertSounds asks this so a hidden alert stays silent too.
+    function alertEnabled(id) {
+        const entry = root._alerts.find(a => a.mode === id) || root.satellites.find(s => s.id === id);
+        return !!entry && (!entry.enabled || entry.enabled());
+    }
+
     function _tasksFailed() { return Tasks.items.some(t => t.status === "error") }
     function _maintenanceFailed() { return Maintenance.rebootRequired || Maintenance.failedUnits.length > 0 }
 
     // Catalogue order is priority. Each side owns one slot; an expanded
     // destination stays pinned while other activities change underneath it.
     function satellitesFor(screenName, onRight) {
-        return root.satellites.filter(s => s.onRight === onRight && s.active()
+        return root.satellites.filter(s => s.onRight === onRight && root.shows(s)
             && (!s.alertScoped || root._alertsOn(screenName, Config.alertScreen, root._focusedScreen, root._alertScreens)));
     }
 
@@ -144,8 +157,9 @@ QtObject {
         if (root.dismissesOnFocusLoss(screenName)) root.closeMain(screenName);
     }
 
-    // Alert priority, highest first: the first entry whose active() is true
-    // wins. dismiss is omitted where dismissing that mode isn't supported.
+    // Alert priority, highest first: the first entry that shows wins.
+    // enabled is the user's setting for that alert (omitted when it has
+    // none); dismiss is omitted where dismissing that mode isn't supported.
     readonly property var _alerts: [
         {
             mode: "notify",
@@ -162,7 +176,8 @@ QtObject {
         {
             mode: "battery",
             card: "BatteryAlertCard.qml",
-            active: () => Config.showBatteryAlerts && Bluetooth.lowBatteryAlert !== null,
+            enabled: () => Config.showBatteryAlerts,
+            active: () => Bluetooth.lowBatteryAlert !== null,
             dismiss: () => Bluetooth.dismissLowBattery()
         },
         { mode: "focus-timer", card: "FocusTimerCard.qml", active: () => FocusTimer.completionPending, dismiss: () => FocusTimer.dismissCompletion() }
@@ -184,7 +199,7 @@ QtObject {
         if (root.panelOpenFor(screenName))
             return root.destinationId;
         const alert = root._alertsOn(screenName, Config.alertScreen, root._focusedScreen, root._alertScreens)
-            ? root._alerts.find(a => a.active()) : null;
+            ? root._alerts.find(a => root.shows(a)) : null;
         if (alert)
             return alert.mode;
         return hovering ? "peek" : "idle";

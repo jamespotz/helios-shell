@@ -12,7 +12,7 @@ Item {
         StyledText { text: qsTr("Game Mode"); font.weight: Font.DemiBold; font.pixelSize: Config.fontSize + 2 }
         StyledText {
             width: parent.width
-            text: qsTr("Desktop effects are off, notifications are silenced, and the screen stays awake.")
+            text: qsTr("Blur and transparency are off, notifications are silenced, and the screen stays awake.")
             color: Colors.subtext
             wrapMode: Text.WordWrap
         }

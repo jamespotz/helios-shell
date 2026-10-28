@@ -23,7 +23,7 @@ Item {
         Loader {
             id: destination
             width: parent.width
-            sourceComponent: root.destinationId === "recording" ? recording : generic
+            sourceComponent: root.definition && root.definition.card === "plain" ? plain : generic
         }
         HoverRow {
             width: parent.width
@@ -59,9 +59,13 @@ Item {
             }
         }
     }
+    // A plain card shows its destination without the shared host's chrome.
     Component {
-        id: recording
-        RecordingDestination { targetScreen: root.targetScreen }
+        id: plain
+        Loader {
+            source: root.definition.file
+            onLoaded: item.targetScreen = Qt.binding(() => root.targetScreen)
+        }
     }
     Component {
         id: generic

@@ -1,0 +1,35 @@
+=== /home/test/.config/Kiro/User/settings.json
+{
+
+  "workbench.colorCustomizations": {
+    "editor.background": "#14121a",
+    "editor.foreground": "#eae6f0",
+    "editorCursor.foreground": "#f0a868",
+    "editor.selectionBackground": "#3a3342",
+    "editor.lineHighlightBackground": "#282331",
+    "sideBar.background": "#282331",
+    "sideBar.foreground": "#eae6f0",
+    "activityBar.background": "#282331",
+    "activityBar.foreground": "#eae6f0",
+    "statusBar.background": "#282331",
+    "statusBar.foreground": "#eae6f0",
+    "titleBar.activeBackground": "#282331",
+    "titleBar.activeForeground": "#eae6f0",
+    "tab.activeBackground": "#14121a",
+    "tab.inactiveBackground": "#282331",
+    "focusBorder": "#f0a868",
+    "button.background": "#f0a868",
+    "button.foreground": "#2c1c0f",
+    "badge.background": "#f0a868",
+    "badge.foreground": "#2c1c0f",
+    "terminal.background": "#14121a",
+    "terminal.foreground": "#eae6f0",
+    "terminal.ansiRed": "#e5707e",
+    "terminal.ansiGreen": "#8fd08a",
+    "terminal.ansiYellow": "#eec172",
+    "terminal.ansiBlue": "#f0a868",
+    "terminal.ansiMagenta": "#f0a868",
+    "terminal.ansiCyan": "#f0a868"
+}
+}
+

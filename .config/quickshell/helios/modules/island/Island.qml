@@ -91,8 +91,11 @@ PanelWindow {
     // below it, not at the surface's own top: the island's shadow blurs
     // upward too, and nothing can paint outside the surface.
     readonly property real islandHeight: height - Config.islandTopGap
+    // In Game Mode an alert growing under a game's hidden cursor would take
+    // pointer focus from it (Steam games run under XWayland, so their pointer
+    // isn't locked), so alert cards stay click-through.
     mask: Region {
-        item: hitArea
+        item: GameMode.enabled && bar.alertComp && !bar.panelOpen ? null : hitArea
         Region {
             item: bar.rightSatellite && bar.rightSatellite.visible ? bar.rightSatellite : null
         }

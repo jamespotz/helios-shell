@@ -189,77 +189,24 @@ QtObject {
         return needles.some(needle => names.includes(needle));
     }
 
-    function range(key) { return root.options[key].range; }
     function alignmentOffset(availableLength, contentLength) {
         const remaining = Math.max(0, availableLength - contentLength);
         return root.alignment === "start" ? 0 : root.alignment === "end" ? remaining : remaining / 2;
     }
-    // Returns the stored value: clamped and stepped for numbers, ignored
-    // (unchanged) for an unknown choice or a wrongly-typed value.
-    function _coerce(key, value) {
-        const option = root.options[key];
-        if (!option || typeof value !== typeof option.value) return undefined;
-        if (option.choices) return option.choices.includes(value) ? value : undefined;
-        if (!option.range) return value;
-        const step = option.step || 1;
-        const clamped = Math.max(option.range[0], Math.min(option.range[1], value));
-        return Number((Math.round(clamped / step) * step).toFixed(4));
+    readonly property OptionStore store: OptionStore {
+        options: root.options
+        target: root
+        presetName: "dock"
+        presetLabel: "Dock"
+        onSaveRequested: root._save()
     }
-    function setOption(key, value) {
-        const coerced = root._coerce(key, value);
-        if (coerced === undefined) return;
-        root[key] = coerced;
-        // Debounced: a slider drag calls this every frame.
-        root._saveTimer.restart();
-    }
-    function resetOptions() {
-        for (const key in root.options) root[key] = root.options[key].value;
-        root._save();
-    }
-    // Presets: every option above as JSON, copied and pasted through the
-    // clipboard. Pins and screen choices stay per machine.
-    function _preset() {
-        const options = {};
-        for (const key in root.options) options[key] = root[key];
-        return JSON.stringify({ helios: "dock", version: 1, options: options }, null, 2);
-    }
-    // Returns how many settings were applied, or -1 when the text isn't a
-    // Dock preset. Unknown keys and invalid values are skipped.
-    function _applyPreset(text) {
-        let preset;
-        try { preset = JSON.parse(text); } catch (e) { return -1; }
-        if (!preset || preset.helios !== "dock" || preset.version !== 1 || !preset.options
-                || typeof preset.options !== "object" || Array.isArray(preset.options)) return -1;
-        let applied = 0;
-        for (const key in root.options) {
-            if (!(key in preset.options)) continue;
-            const coerced = root._coerce(key, preset.options[key]);
-            if (coerced === undefined) continue;
-            root[key] = coerced;
-            applied++;
-        }
-        root._save();
-        return applied;
-    }
-    // Short result note after a copy or paste; clears itself.
-    property string presetStatus: ""
-    onPresetStatusChanged: if (root.presetStatus) root._presetStatusClear.restart()
-    property Timer _presetStatusClear: Timer { interval: 4000; onTriggered: root.presetStatus = "" }
-    function copyPreset() {
-        Clipboard.copyText(root._preset());
-        root.presetStatus = "Copied Dock settings";
-    }
-    function pastePreset() { root._presetPaste.running = true; }
-    property Process _presetPaste: Process {
-        command: ["wl-paste", "--no-newline"]
-        stdout: StdioCollector {
-            onStreamFinished: {
-                const applied = root._applyPreset(this.text);
-                root.presetStatus = applied < 0 ? "Clipboard doesn't hold Dock settings"
-                    : "Applied " + applied + " settings";
-            }
-        }
-    }
+    function range(key) { return root.store.range(key); }
+    function setOption(key, value) { root.store.set(key, value); }
+    function resetOptions() { root.store.reset(); }
+    // Pins and screen choices stay per machine, outside presets.
+    readonly property string presetStatus: root.store.presetStatus
+    function copyPreset() { root.store.copyPreset(); }
+    function pastePreset() { root.store.pastePreset(); }
     function shownOn(screenName) { return root.enabled && !root.hiddenScreens.includes(screenName); }
     function setShownOn(screenName, shown) {
         root.hiddenScreens = root.hiddenScreens.filter(name => name !== screenName).concat(shown ? [] : [screenName]);
@@ -292,10 +239,6 @@ QtObject {
     function _setPins(next) {
         root.pins = next;
         root._save();
-    }
-    property Timer _saveTimer: Timer {
-        interval: 300
-        onTriggered: root._save()
     }
     function _save() {
         const data = { pins: root.pins, hiddenScreens: root.hiddenScreens, recents: root.recents };
@@ -548,10 +491,7 @@ QtObject {
                 if (Array.isArray(parsed.pins)) root.pins = parsed.pins.map(String);
                 if (Array.isArray(parsed.hiddenScreens)) root.hiddenScreens = parsed.hiddenScreens.map(String);
                 if (Array.isArray(parsed.recents)) root.recents = parsed.recents.map(String).slice(0, root._recentsKept);
-                for (const key in root.options) {
-                    const value = root._coerce(key, parsed[key]);
-                    if (value !== undefined) root[key] = value;
-                }
+                root.store.apply(parsed);
             } catch (error) {}
         }
     }

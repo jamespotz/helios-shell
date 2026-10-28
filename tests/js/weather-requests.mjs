@@ -19,7 +19,7 @@ function service(settings = {}) {
     const settingsAdapter = { locationOverride: '', locationName: '', temperatureUnit: 'celsius', windUnit: 'kmh', refreshMinutes: 20, animationsEnabled: true, ...settings };
     const root = { loading: false, available: false, error: '', lastUpdated: 0, searching: false,
         searchResults: [], searchError: '', _searchGeneration: 0, _forecastGeneration: 0, _retryCount: 0,
-        settingsFile: { writeAdapter() {} }, saveTimer: timer(),
+        settingsFile: { writeAdapter() {} }, store: { save() {} },
         cacheFile: (() => { let text = ''; return { text: () => text, setText(value) { text = value; } }; })(), retryTimer: timer(), requestTimer: timer(), searchTimer: timer() };
     for (const key of Object.keys(settingsAdapter)) Object.defineProperty(root, key, { get: () => settingsAdapter[key] });
     const context = vm.createContext({ root, settingsAdapter, XMLHttpRequest: Request, Date, console });

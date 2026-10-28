@@ -1,0 +1,28 @@
+=== /home/test/.config/ghostty/themes/helios
+palette = 0=#3a3342
+palette = 1=#e5707e
+palette = 2=#8fd08a
+palette = 3=#eec172
+palette = 4=#f0a868
+palette = 5=#f0a868
+palette = 6=#f0a868
+palette = 7=#eae6f0
+palette = 8=#6f6580
+palette = 9=#e5707e
+palette = 10=#8fd08a
+palette = 11=#eec172
+palette = 12=#f0a868
+palette = 13=#f0a868
+palette = 14=#f0a868
+palette = 15=#eae6f0
+background = #14121a
+foreground = #eae6f0
+cursor-color = #f0a868
+cursor-text = #14121a
+selection-background = #3a3342
+selection-foreground = #eae6f0
+
+=== /home/test/.config/ghostty/config
+font-size = 12
+theme = helios
+

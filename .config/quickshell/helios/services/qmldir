@@ -4,6 +4,9 @@ singleton Colors 1.0 Colors.qml
 singleton Bluetooth 1.0 Bluetooth.qml
 BluetoothDeviceCore 1.0 BluetoothDeviceCore.qml
 singleton Config 1.0 Config.qml
+OptionStore 1.0 OptionStore.qml
+Command 1.0 Command.qml
+CaptureOutput 1.0 CaptureOutput.qml
 TiledLayoutCore 1.0 TiledLayoutCore.qml
 singleton ShellState 1.0 ShellState.qml
 singleton IslandNavigation 1.0 IslandNavigation.qml
@@ -23,25 +26,7 @@ singleton WallpaperLibrary 1.0 WallpaperLibrary.qml
 singleton WallpaperPlayback 1.0 WallpaperPlayback.qml
 singleton Wallpaper 1.0 Wallpaper.qml
 singleton Themes 1.0 Themes.qml
-singleton ThemeExportHyprland 1.0 ThemeExportHyprland.qml
-singleton ThemeExportGhostty 1.0 ThemeExportGhostty.qml
-singleton ThemeExportKitty 1.0 ThemeExportKitty.qml
-singleton ThemeExportBtop 1.0 ThemeExportBtop.qml
-singleton ThemeExportNvim 1.0 ThemeExportNvim.qml
-singleton ThemeExportZed 1.0 ThemeExportZed.qml
-singleton ThemeExportBat 1.0 ThemeExportBat.qml
-singleton ThemeExportFirefox 1.0 ThemeExportFirefox.qml
-singleton ThemeExportVivaldi 1.0 ThemeExportVivaldi.qml
-singleton ThemeExportYazi 1.0 ThemeExportYazi.qml
-singleton ThemeExportAlacritty 1.0 ThemeExportAlacritty.qml
-singleton ThemeExportWezterm 1.0 ThemeExportWezterm.qml
-singleton ThemeExportTmux 1.0 ThemeExportTmux.qml
-singleton ThemeExportVscode 1.0 ThemeExportVscode.qml
-singleton ThemeExportKiro 1.0 ThemeExportKiro.qml
-singleton ThemeExportRofi 1.0 ThemeExportRofi.qml
-singleton ThemeExportWofi 1.0 ThemeExportWofi.qml
-singleton ThemeExportFuzzel 1.0 ThemeExportFuzzel.qml
-singleton ThemeExportFish 1.0 ThemeExportFish.qml
+singleton ThemeExport 1.0 ThemeExport.qml
 singleton Cava 1.0 Cava.qml
 singleton Clipboard 1.0 Clipboard.qml
 singleton Keybinds 1.0 Keybinds.qml

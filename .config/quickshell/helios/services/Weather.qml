@@ -48,19 +48,25 @@ QtObject {
 
     readonly property string locationOverride: settingsAdapter.locationOverride
     readonly property string locationName: settingsAdapter.locationName
-    readonly property string temperatureUnit: settingsAdapter.temperatureUnit === "fahrenheit" ? "fahrenheit" : "celsius"
-    readonly property string windUnit: ["kmh", "mph", "ms"].includes(settingsAdapter.windUnit) ? settingsAdapter.windUnit : "kmh"
-    readonly property int refreshMinutes: [10, 20, 30, 60].includes(settingsAdapter.refreshMinutes) ? settingsAdapter.refreshMinutes : 20
+    readonly property string temperatureUnit: settingsAdapter.temperatureUnit
+    readonly property string windUnit: settingsAdapter.windUnit
+    readonly property int refreshMinutes: settingsAdapter.refreshMinutes
     readonly property bool animationsEnabled: settingsAdapter.animationsEnabled
 
+    // The location is set through setLocation(), not as an option.
+    readonly property var options: ({
+        temperatureUnit: { value: "celsius", choices: ["celsius", "fahrenheit"] },
+        windUnit: { value: "kmh", choices: ["kmh", "mph", "ms"] },
+        refreshMinutes: { value: 20, choices: [10, 20, 30, 60] },
+        animationsEnabled: { value: true }
+    })
+    readonly property OptionStore store: OptionStore {
+        options: root.options
+        target: settingsAdapter
+        onSaveRequested: root.settingsFile.writeAdapter()
+    }
     function setOption(key, value) {
-        if (key === "temperatureUnit" && !["celsius", "fahrenheit"].includes(value)) return;
-        if (key === "windUnit" && !["kmh", "mph", "ms"].includes(value)) return;
-        if (key === "refreshMinutes" && ![10, 20, 30, 60].includes(value)) return;
-        if (key === "animationsEnabled" && typeof value !== "boolean") return;
-        if (!["temperatureUnit", "windUnit", "refreshMinutes", "animationsEnabled"].includes(key)) return;
-        settingsAdapter[key] = value;
-        root.saveTimer.restart();
+        root.store.set(key, value);
     }
 
     function formatTemperature(celsius, withUnit) {
@@ -212,7 +218,7 @@ QtObject {
         }
         settingsAdapter.locationOverride = value;
         settingsAdapter.locationName = name || "";
-        root.saveTimer.restart();
+        root.store.save();
         root.available = false;
         root.lastUpdated = 0;
         root.location = name || value;
@@ -417,27 +423,22 @@ QtObject {
         });
     }
 
-    property Timer saveTimer: Timer {
-        interval: 100
-        onTriggered: root.settingsFile.writeAdapter()
-    }
-
     property FileView settingsFile: FileView {
         path: Quickshell.statePath("weather.json")
         watchChanges: true
         // Wait for the persisted location (if any) to load before the first
         // fetch, rather than fetching once with the default then again.
-        onLoaded: { root._restoreCache(); root.refresh(); }
+        onLoaded: { root.store.sanitize(); root._restoreCache(); root.refresh(); }
         onLoadFailed: { root._restoreCache(); root.refresh(); }
 
         JsonAdapter {
             id: settingsAdapter
             property string locationOverride: ""
             property string locationName: ""
-            property string temperatureUnit: "celsius"
-            property string windUnit: "kmh"
-            property int refreshMinutes: 20
-            property bool animationsEnabled: true
+            property string temperatureUnit: root.options.temperatureUnit.value
+            property string windUnit: root.options.windUnit.value
+            property int refreshMinutes: root.options.refreshMinutes.value
+            property bool animationsEnabled: root.options.animationsEnabled.value
         }
     }
 

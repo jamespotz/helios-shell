@@ -148,13 +148,13 @@ ShellRoot {
             Dock.setOption("indicatorStyle", "windows");
             Dock.setOption("borderOpacity", 0.73);
             root.verify(Dock.borderOpacity === 0.75, "border opacity steps cleanly");
-            const preset = Dock._preset();
+            const preset = Dock.store.presetText();
             Dock.resetOptions();
-            root.verify(Dock._applyPreset(preset) === Object.keys(Dock.options).length, "preset applies every option");
+            root.verify(Dock.store.applyPreset(preset) === Object.keys(Dock.options).length, "preset applies every option");
             root.verify(Dock.indicatorStyle === "windows" && Dock.borderOpacity === 0.75, "preset restores values");
-            root.verify(Dock._applyPreset(JSON.stringify({ helios: "island", version: 1, options: {} })) === -1, "island preset rejected");
-            root.verify(Dock._applyPreset("not json") === -1, "invalid text rejected");
-            root.verify(Dock._applyPreset(JSON.stringify({ helios: "dock", version: 1, options: { iconSize: 999, glass: "maybe", bogus: 1 } })) === 1, "preset skips invalid values and unknown keys");
+            root.verify(Dock.store.applyPreset(JSON.stringify({ helios: "island", version: 1, options: {} })) === -1, "island preset rejected");
+            root.verify(Dock.store.applyPreset("not json") === -1, "invalid text rejected");
+            root.verify(Dock.store.applyPreset(JSON.stringify({ helios: "dock", version: 1, options: { iconSize: 999, glass: "maybe", bogus: 1 } })) === 1, "preset skips invalid values and unknown keys");
             root.verify(Dock.iconSize === Dock.range("iconSize")[1] && Dock.glass === "follow", "preset clamps and ignores bad choices");
             Dock.resetOptions();
 

@@ -4,21 +4,18 @@ const assert = require('node:assert/strict');
 const cp = require('node:child_process');
 const path = require('node:path');
 const services = path.resolve(__dirname, '../../.config/quickshell/helios/services');
-function load(name, fn) {
-    const source = fs.readFileSync(path.join(services, name + '.qml'), 'utf8');
-    const start = source.indexOf('    function ' + fn + '(');
-    const next = source.indexOf('\n    function ', start + 1);
-    const property = source.indexOf('\n    property ', start + 1);
-    const end = Math.min(...[next, property].filter(i => i >= 0));
-    const context = { JSON, Jsonc: {} };
-    const helper = path.join(services, 'ThemeExportJsonc.js');
-    if (fs.existsSync(helper)) vm.runInNewContext(fs.readFileSync(helper, 'utf8').replace(/^\.pragma library\s*/, ''), context.Jsonc);
-    vm.runInNewContext(source.slice(start, end), context);
-    return context[fn];
+// Runs a themeExport/ module the way QML's .pragma library would, with its
+// .import dependencies loaded the same way.
+function module(name) {
+    const source = fs.readFileSync(path.join(services, 'themeExport', name + '.js'), 'utf8');
+    const context = { JSON };
+    for (const [, file, alias] of source.matchAll(/^\.import "(\w+)\.js" as (\w+)$/gm)) context[alias] = module(file);
+    vm.runInNewContext(source.replace(/^\.(pragma|import) .*$/gm, ''), context);
+    return context;
 }
-const vscode = load('ThemeExportVscode', 'mergeVscodeSettings');
-const zed = load('ThemeExportZed', 'mergeZedSettings');
-const wezterm = load('ThemeExportWezterm', 'buildWeztermTheme');
+const vscode = module('vscode').mergeVscodeSettings;
+const zed = module('zed').mergeZedSettings;
+const wezterm = module('wezterm').buildWeztermTheme;
 const failures = [];
 function test(name, fn) { try { fn(); console.log('PASS ' + name); } catch (error) { failures.push(name); console.error('FAIL ' + name + ': ' + error.message); } }
 test('VS Code replaces inline nested color customization and preserves unrelated settings', () => {

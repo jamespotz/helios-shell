@@ -173,13 +173,13 @@ ShellRoot {
             root.verify(mainShape.cornerRadius === 0, "zero radius allows square corners");
             Config.setOption("islandExpandedCornerRadius", 100);
             root.verify(mainShape.cornerRadius === 48, "radius setting clamps to maximum");
-            const radiusPreset = Config._islandPreset();
+            const radiusPreset = Config.store.presetText();
             Config.resetOptions(["islandExpandedCornerRadius"]);
             root.verify(mainShape.cornerRadius === 18, "reset restores default corners");
             mainShape.expanded = false;
             root.verify(mainShape.cornerRadius === 8, "Expanded reset preserves Idle radius");
             mainShape.expanded = true;
-            Config._applyIslandPreset(radiusPreset);
+            Config.store.applyPreset(radiusPreset);
             root.verify(mainShape.cornerRadius === 48, "preset restores radius");
             Config.resetOptions(["islandIdleCornerRadius", "islandExpandedCornerRadius"]);
             root.verify(root.contentInstances === 0, "collapsed satellite does not instantiate destination");

@@ -18,7 +18,7 @@ ShellRoot {
             root.verify(Config.widgetShown("idle", "launcher"), "Launcher toggle applies");
             Config.setOption("launcherIconMode", "custom");
             Config.setOption("launcherIconPath", "/tmp/logo.svg");
-            root.verify(JSON.parse(Config._islandPreset()).options.launcherIconPath === "/tmp/logo.svg", "custom icon included in presets");
+            root.verify(JSON.parse(Config.store.presetText()).options.launcherIconPath === "/tmp/logo.svg", "custom icon included in presets");
             Config.resetOptions(["showIdleLauncher", "launcherIconMode", "launcherIconPath"]);
             root.verify(Config.widgetShown("peek", "github") && !Config.widgetShown("idle", "github"), "GitHub widget shows on hover by default, opt-in when idle");
             root.verify(Config.idleWidgetLayout.filter(k => k !== "launcher").join(",") === "workspaces,tiledLayout,activeWindow,media,clock,weather,tray,clipboard,github,statusIndicators,|", "idle default keeps existing order");

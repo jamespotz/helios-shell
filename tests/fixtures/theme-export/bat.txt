@@ -1,0 +1,86 @@
+=== /home/test/.config/bat/themes/Helios.tmTheme
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>name</key><string>Helios</string>
+    <key>settings</key>
+    <array>
+        <dict>
+            <key>settings</key>
+            <dict>
+                <key>background</key><string>#14121a</string>
+                <key>foreground</key><string>#eae6f0</string>
+                <key>caret</key><string>#f0a868</string>
+                <key>selection</key><string>#3a3342</string>
+                <key>lineHighlight</key><string>#282331</string>
+                <key>invisibles</key><string>#6f6580</string>
+            </dict>
+        </dict>
+        <dict>
+            <key>name</key><string>Comment</string>
+            <key>scope</key><string>comment</string>
+            <key>settings</key><dict>
+                <key>foreground</key><string>#b3a9c4</string>
+                <key>fontStyle</key><string>italic</string>
+            </dict>
+        </dict>
+        <dict>
+            <key>name</key><string>String</string>
+            <key>scope</key><string>string</string>
+            <key>settings</key><dict>
+                <key>foreground</key><string>#8fd08a</string>
+            </dict>
+        </dict>
+        <dict>
+            <key>name</key><string>Number</string>
+            <key>scope</key><string>constant.numeric</string>
+            <key>settings</key><dict>
+                <key>foreground</key><string>#eec172</string>
+            </dict>
+        </dict>
+        <dict>
+            <key>name</key><string>Keyword</string>
+            <key>scope</key><string>keyword</string>
+            <key>settings</key><dict>
+                <key>foreground</key><string>#e5707e</string>
+            </dict>
+        </dict>
+        <dict>
+            <key>name</key><string>Storage/Type</string>
+            <key>scope</key><string>storage, storage.type</string>
+            <key>settings</key><dict>
+                <key>foreground</key><string>#f0a868</string>
+            </dict>
+        </dict>
+        <dict>
+            <key>name</key><string>Function</string>
+            <key>scope</key><string>entity.name.function, support.function</string>
+            <key>settings</key><dict>
+                <key>foreground</key><string>#f0a868</string>
+            </dict>
+        </dict>
+        <dict>
+            <key>name</key><string>Variable</string>
+            <key>scope</key><string>variable</string>
+            <key>settings</key><dict>
+                <key>foreground</key><string>#eae6f0</string>
+            </dict>
+        </dict>
+        <dict>
+            <key>name</key><string>Constant</string>
+            <key>scope</key><string>constant.language, constant.other</string>
+            <key>settings</key><dict>
+                <key>foreground</key><string>#eec172</string>
+            </dict>
+        </dict>
+    </array>
+    <key>uuid</key><string>b8a1c2d3-e4f5-4a6b-9c8d-0e1f2a3b4c5d</string>
+</dict>
+</plist>
+
+=== /home/test/.config/bat/config
+--style=plain
+--theme="Helios"
+
+=== run bat cache --build

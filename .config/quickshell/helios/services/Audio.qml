@@ -29,8 +29,7 @@ QtObject {
     // the default sink awake while interface sounds are on. Wired outputs
     // stay awake throughout; Bluetooth only during an interaction, since a
     // constant stream holds the headset's radio and drains its battery.
-    readonly property bool bluetoothOutput: !!Pipewire.defaultAudioSink
-        && Pipewire.defaultAudioSink.name.startsWith("bluez_")
+    readonly property bool bluetoothOutput: !!Pipewire.defaultAudioSink && root.isBluetoothSink(Pipewire.defaultAudioSink)
     property Process audioKeepalive: Process {
         command: ["python3", Qt.resolvedUrl("audio-keepalive.py").toString().replace("file://", "")]
         running: Config.interfaceSounds && (!root.bluetoothOutput || root.interactionOpen)
@@ -74,14 +73,31 @@ QtObject {
         if (selected) Pipewire.preferredDefaultAudioSink = selected;
     }
     function clearOutputPreference() { root.preferOutput(""); }
-    function isBluetoothSink(node) {
-        const props = node.properties || {};
-        return !!props["api.bluez5.address"] || props["device.api"] === "bluez5" || props["device.bus"] === "bluetooth" || String(node.name).startsWith("bluez_output.");
+    function isBluetoothSink(node) { return outputRule.isBluetoothSink(node.name, node.properties); }
+
+    // ─── Bluetooth reconnects → restore the preferred output ─────
+    // See AudioOutputRuleCore.bluetoothStep.
+    readonly property var _connectedBluetoothIds: Bluetooth.state.devices
+        .filter(device => device.connected)
+        .map(device => device.id)
+    readonly property var _connectedBluetoothAudio: Bluetooth.state.devices
+        .filter(device => device.connected && device.audio && device.audio.nodeName)
+        .map(device => ({ id: device.id, nodeName: device.audio.nodeName }))
+    property var _bluetoothState: null
+    function _updateBluetooth() {
+        // Devices already connected at startup aren't reconnects.
+        if (!root._bluetoothState) {
+            root._bluetoothState = { connected: root._connectedBluetoothIds, pending: [] };
+            return;
+        }
+        const step = outputRule.bluetoothStep(root._bluetoothState, root._connectedBluetoothIds, root._connectedBluetoothAudio);
+        root._bluetoothState = step.state;
+        if (step.route && root.preferredOutputName === step.route
+                && outputRule.canRouteConnection(step.route, root._pipewireReady)) root.setOutput(step.route);
     }
-    // Bluetooth's connection rule owns routing across A2DP/HFP node recreation.
-    function routeConnectedBluetoothOutput(name) {
-        if (outputRule.canRouteConnection(name, root._pipewireReady)) root.setOutput(name);
-    }
+    on_ConnectedBluetoothIdsChanged: root._updateBluetooth()
+    on_ConnectedBluetoothAudioChanged: root._updateBluetooth()
+
     function _updateOutputs() {
         const arrived = outputRule.update(root._sinkNames, root._pipewireReady);
         const node = root.sinks.find(candidate => candidate.name === arrived);
@@ -89,7 +105,7 @@ QtObject {
     }
     on_SinkNamesChanged: root._updateOutputs()
     on_PipewireReadyChanged: root._updateOutputs()
-    Component.onCompleted: { outputPreferenceFile.text(); root._updateOutputs(); }
+    Component.onCompleted: { outputPreferenceFile.text(); root._updateOutputs(); root._updateBluetooth(); }
 
     // Matches against node.name first (stable pipewire id), falling back to
     // a case-insensitive substring match on description/nickname — e.g.

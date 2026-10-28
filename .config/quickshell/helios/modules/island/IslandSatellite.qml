@@ -38,6 +38,7 @@ FocusScope {
     property real shadowSpread: Config.satelliteShadowSpread
 
     property Component badge
+    readonly property Item badgeItem: badgeLoader.item
     property Component expandedContent
 
     signal clicked()

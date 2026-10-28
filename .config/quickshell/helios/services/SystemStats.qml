@@ -88,8 +88,7 @@ QtObject {
         if (!process || root.isProcessProtected(process)) return false;
         killProc.targetPid = pid;
         killProc.command = ["python3", "-u", Qt.resolvedUrl("system-info.py").toString().replace("file://", ""), "--signal", String(pid), action === "terminate" ? "terminate" : "forceStop"];
-        killProc._errBuf = "";
-        killProc.running = true;
+        killProc.run();
         return true;
     }
 
@@ -168,25 +167,17 @@ QtObject {
         }
     }
 
-    property Process killProc: Process {
+    property Command killProc: Command {
         id: killProc
         property int targetPid: -1
-        property string _errBuf: ""
-        stdout: StdioCollector {
-            onStreamFinished: {
-                try { root._completeProcessAction(JSON.parse(text)); }
-                catch (e) { root._completeProcessAction({ pid: killProc.targetPid, success: false, message: "Invalid process result" }); }
-            }
-        }
-        stderr: SplitParser {
-            onRead: line => killProc._errBuf += (killProc._errBuf.length > 0 ? " " : "") + line
-        }
-        onExited: exitCode => {
-            const success = exitCode === 0;
-            if (!root.state.processAction || root.state.processAction.pid !== killProc.targetPid)
-                root._completeProcessAction({ pid: killProc.targetPid, success: success, message: success ? "" : (killProc._errBuf || "Failed") });
-            const message = success ? "" : (root.state.processAction.message || killProc._errBuf || "Failed");
-            root.processKillResult(killProc.targetPid, success, message);
+        parse: "json"
+        onFinished: result => {
+            const pid = killProc.targetPid, success = result.exitCode === 0;
+            root._completeProcessAction(result.output !== undefined ? result.output
+                : { pid: pid, success: false, message: "Invalid process result" });
+            if (!root.state.processAction || root.state.processAction.pid !== pid)
+                root._completeProcessAction({ pid: pid, success: success, message: success ? "" : (result.stderr || "Failed") });
+            root.processKillResult(pid, success, success ? "" : (root.state.processAction.message || result.stderr || "Failed"));
         }
     }
 

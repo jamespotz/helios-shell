@@ -82,34 +82,24 @@ QtObject {
 
     function chooseOutputDir() {
         IslandNavigation.close();
-        dirPicker.running = true;
+        output.pickFolder();
     }
 
-    // setsid + redirecting all stdio to /dev/null fully detaches the opened
-    // app from this Process: without it, some apps' own child processes
-    // (e.g. an image viewer that logs to stdout) inherit our still-open
-    // pipe, and once xdg-open itself exits and Quickshell closes that pipe,
-    // the still-running app's next write to it dies with EPIPE.
-    function openFolder() {
-        folderOpener.command = ["sh", "-c", "setsid xdg-open \"$0\" >/dev/null 2>&1 </dev/null &", root.outputDir];
-        folderOpener.running = true;
-    }
-
-    function openLast() {
-        if (root.lastPath) {
-            fileOpener.command = ["sh", "-c", "setsid xdg-open \"$0\" >/dev/null 2>&1 </dev/null &", root.lastPath];
-            fileOpener.running = true;
-        }
-    }
-
+    function openFolder() { output.open(root.outputDir); }
+    function openLast() { output.open(root.lastPath); }
     // Clears the result if lastPath was deleted out from under us (e.g. the
-    // user removed it in a file manager) — checked when the island reopens
-    // rather than watched continuously.
-    function verifyLastPath() {
-        if (!root.lastPath) return;
-        existsCheck.command = ["test", "-f", root.lastPath];
-        existsCheck.running = false;
-        existsCheck.running = true;
+    // user removed it in a file manager).
+    function verifyLastPath() { output.checkExists(root.lastPath); }
+
+    property CaptureOutput output: CaptureOutput {
+        pickTitle: "Choose screenshot folder"
+        onFolderPicked: path => root.outputDir = path
+        onMissing: path => {
+            if (path !== root.lastPath) return;
+            root.lastPath = "";
+            root.extractedText = "";
+            root.lastCopied = false;
+        }
     }
 
     function _shoot(geometry) {
@@ -204,26 +194,6 @@ QtObject {
         }
     }
 
-    property Process dirPicker: Process {
-        command: ["zenity", "--file-selection", "--directory", "--title=Choose screenshot folder"]
-        stdout: StdioCollector {
-            onStreamFinished: {
-                const picked = text.trim();
-                if (picked) root.outputDir = picked;
-            }
-        }
-    }
-
-    property Process existsCheck: Process {
-        onExited: exitCode => {
-            if (exitCode !== 0) {
-                root.lastPath = "";
-                root.extractedText = "";
-                root.lastCopied = false;
-            }
-        }
-    }
-
     property Process clipboardProc: Process {
         onStarted: {
             if (stdinEnabled) {
@@ -233,8 +203,6 @@ QtObject {
         }
         onExited: exitCode => { root.lastCopied = exitCode === 0; }
     }
-    property Process folderOpener: Process {}
-    property Process fileOpener: Process {}
     property Process notificationProc: Process {}
     property Process soundProc: Process {}
 }

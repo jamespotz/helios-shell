@@ -333,7 +333,7 @@ Item {
                             { value: "audio", label: "Audio", icon: "headphones" },
                             { value: "call", label: "Call", icon: "call" }
                         ]
-                        currentValue: myRow.modelData.audio && myRow.modelData.audio.profile === "HFP/HSP" ? "call" : "audio"
+                        currentValue: myRow.modelData.audio ? myRow.modelData.audio.mode : "audio"
                         onActivated: value => {
                             if (value !== currentValue) Bluetooth.setAudioMode(myRow.modelData.address, value);
                         }

@@ -18,7 +18,7 @@ File names in `modules/island/` say their role, using the `CONTEXT.md` terms:
 - `*Card` — an alert card
 - no suffix — a part used inside one destination (`WallpaperPicker`)
 
-The suffix also keeps type names clear of service singletons (`WeatherWidget` beside `Weather`). Theme exporters in `services/` are `ThemeExport<App>`; Settings window pages in `modules/settings/` are `*Settings`.
+The suffix also keeps type names clear of service singletons (`WeatherWidget` beside `Weather`). Theme exporters are per-app modules in `services/themeExport/` (`kitty.js`), run by `ThemeExport.qml`; Settings window pages in `modules/settings/` are `*Settings`.
 - `data/` — static data such as emoji and themes
 
 ## Project Philosophy

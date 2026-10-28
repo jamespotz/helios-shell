@@ -6,15 +6,9 @@ import "../../components"
 Item {
     id: root
 
-    // PipeWire's node graph also contains non-audio plumbing nodes (the
-    // Dummy-Driver/Freewheel-Driver clock drivers, the Midi-Bridge/
-    // bluez_midi.server MIDI bridges) that are neither a sink nor a stream,
-    // so `!isSink && !isStream` alone let them leak into the input list.
-    // Requiring the actual Audio(Sink|Source) type flag excludes them.
-    readonly property var sinks: Pipewire.nodes ? Pipewire.nodes.values.filter(n => n.isSink && !n.isStream && (n.type & PwNodeType.AudioSink) === PwNodeType.AudioSink) : []
-    readonly property var sources: Pipewire.nodes ? Pipewire.nodes.values.filter(n => !n.isSink && !n.isStream && (n.type & PwNodeType.AudioSource) === PwNodeType.AudioSource) : []
-
-    PwObjectTracker { objects: root.sinks.concat(root.sources) }
+    // Audio owns the sink/source lists (and keeps them tracked).
+    readonly property var sinks: Audio.sinks
+    readonly property var sources: Audio.sources
 
     readonly property var sink: Pipewire.defaultAudioSink
     readonly property real volume: sink && sink.audio ? sink.audio.volume : 0

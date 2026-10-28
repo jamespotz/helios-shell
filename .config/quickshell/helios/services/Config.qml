@@ -366,11 +366,11 @@ QtObject {
     // Every user option in island-appearance.json (workspaceIcons and
     // islandHiddenScreens aside):
     // default, plus [min, max] (and step) for numbers or the allowed values
-    // for choices. setOption() clamps/validates against this, and the
-    // adapter below takes its defaults from it — same shape as Dock.options.
+    // for choices. `store` clamps/validates against this, and the adapter
+    // below takes its defaults from it — same shape as Dock.options.
     readonly property var options: ({
-        fontFamily: { value: "Inter" },
-        fontSize: { value: 13, range: [9, 22] },
+        fontFamily: { value: "Inter", islandPreset: false },
+        fontSize: { value: 13, range: [9, 22], islandPreset: false },
 
         idleBumpWidth: { value: 140, range: [80, 400] },
         idleBumpHeight: { value: 32, range: [18, 60] },
@@ -419,16 +419,16 @@ QtObject {
         idleLayout: { value: ["workspaces", "tiledLayout", "activeWindow", "media", "clock", "weather", "tray", "clipboard", "github", "statusIndicators", "|"] },
         peekLayout: { value: ["workspaces", "tiledLayout", "activeWindow", "|", "clock", "weather", "tray", "clipboard", "github", "statusIndicators"] },
 
-        workspaceIndicatorStyle: { value: "dots", choices: ["dots", "pills", "numbers", "custom"] },
-        showAllWorkspaces: { value: true },
-        workspacePillsSameHeight: { value: false },
+        workspaceIndicatorStyle: { value: "dots", choices: ["dots", "pills", "numbers", "custom"], islandPreset: false },
+        showAllWorkspaces: { value: true, islandPreset: false },
+        workspacePillsSameHeight: { value: false, islandPreset: false },
 
-        wallpaperTransitionStyle: { value: "any", choices: root.wallpaperTransitionStyles },
+        wallpaperTransitionStyle: { value: "any", choices: root.wallpaperTransitionStyles, islandPreset: false },
 
-        use24HourClock: { value: false },
-        clockAmPmUppercase: { value: true },
+        use24HourClock: { value: false, islandPreset: false },
+        clockAmPmUppercase: { value: true, islandPreset: false },
 
-        reducedMotion: { value: false },
+        reducedMotion: { value: false, islandPreset: false },
 
         turntableDesign: { value: "classic", choices: ["classic", "studio", "minimal", "sleeve"] },
         turntableScale: { value: 100, range: [80, 120], step: 5 },
@@ -477,102 +477,34 @@ QtObject {
         satelliteSpringDamping: { value: 1.0, range: [0.1, 8], step: 0.1 }
     })
 
-    function range(key) { return root.options[key].range; }
+    // islandPreset: false keeps an option out of Island presets: the global
+    // font, clock, workspace, wallpaper and motion options (and the turntable).
+    readonly property var islandKeys: Object.keys(root.options)
+        .filter(key => !key.startsWith("turntable") && root.options[key].islandPreset !== false)
 
-    // Returns the stored value: clamped and stepped for numbers, undefined
-    // for an unknown key, an unknown choice, or a wrongly-typed value.
-    function _coerce(key, value) {
-        const option = root.options[key];
-        if (!option || typeof value !== typeof option.value) return undefined;
-        if (Array.isArray(option.value) !== Array.isArray(value)) return undefined;
-        if (option.choices) return option.choices.includes(value) ? value : undefined;
-        if (!option.range) return value;
-        const step = option.step || 1;
-        const clamped = Math.max(option.range[0], Math.min(option.range[1], value));
-        return Number((Math.round(clamped / step) * step).toFixed(4));
-    }
-
-    // Applies immediately; the file write is debounced so dragging a
-    // slider doesn't rewrite the JSON every frame.
-    function setOption(key, value) {
-        const coerced = root._coerce(key, value);
-        if (coerced === undefined) return;
-        settingsAdapter[key] = coerced;
-        root._save();
-    }
-
-    // Island presets: every option on Settings > Island (everything here but
-    // the global font, clock, workspace, wallpaper and motion options) as
-    // JSON, copied and pasted through the clipboard.
-    readonly property var islandKeys: Object.keys(root.options).filter(key => !key.startsWith("turntable") && ![
-        "fontFamily", "fontSize", "workspaceIndicatorStyle", "showAllWorkspaces", "workspacePillsSameHeight",
-        "wallpaperTransitionStyle", "use24HourClock", "clockAmPmUppercase", "reducedMotion"
-    ].includes(key))
-
-    function _islandPreset() {
-        const options = {};
-        for (const key of root.islandKeys) options[key] = settingsAdapter[key];
-        return JSON.stringify({ helios: "island", version: 1, options: options }, null, 2);
-    }
-
-    // Returns how many settings were applied, or -1 when the text isn't an
-    // Island preset. Unknown keys and invalid values are skipped.
-    function _applyIslandPreset(text) {
-        let preset;
-        try { preset = JSON.parse(text); } catch (e) { return -1; }
-        if (!preset || preset.helios !== "island" || preset.version !== 1 || !preset.options
-                || typeof preset.options !== "object" || Array.isArray(preset.options)) return -1;
+    readonly property OptionStore store: OptionStore {
+        options: root.options
+        target: settingsAdapter
+        presetName: "island"
+        presetLabel: "Island"
+        presetKeys: root.islandKeys
         // Older presets used one radius for both states. Explicit state values win.
-        if ("islandCornerRadius" in preset.options) {
+        migratePreset: options => {
+            if (!("islandCornerRadius" in options)) return;
             for (const key of ["islandIdleCornerRadius", "islandExpandedCornerRadius"])
-                if (!(key in preset.options)) preset.options[key] = preset.options.islandCornerRadius;
+                if (!(key in options)) options[key] = options.islandCornerRadius;
         }
-        let applied = 0;
-        for (const key of root.islandKeys) {
-            if (!(key in preset.options)) continue;
-            const coerced = root._coerce(key, preset.options[key]);
-            if (coerced === undefined) continue;
-            settingsAdapter[key] = coerced;
-            applied++;
-        }
-        root._save();
-        return applied;
+        onSaveRequested: root.settingsFile.writeAdapter()
     }
 
-    // Short result note after a copy or paste; clears itself.
-    property string presetStatus: ""
-    onPresetStatusChanged: if (root.presetStatus) root._presetStatusClear.restart()
-    property Timer _presetStatusClear: Timer { interval: 4000; onTriggered: root.presetStatus = "" }
+    function range(key) { return root.store.range(key); }
+    function setOption(key, value) { root.store.set(key, value); }
+    function resetOptions(keys) { root.store.reset(keys); }
+    readonly property string presetStatus: root.store.presetStatus
+    function copyIslandPreset() { root.store.copyPreset(); }
+    function pasteIslandPreset() { root.store.pastePreset(); }
 
-    function copyIslandPreset() {
-        Clipboard.copyText(root._islandPreset());
-        root.presetStatus = "Copied Island settings";
-    }
-
-    function pasteIslandPreset() { root._presetPaste.running = true; }
-
-    property Process _presetPaste: Process {
-        command: ["wl-paste", "--no-newline"]
-        stdout: StdioCollector {
-            onStreamFinished: {
-                const applied = root._applyIslandPreset(this.text);
-                root.presetStatus = applied < 0 ? "Clipboard doesn't hold Island settings"
-                    : "Applied " + applied + " settings";
-            }
-        }
-    }
-
-    function resetOptions(keys) {
-        for (const key of keys) settingsAdapter[key] = root.options[key].value;
-        root._save();
-    }
-
-    function _save() { root._saveTimer.restart(); }
-
-    property Timer _saveTimer: Timer {
-        interval: 300
-        onTriggered: root.settingsFile.writeAdapter()
-    }
+    function _save() { root.store.save(); }
 
     property FileView settingsFile: FileView {
         path: Quickshell.statePath("island-appearance.json")
