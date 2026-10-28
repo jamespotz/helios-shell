@@ -73,7 +73,7 @@ QtObject {
             noDisplay: false,
             execute: function() {
                 AppLaunch.exec(isTerminal
-                    ? [Config.terminal, "-e", "sh", "-c", execCmd]
+                    ? Config.terminalExec.concat(["sh", "-c", execCmd])
                     : ["sh", "-c", execCmd]);
             }
         };

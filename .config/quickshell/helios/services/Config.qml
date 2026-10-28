@@ -15,7 +15,16 @@ QtObject {
     readonly property string monoFontFamily: "JetBrains Mono"
     readonly property string iconFontFamily: "Material Symbols Rounded"
 
-    readonly property string terminal: "ghostty"
+    // Executable of the default terminal, set from Settings > Default Apps.
+    readonly property string terminal: settingsAdapter.terminal
+    // Prefix that runs a command in the terminal. Most take `-e`; the
+    // GNOME-style ones (Ptyxis, GNOME Terminal, Console) only take `--`.
+    readonly property var terminalExec: {
+        const name = terminal.split("/").pop();
+        if (name === "wezterm") return [terminal, "start", "--"];
+        if (["ptyxis", "gnome-terminal", "kgx"].includes(name)) return [terminal, "--"];
+        return [terminal, "-e"];
+    }
     readonly property string pamService: "system-auth"
 
     // Apple HIG uses ~250ms for standard transitions, 350ms for larger
@@ -370,6 +379,7 @@ QtObject {
     // below takes its defaults from it — same shape as Dock.options.
     readonly property var options: ({
         fontFamily: { value: "Inter", islandPreset: false },
+        terminal: { value: "ghostty", islandPreset: false },
         fontSize: { value: 13, range: [9, 22], islandPreset: false },
 
         idleBumpWidth: { value: 140, range: [80, 400] },
@@ -515,6 +525,7 @@ QtObject {
         JsonAdapter {
             id: settingsAdapter
             property string fontFamily: root.options.fontFamily.value
+            property string terminal: root.options.terminal.value
             property int fontSize: root.options.fontSize.value
             property int idleBumpWidth: root.options.idleBumpWidth.value
             property int idleBumpHeight: root.options.idleBumpHeight.value

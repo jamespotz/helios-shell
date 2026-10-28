@@ -3,8 +3,9 @@ import Quickshell
 import "../../services"
 import "../../components"
 
-// Default browser/file manager/text editor — thin UI over xdg-mime, which
-// is what actually owns these associations (see DefaultApps.qml). Same
+// Default browser, file manager, viewers, etc. — thin UI over xdg-mime, which
+// is what actually owns these associations (see DefaultApps.qml) — plus the
+// terminal, which has no mime type and lives in Config.terminal. Same
 // collapsed-row-expands-to-picker pattern as ThemeDestination's theme grid.
 Item {
     id: root
@@ -24,6 +25,22 @@ Item {
         const bare = desktopId.replace(/\.desktop$/, "");
         const match = root.apps.find(a => a.id === bare);
         return match ? match.name : bare;
+    }
+
+    // Apps that can open the category's files, plus the current default even
+    // if it isn't registered; every app while the handler list is unknown.
+    function appsFor(category) {
+        if (category.appCategory) return root.apps.filter(a => a.categories.includes(category.appCategory));
+        const ids = DefaultApps.handlers[category.id] || [];
+        if (!ids.length) return root.apps;
+        const current = DefaultApps.current[category.id];
+        return root.apps.filter(a => ids.includes(a.id + ".desktop") || a.id + ".desktop" === current);
+    }
+
+    function currentFor(category) {
+        if (category.id !== "terminal") return DefaultApps.current[category.id];
+        const match = root.apps.find(a => a.command[0] === Config.terminal);
+        return match ? match.id + ".desktop" : Config.terminal;
     }
 
     Column {
@@ -51,7 +68,7 @@ Item {
                 wrapMode: Text.WordWrap
                 color: Colors.subtext
                 font.pixelSize: Config.fontSize - 1
-                text: "Sets the system-wide xdg-mime association, so other apps that ask the desktop for a default pick it up too."
+                text: "Sets the system-wide xdg-mime association, so other apps that ask the desktop for a default pick it up too. The terminal is used by Helios and its shortcuts."
             }
         }
 
@@ -90,7 +107,7 @@ Item {
                             spacing: 1
                             StyledText { text: categoryDelegate.modelData.label; font.weight: Font.Medium }
                             StyledText {
-                                text: root.labelFor(DefaultApps.current[categoryDelegate.modelData.id])
+                                text: root.labelFor(root.currentFor(categoryDelegate.modelData))
                                 font.pixelSize: Config.fontSize - 3
                                 color: Colors.subtext
                             }
@@ -113,14 +130,14 @@ Item {
                     visible: categoryDelegate.open
 
                     Repeater {
-                        model: root.apps
+                        model: categoryDelegate.open ? root.appsFor(categoryDelegate.modelData) : []
 
                         HoverRow {
                             id: appRow
                             required property var modelData
                             width: parent.width
                             height: 40
-                            highlighted: DefaultApps.current[categoryDelegate.modelData.id] === appRow.modelData.id + ".desktop"
+                            highlighted: root.currentFor(categoryDelegate.modelData) === appRow.modelData.id + ".desktop"
                             onClicked: DefaultApps.setDefault(categoryDelegate.modelData.id, appRow.modelData.id + ".desktop")
 
                             Row {

@@ -152,6 +152,9 @@ QtObject {
 
     function remove(index) { root._commit(root.commands.filter((c, i) => i !== index)); }
 
+    // The terminal is baked into the generated binds; DefaultApps calls this when it changes.
+    function rewrite() { root._commit(root.commands); }
+
     function _commit(next) {
         root.commands = next;
         stateFile.setText(JSON.stringify(next));

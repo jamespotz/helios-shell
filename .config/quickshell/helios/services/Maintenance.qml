@@ -48,7 +48,7 @@ QtObject {
         if (steps.length === 0) return;
         steps.push("quickshell -c helios ipc call maintenance refresh >/dev/null");
         steps.push("printf '\\nPress Enter to close'; read -r _");
-        AppLaunch.exec([Config.terminal, "-e", "sh", "-c", steps.join("; ")]);
+        AppLaunch.exec(Config.terminalExec.concat(["sh", "-c", steps.join("; ")]));
     }
 
     property Process infoProc: Process {

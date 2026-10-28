@@ -105,10 +105,10 @@ QtObject {
         if (entry.runInTerminal) {
             const cmd = entry.command || [];
             if (cmd.length > 0) {
-                root.exec([Config.terminal, "-e"].concat(cmd));
+                root.exec(Config.terminalExec.concat(cmd));
             } else {
                 const exec = (entry.execString || "").replace(/%[fFuUdDnNickvm]/g, "").trim();
-                if (exec) root.exec([Config.terminal, "-e", "sh", "-c", exec]);
+                if (exec) root.exec(Config.terminalExec.concat(["sh", "-c", exec]));
             }
         } else if (entry.id) {
             // uwsm resolves the desktop entry itself (Exec field codes, Path).
