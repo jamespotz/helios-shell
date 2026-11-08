@@ -53,15 +53,15 @@ ShellRoot {
             // First run (no state file) seeds the three default commands.
             root.verify(seeded === JSON.stringify(CustomCommands.defaults), "seeded defaults: " + seeded);
             const defaultsLua = CustomCommands.buildLua(CustomCommands.defaults);
-            root.verify(defaultsLua.includes('hl.bind("SUPER + B", hl.dsp.exec_cmd(launch("\\"$(xdg-mime query default x-scheme-handler/https)\\"")),'),
+            root.verify(defaultsLua.includes('hl.bind("SUPER + B", hl.dsp.exec_cmd("gtk-launch \\"$(xdg-mime query default x-scheme-handler/https)\\""),'),
                 "default browser:\n" + defaultsLua);
-            root.verify(defaultsLua.includes('hl.bind("SUPER + E", hl.dsp.exec_cmd(launch("\\"$(xdg-mime query default inode/directory)\\"")),'),
+            root.verify(defaultsLua.includes('hl.bind("SUPER + E", hl.dsp.exec_cmd("gtk-launch \\"$(xdg-mime query default inode/directory)\\""),'),
                 "default file manager");
-            root.verify(defaultsLua.includes('hl.bind("SUPER + T", hl.dsp.exec_cmd(run_app .. "' + Config.terminal + '"),'),
+            root.verify(defaultsLua.includes('hl.bind("SUPER + T", hl.dsp.exec_cmd("' + Config.terminal + '"),'),
                 "default terminal");
 
             const lua = CustomCommands.buildLua([{ mods: ["SUPER"], key: "B", app: "firefox", name: "Firefox" }]);
-            root.verify(lua.includes('hl.bind("SUPER + B", hl.dsp.exec_cmd(launch("firefox.desktop")),'), "lua bind:\n" + lua);
+            root.verify(lua.includes('hl.bind("SUPER + B", hl.dsp.exec_cmd("gtk-launch firefox.desktop"),'), "lua bind:\n" + lua);
             root.verify(lua.includes('description = "Custom: Open Firefox"'), "lua description");
             console.warn("CUSTOM_COMMANDS_TEST_PASS");
         } catch (error) {
