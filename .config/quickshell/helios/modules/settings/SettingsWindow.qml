@@ -35,7 +35,7 @@ PanelWindow {
     // shows for the page; adding a page is one entry here.
     readonly property var pages: [
         { id: "appearance", label: "Appearance", icon: "palette", group: "Personalization", component: appearancePage,
-          keywords: ["theme", "dark mode", "color", "palette", "scheme", "wallpaper colors", "font", "typeface", "text size", "reduce motion"] },
+          keywords: ["theme", "dark mode", "color", "palette", "scheme", "wallpaper colors", "font", "typeface", "text size", "reduce motion", "screen corners", "rounded corners", "screen border", "frame"] },
         { id: "wallpaper", label: "Wallpaper", icon: "wallpaper", group: "Personalization", component: wallpaperPage,
           keywords: ["wallpaper", "background", "transition", "folder"] },
         { id: "island", label: "Island", icon: "auto_awesome", group: "Personalization", component: islandPage,
@@ -380,6 +380,29 @@ PanelWindow {
 
                 ThemeDestination { width: parent.width }
                 FontSettings { width: parent.width }
+
+                Column {
+                    width: parent.width
+                    spacing: 10
+                    SectionTitle { title: qsTr("Screen edges"); subtitle: qsTr("Rounds the corners and frames the edges of every screen. 0 turns each off.") }
+                    SettingsCard {
+                        OptionSlider {
+                            target: Config
+                            option: "screenCornerRadius"
+                            icon: "rounded_corner"
+                            label: qsTr("Radius")
+                            format: v => Math.round(v) + " px"
+                        }
+                        OptionSlider {
+                            target: Config
+                            option: "screenBorderWidth"
+                            icon: "border_outer"
+                            label: qsTr("Border width")
+                            format: v => Math.round(v) + " px"
+                            last: true
+                        }
+                    }
+                }
             }
         }
     }

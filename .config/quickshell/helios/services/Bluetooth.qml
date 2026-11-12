@@ -111,15 +111,16 @@ QtObject {
         return true;
     }
 
-    // Audio = A2DP with SBC-XQ, Call = HFP with mSBC. Each falls back to the
-    // bare profile, where PipeWire picks the codec, when the device or
-    // PipeWire build doesn't offer that exact one (PipeWire names the
-    // best HFP codec plain "headset-head-unit", so mSBC often lives there).
+    // Audio = bare A2DP, where PipeWire picks the device's best codec (AAC
+    // over SBC-XQ, which crackles on shared Wi-Fi/BT radios like the AX201).
+    // Call = HFP with mSBC, falling back to the bare profile when the device
+    // or PipeWire build doesn't offer it (PipeWire names the best HFP codec
+    // plain "headset-head-unit", so mSBC often lives there).
     // Some headsets (JBL Tune 730BT) drop the A2DP link while in HFP, so
     // the card stops offering A2DP at all: reconnect that BlueZ profile
     // (uuid) and retry while PipeWire re-adds it.
     readonly property var audioModes: ({
-        audio: { profiles: ["a2dp-sink-sbc_xq", "a2dp-sink"], uuid: "0000110b-0000-1000-8000-00805f9b34fb" },
+        audio: { profiles: ["a2dp-sink", "a2dp-sink-sbc_xq"], uuid: "0000110b-0000-1000-8000-00805f9b34fb" },
         call: { profiles: ["headset-head-unit-msbc", "headset-head-unit"], uuid: "0000111e-0000-1000-8000-00805f9b34fb" }
     })
 
@@ -129,7 +130,11 @@ QtObject {
         if (!device || !target) { root._reportError("switch to " + mode, "Device is no longer available"); return false; }
         profileSetter.mode = mode;
         profileSetter.command = ["sh", "-c",
-            'set_profile() { pactl set-card-profile "$1" "$2" 2>/dev/null || pactl set-card-profile "$1" "$3" 2>/dev/null; }\n'
+            // pactl exits 0 even when the switch fails (transport Acquire
+            // error), so confirm the card's Active Profile before trusting it.
+            'is_active() { pactl list cards | sed -n "/Name: $1\\$/,/^Card #/p" | grep -q "Active Profile: $2\\$"; }\n'
+            + 'set_profile() { for p in "$2" "$3"; do pactl set-card-profile "$1" "$p" 2>/dev/null || continue; '
+            + 'for i in 1 2 3 4 5 6 7 8; do sleep 0.5; is_active "$1" "$p" && return 0; done; done; return 1; }\n'
             + 'set_profile "$1" "$2" "$3" && exit 0\n'
             + 'busctl call org.bluez "$4" org.bluez.Device1 ConnectProfile s "$5" || exit 1\n'
             + 'for i in 1 2 3 4 5; do sleep 1; set_profile "$1" "$2" "$3" && exit 0; done\n'

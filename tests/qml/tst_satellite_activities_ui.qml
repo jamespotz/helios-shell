@@ -35,9 +35,11 @@ ShellRoot {
             id: surface
             anchors.fill: parent
             Item { id: anchor; x: 420; y: 24; width: 200; height: 32 }
+            IslandUI.IslandGeometry { id: geometry; paintedWidth: anchor.width }
             IslandUI.IslandSatelliteHost {
                 id: left
                 anchorItem: anchor
+                geometry: geometry
                 definition: IslandNavigation.satelliteFor("test-screen", false)
                 targetScreen: "test-screen"
             }
@@ -45,6 +47,7 @@ ShellRoot {
                 id: right
                 slotOnRight: true
                 anchorItem: anchor
+                geometry: geometry
                 definition: IslandNavigation.satelliteFor("test-screen", true)
                 targetScreen: "test-screen"
             }

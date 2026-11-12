@@ -42,7 +42,8 @@ QtObject {
     readonly property int fontSize: settingsAdapter.fontSize
     readonly property int idleBumpWidth: settingsAdapter.idleBumpWidth
     readonly property int idleBumpHeight: settingsAdapter.idleBumpHeight
-    readonly property int islandTopGap: settingsAdapter.islandTopGap
+    // Notch sits on the screen edge, so its top gap is always 0.
+    readonly property int islandTopGap: islandAttached ? 0 : settingsAdapter.islandTopGap
     // Spacing between widgets in the collapsed idle bump — user-tunable
     // from Settings > Island.
     readonly property int idleWidgetSpacing: settingsAdapter.idleWidgetSpacing
@@ -64,7 +65,23 @@ QtObject {
     // flat constant regardless of mode (see Island.qml) — expanded states
     // overlap windows rather than growing the reservation, so the gap stays
     // put whether the island is idle or expanded.
+    // Island layout, from Settings > Island. Quiet trims the idle widgets
+    // to workspaces, clock and media (IslandIdle). Notch joins the Island
+    // to the top edge; its shape fills the top gap. Zen hides the idle Island;
+    // it slides in from the top edge on hover, for an alert, or when a
+    // destination opens. None of them change the widget settings.
+    readonly property string islandLayout: settingsAdapter.islandLayout
+    readonly property bool islandAttached: islandLayout === "notch"
+    readonly property bool islandAutoHide: islandLayout === "zen"
     readonly property int islandExclusiveZone: islandTopGap + idleBumpHeight
+    // Space between the Island and windows below it. The floating Island
+    // mirrors its top gap; Notch has none, so windows keep the default
+    // spacing below it.
+    readonly property int islandWindowGap: islandAttached ? root.options.islandTopGap.value : islandTopGap
+    // Rounds each screen's corners with black fillets; 0 turns it off.
+    readonly property int screenCornerRadius: settingsAdapter.screenCornerRadius
+    // Frames each screen with a black border that windows stay inside; 0 turns it off.
+    readonly property int screenBorderWidth: settingsAdapter.screenBorderWidth
     // Apple's peek/hover state is slightly taller for better touch/click
     // targets and more breathing room around text.
     readonly property int peekHeight: settingsAdapter.peekHeight
@@ -385,6 +402,9 @@ QtObject {
         idleBumpWidth: { value: 140, range: [80, 400] },
         idleBumpHeight: { value: 32, range: [18, 60] },
         islandTopGap: { value: 10, range: [0, 40] },
+        screenCornerRadius: { value: 0, range: [0, 40], islandPreset: false },
+        screenBorderWidth: { value: 0, range: [0, 24], islandPreset: false },
+        islandLayout: { value: "island", choices: ["island", "quiet", "notch", "zen"] },
         idleWidgetSpacing: { value: 8, range: [0, 40] },
         islandContentPadH: { value: 18, range: [0, 60] },
         islandContentPadV: { value: 10, range: [0, 40] },
@@ -530,6 +550,9 @@ QtObject {
             property int idleBumpWidth: root.options.idleBumpWidth.value
             property int idleBumpHeight: root.options.idleBumpHeight.value
             property int islandTopGap: root.options.islandTopGap.value
+            property int screenCornerRadius: root.options.screenCornerRadius.value
+            property int screenBorderWidth: root.options.screenBorderWidth.value
+            property string islandLayout: root.options.islandLayout.value
             property int idleWidgetSpacing: root.options.idleWidgetSpacing.value
             property int islandContentPadH: root.options.islandContentPadH.value
             property int islandContentPadV: root.options.islandContentPadV.value

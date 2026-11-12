@@ -12,6 +12,8 @@ FocusScope {
     // satellite along in the same instant jump. Animate the anchor edge instead
     // of chasing the satellite's animated width with a second spring.
     required property Item anchorItem
+    // The Island's live painted edges and room (IslandGeometry).
+    required property IslandGeometry geometry
     property bool onRight: false
     property real restGap: Config.satelliteRestGap
 
@@ -50,8 +52,21 @@ FocusScope {
         enabled: !Config.reducedMotion
         Spring { id: entranceSpring; spring: Config.satelliteSpringStiffness; damping: Config.satelliteSpringDamping }
     }
+    // Notch: a collapsed badge tucks under the Island's side so the two read
+    // as one shape, and separates by restGap when it expands.
+    readonly property bool fused: Config.islandAttached && !root.expanded
+    // Deep enough to hide both facing rounded corners under the Island.
+    readonly property real fuseOverlap: Math.min(root.badgeSize / 2, root.radiusLimit)
+        + Math.min(root.anchorHeight / 2, Config.islandIdleCornerRadius)
+    property real fuseProgress: root.fused ? 1 : 0
+    Behavior on fuseProgress {
+        enabled: !Config.reducedMotion
+        Spring { id: fuseSpring; spring: Config.satelliteSpringStiffness; damping: Config.satelliteSpringDamping }
+    }
+    readonly property real fuseWidth: root.fuseOverlap * root.fuseProgress
+    readonly property real sideOffset: root.restGap - (root.restGap + root.fuseOverlap) * root.fuseProgress
     // The Island occludes the satellite along both directions of travel.
-    z: root.entranceProgress < 0.999 ? -1 : 0
+    z: root.entranceProgress < 0.999 || root.fuseProgress > 0.001 ? -1 : 0
 
     // Same escape-to-close as the main island's hitArea (Island.qml) — focus
     // has to sit here, the shallowest ancestor of expandedContent, so keys
@@ -80,17 +95,25 @@ FocusScope {
     property real animatedAnchorX: root.desiredAnchorX
     // Size and position share the same edge, so closing keeps a steady gap.
     // Clamp against the current Island bounds while its anchor spring catches up.
-    readonly property real sideX: root.onRight
-        ? Math.max(root.animatedAnchorX, anchorItem.x + anchorItem.width) + root.restGap
-        : Math.min(root.animatedAnchorX, anchorItem.x) - root.width - root.restGap
+    // Fused: follow the Island's painted edge, which springs on its own,
+    // instead of hitArea's edge, which jumps to the new size and would
+    // pull the badge away from the morphing notch.
+    readonly property real paintedEdgeX: root.onRight ? root.geometry.paintedRight : root.geometry.paintedLeft
+    readonly property real sideX: root.fused
+        ? (root.onRight ? root.paintedEdgeX + root.sideOffset : root.paintedEdgeX - root.width - root.sideOffset)
+        : root.onRight
+        ? Math.max(root.animatedAnchorX, anchorItem.x + anchorItem.width) + root.sideOffset
+        : Math.min(root.animatedAnchorX, anchorItem.x) - root.width - root.sideOffset
     readonly property real belowX: root.animatedAnchorX
         + (root.onRight ? -1 : 1) * anchorItem.width / 2 - root.width / 2
     readonly property real separatedX: root.sideX + (root.belowX - root.sideX) * root.belowProgress
     readonly property real emergenceX: anchorItem.x
         + (root.onRight ? anchorItem.width - root.badgeWidth : 0)
         + (root.badgeWidth - root.width) / 2
-    readonly property real emergenceY: anchorItem.y + Math.max(0, (anchorItem.height - root.badgeSize) / 2)
-    readonly property real restingY: root.below ? anchorItem.y + anchorItem.height + root.restGap : anchorItem.y
+    readonly property real anchorTop: anchorItem.y
+    readonly property real anchorHeight: anchorItem.height
+    readonly property real emergenceY: root.anchorTop + Math.max(0, (root.anchorHeight - root.badgeSize) / 2)
+    readonly property real restingY: root.below ? root.anchorTop + root.anchorHeight + root.restGap : root.anchorTop
     x: Math.max(0, Math.min(root.emergenceX + (root.separatedX - root.emergenceX) * root.entranceProgress,
         parent.width - root.width))
     property real animatedRestingY: root.restingY
@@ -107,7 +130,7 @@ FocusScope {
     readonly property real _expandedWidth: expandedLoader.item ? expandedLoader.item.implicitWidth + root.padH * 2 : root.badgeWidth
     readonly property real _expandedHeight: expandedLoader.item ? expandedLoader.item.implicitHeight + root.padV * 2 : root.badgeSize
 
-    readonly property real desiredWidth: root.expanded ? Math.min(root._expandedWidth, Config.islandMaxWidth, parent.width) : root.badgeWidth
+    readonly property real desiredWidth: root.expanded ? Math.min(root._expandedWidth, Config.islandMaxWidth, parent.width) : root.badgeWidth + root.fuseWidth
     readonly property real desiredHeight: root.expanded ? Math.max(root.badgeSize, Math.min(root._expandedHeight, Config.islandMaxHeight, parent.height - root.y)) : root.badgeSize
     width: root.desiredWidth
     height: root.desiredHeight
@@ -137,6 +160,7 @@ FocusScope {
             placementSpring.stop();
             verticalSpring.stop();
             anchorSpring.stop();
+            fuseSpring.stop();
             widthSpring.stop();
             heightSpring.stop();
             visibilityFade.stop();
@@ -144,6 +168,7 @@ FocusScope {
             root.belowProgress = Qt.binding(() => root.below ? 1 : 0);
             root.animatedRestingY = Qt.binding(() => root.restingY);
             root.animatedAnchorX = Qt.binding(() => root.desiredAnchorX);
+            root.fuseProgress = Qt.binding(() => root.fused ? 1 : 0);
             root.width = Qt.binding(() => root.desiredWidth);
             root.height = Qt.binding(() => root.desiredHeight);
             root.opacity = Qt.binding(() => root.shown ? 1 : 0);
@@ -167,6 +192,9 @@ FocusScope {
         anchors.fill: parent
         visible: !root.plainSurface
         radiusLimit: root.radiusLimit
+        // Notch: join the top edge like the Island, unless placed below it.
+        attached: Config.islandAttached && !root.below
+        attachGap: root.y
         borderEnabled: Config.satelliteBorder
         borderWidth: Config.satelliteBorderWidth
         fillColor: root.fillColor
@@ -193,6 +221,8 @@ FocusScope {
         Loader {
             id: badgeLoader
             anchors.centerIn: parent
+            // Centre on the part left visible beside the Island.
+            anchors.horizontalCenterOffset: (root.onRight ? 1 : -1) * root.fuseWidth / 2
             active: !root.expanded
             sourceComponent: root.badge
             opacity: root.expanded ? 0 : 1

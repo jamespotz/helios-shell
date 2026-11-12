@@ -14,9 +14,11 @@ ShellRoot {
         Item {
             anchors.fill: parent
             Item { id: anchor; x: 400; y: 20; width: 160; height: 32 }
+            IslandUI.IslandGeometry { id: geometry; surfaceWidth: 1000; screenHeight: 800; paintedWidth: anchor.width }
             IslandUI.IslandSatellite {
                 id: satellite
                 anchorItem: anchor
+                geometry: geometry
                 active: true
                 badgeWidth: 60
                 expandedContent: Component { Item { implicitWidth: 320; implicitHeight: 200 } }
@@ -24,6 +26,7 @@ ShellRoot {
             IslandUI.IslandSatellite {
                 id: rightSatellite
                 anchorItem: anchor
+                geometry: geometry
                 onRight: true
                 active: true
                 expandedContent: Component { Item { implicitWidth: 320; implicitHeight: 200 } }

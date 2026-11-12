@@ -34,15 +34,26 @@ PanelWindow {
     readonly property var hyprMonitor: Hyprland.monitorFor(modelData)
     readonly property bool hasFullscreen: !!hyprMonitor && !!hyprMonitor.activeWorkspace && hyprMonitor.activeWorkspace.hasFullscreen
 
+    // Sizes, offsets and budgets for this screen's Island; satellites read it too.
+    IslandGeometry {
+        id: islandGeometry
+        mode: bar.mode
+        expanded: bar.expanded
+        contentReady: content.item !== null
+        contentWidth: content.item ? content.item.implicitWidth : 0
+        contentHeight: content.item ? content.item.implicitHeight : 0
+        surfaceWidth: bar.width
+        screenHeight: bar.screen ? bar.screen.height : 0
+        satelliteBelow: (!!bar.leftSatellite && bar.leftSatellite.expanded && bar.leftSatellite.below)
+            || (!!bar.rightSatellite && bar.rightSatellite.expanded && bar.rightSatellite.below)
+        paintedWidth: visual.width
+    }
+
     readonly property bool hasActiveMedia: {
         const players = Mpris.players ? Mpris.players.values : [];
         return players.some(p => p.isPlaying);
     }
 
-    // User-tunable from Settings > Island — idle mode
-    // still forces 0 regardless of the configured value.
-    readonly property int padH: mode === "idle" ? 0 : Config.islandContentPadH
-    readonly property int padV: mode === "idle" ? 0 : Config.islandContentPadV
 
     readonly property bool suppressFocusDismiss: ShellState.trayMenuOpen || !IslandNavigation.dismissesOnFocusLoss(bar.modelData.name)
 
@@ -68,15 +79,7 @@ PanelWindow {
     // game's pointer lock.
     WlrLayershell.keyboardFocus: bar.panelOpen && IslandNavigation.current && IslandNavigation.current.retainOnFocusLoss ? WlrKeyboardFocus.Exclusive : bar.panelOpen || bar.hovering || bar.satelliteOpen ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
     anchors.top: true
-    // Reserves enough room for the *whole* idle bump plus a visible gap
-    // below it, not just the top margin — otherwise a maximized window's
-    // title bar sits flush against the bump with no breathing room. This is
-    // a flat constant independent of `mode`, so the gap holds even when the
-    // island expands (expanded states overlap windows instead of pushing
-    // this reservation any bigger). The top gap lives inside the surface
-    // (see islandHeight) and Hyprland adds a margin on top of this zone, so
-    // the gap is counted again here to keep windows where they were.
-    exclusiveZone: Config.islandExclusiveZone + Config.islandTopGap
+    exclusiveZone: islandGeometry.exclusiveZone
     color: "transparent"
 
     // The real layer-shell surface never resizes — only the item(s) inside it
@@ -86,11 +89,7 @@ PanelWindow {
     // compositing, which stays smooth. `mask` keeps the rest of this window
     // click-through so it doesn't eat input outside the visible pill.
     implicitWidth: bar.screen ? bar.screen.width : Config.islandMaxWidth
-    implicitHeight: Config.islandTopGap + Math.min(Config.islandMaxHeight, bar.screen ? bar.screen.height - Config.islandTopGap : Config.islandMaxHeight)
-    // The surface starts at the screen edge and the pill sits islandTopGap
-    // below it, not at the surface's own top: the island's shadow blurs
-    // upward too, and nothing can paint outside the surface.
-    readonly property real islandHeight: height - Config.islandTopGap
+    implicitHeight: islandGeometry.surfaceHeight
     // In Game Mode an alert growing under a game's hidden cursor would take
     // pointer focus from it (Steam games run under XWayland, so their pointer
     // isn't locked), so alert cards stay click-through.
@@ -171,36 +170,9 @@ PanelWindow {
         }
     }
 
-    // visual's spring target while content.item is momentarily null on a
-    // fresh open (see hitArea below). Bindings only fire while content.item
-    // is valid or the island is idle — during the null-but-expanded gap
-    // neither applies, so this just holds its last real value instead of
-    // jumping to hitArea's islandMaxWidth/Height click-safety fallback,
-    // which was making the pill itself balloon to full size for a frame
-    // before settling to the real content size.
-    property int visualTargetWidth: Config.idleBumpWidth
-    property int visualTargetHeight: Config.idleBumpHeight
-
-    Binding on visualTargetWidth {
-        when: content.item !== null
-        value: Math.min(content.item ? content.item.implicitWidth + bar.padH * 2 : 0, Math.min(Config.islandMaxWidth, bar.width))
-    }
-    Binding on visualTargetHeight {
-        when: content.item !== null
-        value: Math.min(content.item ? content.item.implicitHeight + bar.padV * 2 : 0, Math.min(Config.islandMaxHeight, bar.islandHeight))
-    }
-    Binding on visualTargetWidth {
-        when: content.item === null && !bar.expanded
-        value: Config.idleBumpWidth
-    }
-    Binding on visualTargetHeight {
-        when: content.item === null && !bar.expanded
-        value: Config.idleBumpHeight
-    }
-
     // hitArea snaps to its target size *instantly* — no Behavior — and owns
     // the mask + hover MouseArea. visual (below) tracks its own target
-    // (visualTargetWidth/Height above), which usually matches hitArea but
+    // (islandGeometry.paintTarget*), which usually matches hitArea but
     // deliberately diverges during the fresh-open content.item gap so the
     // paint layer doesn't spring toward hitArea's islandMaxWidth/Height
     // click-safety fallback. If the hit-test region itself were mid-spring
@@ -213,7 +185,7 @@ PanelWindow {
     FocusScope {
         id: hitArea
         anchors.top: parent.top
-        anchors.topMargin: Config.islandTopGap
+        anchors.topMargin: islandGeometry.hitTop
         anchors.horizontalCenter: parent.horizontalCenter
         focus: bar.expanded
         TapHandler {
@@ -232,29 +204,9 @@ PanelWindow {
                 bar.hovering = false;
         }
 
-        // Falling all the way back to the tiny idle-bump size while
-        // `content.item` is still null (the Loader hasn't finished
-        // instantiating IslandDestinationHost/NotificationCard/IslandPeek yet — true for
-        // one frame on every *fresh* open, though never on a tab switch
-        // within an already-open panel, since content.item there never goes
-        // null) put the mask's real input region there for that frame. On a
-        // fresh open, clicks inside the visually-full-size panel landed
-        // outside that actual (still tiny) input region and fell through to
-        // whatever's behind — reproduced live: every row/button in a
-        // freshly-opened panel silently ate clicks, while the exact same
-        // click after a tab switch worked. Falling back to the full max
-        // size instead (while expanded) means the mask is never smaller
-        // than the real content, so a stray click at worst hits inert
-        // padding instead of missing the window entirely.
-        // Clamped to islandMaxWidth/Height — the real layer-shell surface
-        // (bar's implicitWidth/implicitHeight, below) never grows past that
-        // fixed size, so an unclamped content size here (e.g. a long window
-        // title pushing the idle/peek row past the surface's fixed width)
-        // would get hard-cut by the surface edge itself: square, no
-        // rounding, past the mask entirely. Clamping keeps overflow inside
-        // the visual's own rounded-corner clip below instead.
-        width: content.item ? Math.min(content.item.implicitWidth + bar.padH * 2, Math.min(Config.islandMaxWidth, bar.width)) : bar.expanded ? Math.min(Config.islandMaxWidth, bar.width) : Math.min(Config.idleBumpWidth, bar.width)
-        height: content.item ? Math.min(content.item.implicitHeight + bar.padV * 2, Math.min(Config.islandMaxHeight, bar.islandHeight)) : bar.expanded ? Math.min(Config.islandMaxHeight, bar.islandHeight) : Math.min(Config.idleBumpHeight, bar.islandHeight)
+        // Size rules, including the fresh-open fallback: IslandGeometry.
+        width: islandGeometry.hitWidth
+        height: islandGeometry.hitHeight
 
         // A plain MouseArea here would lose hover the instant the cursor moves
         // onto a nested IconButton's own MouseArea (overlapping MouseAreas
@@ -329,8 +281,22 @@ PanelWindow {
             // instead of also pushing the top edge upward.
             anchors.top: parent.top
             anchors.horizontalCenter: parent.horizontalCenter
-            width: bar.visualTargetWidth
-            height: bar.visualTargetHeight
+            width: islandGeometry.paintTargetWidth
+            height: islandGeometry.paintTargetHeight
+            // Zen slides the idle Island up past the edge and back down the
+            // same path; the extra 24 px keeps its shadow out of view too.
+            opacity: islandGeometry.zenHidden ? 0 : 1
+            Behavior on opacity { NumberAnimation { duration: Config.animMedium; easing.type: Easing.OutCubic } }
+            transform: Translate {
+                y: islandGeometry.zenHidden ? -(visual.height + Config.islandTopGap + 24) : 0
+                Behavior on y {
+                    enabled: !Config.reducedMotion
+                    SpringAnimation {
+                        spring: Config.islandSpringStiffness
+                        damping: Config.islandSpringDamping
+                    }
+                }
+            }
 
             // Both axes share identical spring params so they stay in
             // lockstep — mismatched width/height easing is what makes a
@@ -354,6 +320,8 @@ PanelWindow {
                 id: islandShape
                 anchors.fill: parent
                 expanded: bar.mode !== "idle"
+                attached: Config.islandAttached
+                attachGap: Config.islandTopGap
                 fillColor: bar.mode === "idle" ? Colors.background : Colors.surface
             }
 
@@ -374,7 +342,7 @@ PanelWindow {
                 Loader {
                     id: content
                     anchors.top: parent.top
-                    anchors.topMargin: bar.padV
+                    anchors.topMargin: islandGeometry.padV
                     anchors.horizontalCenter: parent.horizontalCenter
                     opacity: 0
                     sourceComponent: bar.panelOpen ? panelComp : bar.alertComp ? bar.alertComp : bar.hovering ? peekComp : idleComp
@@ -405,6 +373,7 @@ PanelWindow {
             definition: IslandNavigation.satelliteFor(bar.modelData.name, modelData)
             targetScreen: bar.modelData.name
             anchorItem: hitArea
+            geometry: islandGeometry
             defaultFillColor: bar.mode === "idle" ? Colors.background : Colors.surface
         }
         onItemAdded: (index, item) => {
@@ -435,11 +404,8 @@ PanelWindow {
         IslandDestinationHost {
             destinationId: IslandNavigation.destinationId
             targetScreen: bar.modelData.name
-            maxContentWidth: Math.max(0, Math.min(Config.islandMaxWidth, bar.width) - bar.padH * 2)
-            maxContentHeight: Math.max(0, bar.islandHeight - bar.padV * 2 - 60
-                - ((bar.leftSatellite && bar.leftSatellite.expanded && bar.leftSatellite.below)
-                    || (bar.rightSatellite && bar.rightSatellite.expanded && bar.rightSatellite.below)
-                    ? bar.islandHeight / 2 + Config.satelliteRestGap : 0))
+            maxContentWidth: islandGeometry.destinationMaxWidth
+            maxContentHeight: islandGeometry.destinationMaxHeight
         }
     }
 

@@ -32,6 +32,13 @@ SettingsPreviewPage {
     component ConfigSlider: OptionSlider { target: Config }
     component ConfigChoice: OptionChoice { target: Config }
 
+    readonly property var layoutChoices: [
+        { value: "island", label: qsTr("Island") },
+        { value: "quiet", label: qsTr("Quiet") },
+        { value: "notch", label: qsTr("Notch") },
+        { value: "zen", label: qsTr("Zen") }
+    ]
+
     readonly property var motionChoices: [
         { value: "snappy", label: "Snappy" },
         { value: "smooth", label: "Smooth" },
@@ -74,6 +81,24 @@ SettingsPreviewPage {
         id: col
         width: parent.width
         spacing: 20
+
+        Column {
+            width: parent.width
+            spacing: 10
+            SectionTitle {
+                title: qsTr("Layout")
+                subtitle: qsTr("Quiet shows only workspaces, media and the clock when idle. Notch joins the Island to the top edge, with no top gap. Zen hides it until you point at the top edge, an alert arrives, or a destination opens.")
+            }
+            SettingsCard {
+                ConfigChoice {
+                    option: "islandLayout"
+                    icon: "dashboard_customize"
+                    label: qsTr("Layout")
+                    choices: root.layoutChoices
+                    last: true
+                }
+            }
+        }
 
         Column {
             width: parent.width
@@ -123,7 +148,8 @@ SettingsPreviewPage {
                 ConfigSlider { option: "idleBumpWidth"; icon: "width"; label: "Width" }
                 ConfigSlider { option: "idleBumpHeight"; icon: "height"; label: "Height" }
                 ConfigSlider { option: "islandIdleCornerRadius"; icon: "rounded_corner"; label: "Corner radius"; format: v => Math.round(v) + " px" }
-                ConfigSlider { option: "islandTopGap"; icon: "vertical_align_top"; label: "Top gap" }
+                // Notch always sits on the edge (Config.islandTopGap).
+                ConfigSlider { option: "islandTopGap"; icon: "vertical_align_top"; label: "Top gap"; visible: !Config.islandAttached }
                 ConfigSlider { option: "idleWidgetSpacing"; icon: "space_bar"; label: "Widget spacing"; last: true }
             }
 

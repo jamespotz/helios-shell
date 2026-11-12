@@ -20,6 +20,7 @@ import "./modules/polkit"
 import "./modules/annotate"
 import "./modules/dock"
 import "./modules/settings"
+import "./modules/corners"
 
 ShellRoot {
     id: shellRoot
@@ -76,6 +77,11 @@ ShellRoot {
     Variants {
         model: Quickshell.screens
         CaptureFlash {}
+    }
+
+    Variants {
+        model: Quickshell.screens
+        ScreenCorners {}
     }
 
     Osd {}
@@ -160,6 +166,7 @@ ShellRoot {
             Config.setOption("islandTopGap", gap);
             Config.setOption("idleWidgetSpacing", widgetSpacing);
         }
+        function layout(name: string) { Config.setOption("islandLayout", name) }
         function resetAppearance() { Config.resetOptions(["idleBumpWidth", "idleBumpHeight", "islandTopGap", "idleWidgetSpacing"]) }
         function font(family: string, size: int) {
             Config.setOption("fontFamily", family);

@@ -126,17 +126,21 @@ ShellRoot {
             width: 1000
             height: 800
             FocusScope { id: anchor; x: 400; width: 200; height: 32 }
+            // Centred like Island's hit area, so painted edges match the anchor.
+            IslandUI.IslandGeometry { id: geometry; surfaceWidth: surface.width; screenHeight: surface.height; paintedWidth: anchor.width }
             IslandUI.IslandShape { id: mainShape; width: 200; height: 100; visible: false }
             SettingsUI.IslandSettings { id: settings; width: 700; visible: false }
             IslandUI.IslandSatelliteHost {
                 id: recordingHost
                 anchorItem: anchor
+                geometry: geometry
                 definition: IslandNavigation.satellites[0]
                 targetScreen: "test-screen"
             }
             IslandUI.IslandSatellite {
                 id: satellite
                 anchorItem: anchor
+                geometry: geometry
                 expandedContent: Component {
                     Item {
                         implicitWidth: 240
@@ -192,6 +196,19 @@ ShellRoot {
             satellite.active = true;
             root.verify(satellite.gap === Config.satelliteRestGap, "reduced motion skips entrance tween");
             root.verify(satellite.opacity === 1, "reduced motion skips fade");
+            Config.setOption("islandLayout", "notch");
+            root.verify(satellite.x + satellite.width > anchor.x + satellite.fuseOverlap - 0.5
+                && satellite.x + satellite.width - satellite.fuseOverlap <= anchor.x + 0.5 && satellite.z < 0,
+                "notch tucks the collapsed badge under the Island's side");
+            geometry.paintedWidth = anchor.width - 60;
+            root.verify(Math.abs(satellite.x + satellite.width - satellite.fuseOverlap - (anchor.x + 30)) < 0.5,
+                "notch badge follows the Island's painted edge while it morphs");
+            geometry.paintedWidth = Qt.binding(() => anchor.width);
+            satellite.expanded = true;
+            root.verify(satellite.x + satellite.width <= anchor.x - satellite.restGap + 0.5,
+                "notch separates an expanded satellite by the gap");
+            satellite.expanded = false;
+            Config.setOption("islandLayout", "island");
             satellite.active = false;
             root.verify(satellite.opacity === 0, "reduced motion hides immediately");
             surface.width = 500;

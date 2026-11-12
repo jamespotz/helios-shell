@@ -28,7 +28,8 @@ def dnf_update_packages():
 
 def _flatpak_installed_commits():
     # Maps app id -> the set of commits that count as "already installed":
-    # its own active commit, plus its alt-id if it has one.
+    # each installed branch's active commit, plus its alt-id if it has one.
+    # Merged per app id: runtimes often have two branches installed at once.
     result = _run(["flatpak", "list", "--columns=application,active,options"], 15)
     if result is None or result.returncode != 0:
         return None
@@ -42,7 +43,7 @@ def _flatpak_installed_commits():
         for opt in options.split(","):
             if opt.startswith("alt-id="):
                 commits.add(opt.split("=", 1)[1])
-        installed[app_id] = commits
+        installed.setdefault(app_id, set()).update(commits)
     return installed
 
 

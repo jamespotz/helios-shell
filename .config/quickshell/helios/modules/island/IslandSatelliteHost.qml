@@ -67,8 +67,7 @@ IslandSatellite {
             destinationId: root.activityId
             targetScreen: root.targetScreen
             maxContentWidth: Math.max(0, root.parent.width - root.padH * 2)
-            maxContentHeight: Math.max(0, root.parent.height - root.anchorItem.y
-                - (root.below ? root.parent.height / 2 : 0) - root.padV * 2 - 60)
+            maxContentHeight: root.geometry.satelliteMaxHeight(root.below, root.padV)
         }
     }
 }

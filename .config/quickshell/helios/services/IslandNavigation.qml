@@ -32,7 +32,7 @@ QtObject {
         root._destination("power", "Power mode", "PowerDestination.qml"),
         root._destination("powermenu", "Power", "PowerMenuDestination.qml"),
         root._destination("keybinds", "Keybinds", "KeybindsDestination.qml")
-    ].concat(root.satellites.map(s => root._destination(s.id, s.destinationLabel || s.label, s.file, 0, s.inIsland ? "" : s.id)), [
+    ].concat(root.satellites.map(s => root._destination(s.id, s.destinationLabel || s.label, s.file, 0, s.inIsland || Config.islandAttached ? "" : s.id)), [
         root._destination("annotate", "Annotate", "AnnotateDestination.qml", 0, "", true),
         root._destination("colorpicker", "Color Picker", "ColorPickerDestination.qml", 0, "", true),
         root._destination("launcher", "Launcher", "LauncherDestination.qml")
@@ -57,7 +57,8 @@ QtObject {
 
     // Each Satellite owns its Island destination; `destinations` derives them.
     // destinationLabel names it where the badge label would clash (Launcher).
-    // inIsland opens the destination in the Island instead of the Satellite.
+    // inIsland opens the destination in the Island instead of the Satellite;
+    // Notch does this for every satellite, so it opens inside the notch.
     // icon, color and badge feed the collapsed badge; each is a value or a
     // function. color defaults to the accent, badge text replaces the icon.
     // badgeFile replaces the whole badge with a component from modules/island.

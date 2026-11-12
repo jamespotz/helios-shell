@@ -9,10 +9,41 @@ import Quickshell.Io
 // reads — but snapd registers its desktop files under /var/lib/snapd/desktop
 // without reliably adding that to XDG_DATA_DIRS for non-login sessions, so
 // Launcher merges this in alongside DesktopEntries.applications.
+// Installed Steam games (native or Flatpak Steam) come from steam-games.py,
+// since Steam only writes .desktop files for games when asked to.
 QtObject {
     id: root
 
-    property var list: []
+    readonly property var list: root.snapApps.concat(root.steamGames)
+    property var snapApps: []
+    property var steamGames: []
+
+    // Rescanned whenever the Launcher opens, so a newly installed game shows up.
+    function refreshSteam() { steamScanner.running = true; }
+
+    readonly property Process steamScanner: Process {
+        command: ["python3", Qt.resolvedUrl("steam-games.py").toString().replace("file://", "")]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try { root.steamGames = JSON.parse(text).map(game => root.steamEntry(game)); }
+                catch (error) { root.steamGames = []; }
+            }
+        }
+    }
+
+    function steamEntry(game) {
+        const url = "steam://rungameid/" + game.appid;
+        return {
+            name: game.name,
+            genericName: "Steam game",
+            icon: game.icon || (game.flatpak ? "com.valvesoftware.Steam" : "steam"),
+            keywords: ["steam", "game"],
+            noDisplay: false,
+            execute: function() {
+                AppLaunch.exec(game.flatpak ? ["flatpak", "run", "com.valvesoftware.Steam", url] : ["steam", url]);
+            }
+        };
+    }
 
     readonly property Process scanner: Process {
         // \x1e (record separator) delimits "path, then its content" pairs so
@@ -35,7 +66,7 @@ QtObject {
             const entry = root.parseDesktopFile(chunks[i + 1]);
             if (entry) entries.push(entry);
         }
-        root.list = entries;
+        root.snapApps = entries;
     }
 
     function parseDesktopFile(text) {
@@ -79,5 +110,5 @@ QtObject {
         };
     }
 
-    Component.onCompleted: scanner.running = true
+    Component.onCompleted: { scanner.running = true; root.refreshSteam(); }
 }

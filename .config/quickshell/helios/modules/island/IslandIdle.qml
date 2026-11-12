@@ -24,7 +24,9 @@ Item {
     readonly property var rightKeys: root.layout.slice(root.layout.indexOf("|") + 1)
 
     function shows(key) {
-        if (!Config.widgetShown("idle", key)) return false;
+        if (Config.islandLayout === "quiet") {
+            if (!["workspaces", "clock", "media"].includes(key)) return false;
+        } else if (!Config.widgetShown("idle", key)) return false;
         if (key === "media") return root.mediaPlaying;
         if (key === "weather") return Weather.available;
         if (key === "github") return GitHub.items.length > 0;

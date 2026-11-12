@@ -248,6 +248,7 @@ QtObject {
     }
     function _resetView() {
         if (!(IslandNavigation.open && IslandNavigation.destinationId === "launcher")) root.view = "list";
+        else ExtraApps.refreshSteam();
     }
     property Connections appChanges: Connections { target: DesktopEntries; function onApplicationsChanged() { root.search(root.query); } }
     property Connections extraChanges: Connections { target: ExtraApps; function onListChanged() { root.search(root.query); } }

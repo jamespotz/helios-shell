@@ -49,7 +49,8 @@ ShellRoot {
             anchors.fill: parent
             color: Colors.background
             Item { id: satelliteAnchor; x: 180; y: 700; width: 140; height: 32 }
-            IslandUI.IslandSatelliteHost { id: countdown; anchorItem: satelliteAnchor; targetScreen: "test"; definition: IslandNavigation.satelliteFor("test", false) }
+            IslandUI.IslandGeometry { id: satelliteGeometry; paintedWidth: satelliteAnchor.width }
+            IslandUI.IslandSatelliteHost { id: countdown; anchorItem: satelliteAnchor; geometry: satelliteGeometry; targetScreen: "test"; definition: IslandNavigation.satelliteFor("test", false) }
             Loader { id: surface; width: 380; anchors.horizontalCenter: parent.horizontalCenter; y: 20; sourceComponent: focusComponent }
         }
     }
