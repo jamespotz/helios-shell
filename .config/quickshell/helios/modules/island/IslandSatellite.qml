@@ -187,6 +187,8 @@ FocusScope {
         yScale: Config.reducedMotion ? 1 : 0.92 + 0.08 * progress - 0.06 * stretch
     }
 
+    readonly property IslandShape shape: islandShape.visible ? islandShape : null
+
     IslandShape {
         id: islandShape
         anchors.fill: parent

@@ -8,8 +8,8 @@ import "../island"
 
 // Settings > Island — static preview of the idle pill and the hover row,
 // built from the real IslandIdle/IslandPeek so every setting shows as it
-// changes. Input is off; the hover row shrinks to fit the card. Sits on
-// a card so the dark idle pill reads against the page.
+// changes. Input is off; the hover row shrinks to fit the card. The idle
+// pill sits on the top of the wallpaper, placed by the current layout.
 Rectangle {
     id: root
 
@@ -33,18 +33,42 @@ Rectangle {
         width: root.width - 36
         spacing: 14
 
-        IslandShape {
-            anchors.horizontalCenter: parent.horizontalCenter
-            width: idle.implicitWidth
-            height: idle.implicitHeight
-            fillColor: Colors.background
+        // The top of the screen: Island and Quiet float below the top gap,
+        // Notch hangs from the edge, Zen is hidden until pointed at (faded).
+        Rectangle {
+            objectName: "islandPreviewScreen"
+            width: parent.width
+            height: idleShape.y + idleShape.height + 16
+            color: Colors.surfaceContainer
+            clip: true
 
-            IslandIdle {
-                id: idle
-                objectName: "islandPreviewIdle"
+            Image {
                 anchors.fill: parent
-                targetScreen: root.targetScreen
-                mediaPlaying: root.mediaPlaying
+                source: Wallpaper.isVideo ? "" : Wallpaper.source
+                sourceSize.width: Math.ceil(width * 2)
+                fillMode: Image.PreserveAspectCrop
+                verticalAlignment: Image.AlignTop
+                asynchronous: true
+            }
+
+            IslandShape {
+                id: idleShape
+                objectName: "islandPreviewShape"
+                anchors.horizontalCenter: parent.horizontalCenter
+                y: Config.islandTopGap
+                width: idle.implicitWidth
+                height: idle.implicitHeight
+                attached: Config.islandAttached
+                fillColor: Colors.background
+                opacity: Config.islandAutoHide ? 0.35 : 1
+
+                IslandIdle {
+                    id: idle
+                    objectName: "islandPreviewIdle"
+                    anchors.fill: parent
+                    targetScreen: root.targetScreen
+                    mediaPlaying: root.mediaPlaying
+                }
             }
         }
 

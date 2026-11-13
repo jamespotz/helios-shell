@@ -2,6 +2,7 @@ pragma Singleton
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import Quickshell.Hyprland
 
 QtObject {
     id: root
@@ -192,8 +193,7 @@ QtObject {
         const activation = result.activation;
         let accepted = true;
         if (activation.kind === "window") {
-            focusProcess.command = ["hyprctl", "dispatch", "focuswindow", "address:" + activation.address];
-            focusProcess.running = false; focusProcess.running = true;
+            Hyprland.dispatch(`hl.dsp.focus({ window = "address:${activation.address}" })`);
         } else if (activation.kind === "app") {
             root.recordLaunch(result.title);
             AppLaunch.launch(result.entry);
@@ -235,7 +235,6 @@ QtObject {
             root.search(root.query);
         }}
     }
-    property Process focusProcess: Process {}
     property FileView usageFile: FileView {
         path: Quickshell.statePath("launcher-app-usage.json"); printErrors: false; atomicWrites: true; preload: true; blockLoading: true
         onLoaded: { try { const parsed = JSON.parse(usageFile.text()); if (parsed && typeof parsed === "object") root.launchCounts = parsed; } catch (error) {} }

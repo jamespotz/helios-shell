@@ -1,4 +1,6 @@
 //@ pragma UseQApplication
+// Skips woff/woff2 files, which Qt loads slowly and holds a lot of memory for.
+//@ pragma DropExpensiveFonts
 // Default state dir is keyed by an MD5 hash of the resolved config path —
 // launching via `-c helios` vs `-p <repo path>` (or any other path
 // inconsistency, e.g. symlink resolution) hashes differently and orphans
@@ -52,7 +54,7 @@ ShellRoot {
         Component.onCompleted: {
             Themes.currentLabel();
             NightLight.enabled;    // restores persisted state + spawns wlsunset if needed
-            IdleInhibit.enabled;   // restores persisted state + spawns hypridle if needed
+            IdleInhibit.enabled;   // restores persisted state + starts the idle monitors
             GameMode.enabled;      // restores persisted state + reapplies Hyprland perf config
             Automations.headphonesRule; // rules only run once the singleton exists
             FocusTimer.state;
@@ -90,20 +92,6 @@ ShellRoot {
     PolkitAgent {}
     SettingsWindow {}
     AnnotateOverlay { id: annotateOverlay }
-
-    // Lets the (experimental) Liquid Glass surface read real desktop pixels
-    // through Hyprland's compositor blur instead of faking translucency.
-    // Matches every screen's Bar plus the settings window, which now shares
-    // the same LiquidGlassSurface toggle.
-    Process {
-        running: true
-        command: [
-            "hyprctl", "--batch",
-            "keyword layerrule blur,namespace:^(helios:bar|helios:settings|helios:dock)$ ; " +
-            "keyword layerrule ignorealpha 0.15,namespace:^(helios:bar|helios:settings|helios:dock)$ ; " +
-            "keyword layerrule xray 0,namespace:^(helios:bar|helios:settings|helios:dock)$"
-        ]
-    }
 
     // Qt reads the icon theme once at startup (QS_ICON_THEME, which
     // helios-reload.sh takes from GTK's setting), so a theme picked later in

@@ -103,6 +103,29 @@ PanelWindow {
         }
     }
 
+    // Compositor blur behind the pill and its satellites, read by the Liquid
+    // Glass surface and the translucent fill.
+    BackgroundEffect.blurRegion: Region {
+        ShapeBlur { target: islandShape }
+        ShapeBlur { target: bar.rightSatellite && bar.rightSatellite.visible ? bar.rightSatellite.shape : null }
+        ShapeBlur { target: bar.leftSatellite && bar.leftSatellite.visible ? bar.leftSatellite.shape : null }
+    }
+    // An IslandShape's body plus its notch fillets, each fillet cut to its
+    // concave edge so no unblurred square corner shows.
+    component ShapeBlur: Region {
+        property IslandShape target
+        item: target ? target.blurBody : null
+        radius: target ? target.blurRadius : 0
+        Region {
+            item: target ? target.leftFillet : null
+            Region { item: target && target.leftFillet ? target.leftFilletCut : null; shape: RegionShape.Ellipse; intersection: Intersection.Subtract }
+        }
+        Region {
+            item: target ? target.rightFillet : null
+            Region { item: target && target.rightFillet ? target.rightFilletCut : null; shape: RegionShape.Ellipse; intersection: Intersection.Subtract }
+        }
+    }
+
     Timer {
         id: hoverCollapseTimer
         interval: Config.hoverCollapseDelay

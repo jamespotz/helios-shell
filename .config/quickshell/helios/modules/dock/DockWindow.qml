@@ -149,6 +149,11 @@ PanelWindow {
         Region { item: menu }
         Region { item: preview }
     }
+    // Compositor blur behind the Dock body; dropped while it is hidden.
+    BackgroundEffect.blurRegion: Region {
+        item: dock.revealed ? dockBlur : null
+        radius: Math.max(0, dockSurface.cornerRadius - 2)
+    }
 
     // Center of the cell at index along the Dock, in window coordinates.
     // The buttons (index >= items.length) sit past the separator.
@@ -327,8 +332,11 @@ PanelWindow {
             Behavior on opacity { NumberAnimation { duration: Config.animFast } }
 
             DockSurface {
+                id: dockSurface
                 anchors.fill: parent
             }
+            // Blur area kept inside the antialiased edge; see IslandShape.blurInset.
+            Item { id: dockBlur; anchors.fill: parent; anchors.margins: 2 }
 
             Grid {
                 id: iconRow

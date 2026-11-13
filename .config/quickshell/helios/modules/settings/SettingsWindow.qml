@@ -30,6 +30,8 @@ PanelWindow {
     exclusiveZone: -1
 
     mask: Region { item: card }
+    // Blur area kept inside the antialiased edge; see IslandShape.blurInset.
+    BackgroundEffect.blurRegion: Region { item: cardBlur; radius: card.radius - 2 }
 
     // Sidebar entries, in order. `component` is what the content Loader
     // shows for the page; adding a page is one entry here.
@@ -159,6 +161,8 @@ PanelWindow {
         border.width: 0.5
         border.color: Qt.rgba(Colors.outline.r, Colors.outline.g, Colors.outline.b, 0.5)
         clip: true
+
+        Item { id: cardBlur; anchors.fill: parent; anchors.margins: 2 }
 
         LiquidGlassSurface {
             anchors.fill: parent

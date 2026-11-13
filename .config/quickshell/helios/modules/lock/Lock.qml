@@ -29,7 +29,9 @@ Loader {
         id: lock
 
         Component.onCompleted: lock.locked = true
+        Component.onDestruction: ShellState.lockSecure = false
         onLockedChanged: if (!lock.locked) root.active = false
+        onSecureChanged: ShellState.lockSecure = lock.secure
 
         surface: Component {
             WlSessionLockSurface {

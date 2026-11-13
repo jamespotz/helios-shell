@@ -6,6 +6,8 @@ import Quickshell.Io
 QtObject {
     id: root
     property bool locked: false
+    // True once the compositor confirms the lock is covering every output.
+    property bool lockSecure: false
 
     readonly property bool dndEnabled: liquidGlassAdapter.dndEnabled || root.automaticDndEnabled || GameMode.enabled
     // Fullscreen automation is temporary; only manual DND is persisted.

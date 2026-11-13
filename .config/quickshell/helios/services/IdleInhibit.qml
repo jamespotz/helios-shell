@@ -2,10 +2,11 @@ pragma Singleton
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import Quickshell.Wayland
+import Quickshell.Hyprland
 
-// Idle / auto-lock service — manages hypridle configuration for
-// automatic screen dimming, DPMS off, and session lock after timeout.
-// Writes a runtime config file and spawns/kills hypridle as needed.
+// Idle / auto-lock service: dims, locks, and turns the display off after
+// the user's timeouts, using Wayland idle notifications.
 QtObject {
     id: root
 
@@ -22,105 +23,51 @@ QtObject {
     property alias dimTimeout: adapter.dimTimeout        // seconds before dimming (0 = never)
     property alias caffeine: adapter.inhibited           // the user's caffeine toggle
     readonly property bool inhibited: root.caffeine || GameMode.enabled
-    // Before load, onLoaded does the first sync with the restored timeouts.
-    onInhibitedChanged: if (root.settingsFile.loaded) root._sync()
 
-    readonly property string configPath: Quickshell.env("HOME") + "/.config/hypr/hypridle-helios.conf"
-    readonly property string helios: "quickshell -c helios ipc call"
+    function setEnabled(v) { root.enabled = v; }
+    function setLockTimeout(secs) { root.lockTimeout = Math.max(0, secs); }
+    function setDpmsTimeout(secs) { root.dpmsTimeout = Math.max(0, secs); }
+    function setDimTimeout(secs) { root.dimTimeout = Math.max(0, secs); }
+    function toggleInhibit() { root.caffeine = !root.caffeine; }
 
-    function setEnabled(v) {
-        root.enabled = v;
-        root._sync();
+    // Off until the saved settings load, so defaults never fire.
+    readonly property bool _active: root.settingsFile.loaded && root.enabled && !root.inhibited
+
+    // IdleMonitor respects app idle inhibitors (video players, browsers) by default.
+    property IdleMonitor dimMonitor: IdleMonitor {
+        enabled: root._active && root.dimTimeout > 0
+        timeout: root.dimTimeout
+        onIsIdleChanged: Quickshell.execDetached(isIdle ? ["brightnessctl", "-s", "set", "30%"] : ["brightnessctl", "-r"])
+    }
+    property IdleMonitor lockMonitor: IdleMonitor {
+        enabled: root._active && root.lockTimeout > 0
+        timeout: root.lockTimeout
+        onIsIdleChanged: if (isIdle) ShellState.lock()
+    }
+    property IdleMonitor dpmsMonitor: IdleMonitor {
+        enabled: root._active && root.dpmsTimeout > 0
+        timeout: root.dpmsTimeout
+        onIsIdleChanged: Hyprland.dispatch(`hl.dsp.dpms({ action = "${isIdle ? "off" : "on"}" })`)
     }
 
-    function setLockTimeout(secs) {
-        root.lockTimeout = Math.max(0, secs);
-        root._sync();
+    // Lock before sleep: hold a logind delay inhibitor while unlocked, lock on
+    // PrepareForSleep, and drop the inhibitor once the lock is secure so
+    // suspend proceeds without showing the desktop on wake.
+    // pdeathsig ends both if the shell is killed; tail exits with systemd-inhibit.
+    // An orphaned inhibitor would delay every suspend.
+    property Process sleepInhibitor: Process {
+        running: root.enabled && !ShellState.lockSecure
+        command: ["setpriv", "--pdeathsig", "TERM", "--", "systemd-inhibit", "--what=sleep", "--mode=delay", "--who=Helios",
+            "--why=Lock the screen before sleep", "sh", "-c", "exec tail --pid=$PPID -f /dev/null"]
     }
-
-    function setDpmsTimeout(secs) {
-        root.dpmsTimeout = Math.max(0, secs);
-        root._sync();
-    }
-
-    function setDimTimeout(secs) {
-        root.dimTimeout = Math.max(0, secs);
-        root._sync();
-    }
-
-    function toggleInhibit() {
-        root.caffeine = !root.caffeine;
-    }
-
-    function _sync() {
-        // Kill existing hypridle
-        killProc.running = false;
-        killProc.running = true;
-    }
-
-    function _writeConfigAndStart() {
-        if (!root.enabled || root.inhibited) return;
-
-        // Build hypridle config lines
-        let lines = [];
-        lines.push("general {");
-        lines.push("    lock_cmd = " + root.helios + " lock lock");
-        lines.push("    before_sleep_cmd = loginctl lock-session");
-        lines.push("    after_sleep_cmd = hyprctl dispatch dpms on");
-        lines.push("}");
-        lines.push("");
-
-        if (root.dimTimeout > 0) {
-            lines.push("listener {");
-            lines.push("    timeout = " + root.dimTimeout);
-            lines.push("    on-timeout = brightnessctl -s set 30%");
-            lines.push("    on-resume = brightnessctl -r");
-            lines.push("}");
-            lines.push("");
-        }
-
-        if (root.lockTimeout > 0) {
-            lines.push("listener {");
-            lines.push("    timeout = " + root.lockTimeout);
-            lines.push("    on-timeout = " + root.helios + " lock lock");
-            lines.push("}");
-            lines.push("");
-        }
-
-        if (root.dpmsTimeout > 0) {
-            lines.push("listener {");
-            lines.push("    timeout = " + root.dpmsTimeout);
-            lines.push("    on-timeout = hyprctl dispatch dpms off");
-            lines.push("    on-resume = hyprctl dispatch dpms on");
-            lines.push("}");
-            lines.push("");
-        }
-
-        const config = lines.join("\\n");
-        // Use printf to write config file then exec hypridle.
-        // If hypridle isn't installed, this just silently fails.
-        writeProc.command = ["sh", "-c",
-            "mkdir -p \"$(dirname '" + root.configPath + "')\" && " +
-            "printf '%b' '" + config + "' > '" + root.configPath + "' && " +
-            "command -v hypridle >/dev/null 2>&1 && exec hypridle -c '" + root.configPath + "'"
-        ];
-        writeProc.running = false;
-        writeProc.running = true;
-    }
-
-    property Process killProc: Process {
-        command: ["pkill", "-x", "hypridle"]
-        onExited: {
-            startDelay.restart();
+    property Process sleepWatcher: Process {
+        running: root.enabled
+        command: ["setpriv", "--pdeathsig", "TERM", "--", "gdbus", "monitor", "--system", "--dest", "org.freedesktop.login1",
+            "--object-path", "/org/freedesktop/login1"]
+        stdout: SplitParser {
+            onRead: line => { if (line.includes("PrepareForSleep (true")) ShellState.lock(); }
         }
     }
-
-    property Timer startDelay: Timer {
-        interval: 150
-        onTriggered: root._writeConfigAndStart()
-    }
-
-    property Process writeProc: Process {}
 
     // Persistence
     property FileView settingsFile: FileView {
@@ -137,10 +84,6 @@ QtObject {
             property bool inhibited: false
         }
 
-        // Fires once the async load actually completes — the correct place
-        // to act on the *real* restored `enabled`, unlike Component.onCompleted
-        // (see the comment on the aliases above).
-        onLoaded: root._sync()
     }
 
     // Adapter updates exclude disk loading, so restoring preferences never

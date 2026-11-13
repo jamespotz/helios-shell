@@ -1,8 +1,8 @@
 import QtQuick
 import "../services"
 
-// Apple-style vibrancy surface: Hyprland supplies the real blur (via
-// `layerrule blur` for the "helios:bar" namespace in shell.qml); this
+// Apple-style vibrancy surface: the compositor supplies the real blur (via
+// BackgroundEffect.blurRegion on the Island, Dock and Settings windows); this
 // surface only paints a neutral tint + subtle specular rim on top.
 // Falls back to a flat fill (a Rectangle child) when liquid glass is disabled.
 //
@@ -16,6 +16,13 @@ Item {
     property real cornerRadius: 8
     property color fallbackColor: Colors.background
     property real glassAmount: active ? 1 : 0
+    // Hides the rim above this y, e.g. where a notch fillet joins the side.
+    property real rimTopInset: 0
+    // Off when the owner draws the fill itself in a different outline
+    // (IslandShape's notch), using topTint/bottomTint to match.
+    property bool fillShown: true
+    readonly property color topTint: Qt.alpha(Colors.surface, 0.72)
+    readonly property color bottomTint: Qt.alpha(Colors.background, 0.78)
     readonly property real _radius: Math.min(cornerRadius, width / 2, height / 2)
 
     // Plain Rectangles, not Canvas: a Canvas texture isn't antialiased at
@@ -33,11 +40,12 @@ Item {
         // switches instead of being locked to one fixed dark palette.
         Rectangle {
             anchors.fill: parent
+            visible: root.fillShown
             radius: root._radius
             antialiasing: true
             gradient: Gradient {
-                GradientStop { position: 0; color: Qt.alpha(Colors.surface, 0.72) }
-                GradientStop { position: 1; color: Qt.alpha(Colors.background, 0.78) }
+                GradientStop { position: 0; color: root.topTint }
+                GradientStop { position: 1; color: root.bottomTint }
             }
         }
 
@@ -57,13 +65,21 @@ Item {
         // light. Kept a literal white rather than a theme token: this is a
         // physical light-catch reflection, not UI chrome, so it stays white
         // in every theme the same way a real glass edge would.
-        Rectangle {
+        Item {
             anchors.fill: parent
-            radius: root._radius
-            antialiasing: true
-            color: "transparent"
-            border.width: 0.75
-            border.color: Qt.rgba(1, 1, 1, 0.14)
+            anchors.topMargin: root.rimTopInset
+            clip: root.rimTopInset > 0
+
+            Rectangle {
+                y: -root.rimTopInset
+                width: root.width
+                height: root.height
+                radius: root._radius
+                antialiasing: true
+                color: "transparent"
+                border.width: 0.75
+                border.color: Qt.rgba(1, 1, 1, 0.14)
+            }
         }
     }
 
@@ -73,7 +89,7 @@ Item {
         antialiasing: true
         color: root.fallbackColor
         opacity: 1 - root.glassAmount
-        visible: opacity > 0.001
+        visible: root.fillShown && opacity > 0.001
     }
 
     Behavior on glassAmount {
