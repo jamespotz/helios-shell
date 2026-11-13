@@ -23,7 +23,7 @@ Rectangle {
     radius: height / 2
     opacity: root.enabled ? 1 : 0.4
     scale: Config.reducedMotion ? 1
-        : mouse.pressed ? 0.9
+        : mouse.pressed ? Config.pressScaleSmall
         : root.bounceOnHover && mouse.containsMouse ? 1.12 : 1
     color: active ? Colors.accent
         : mouse.containsMouse ? Qt.rgba(Colors.overlay.r, Colors.overlay.g, Colors.overlay.b, 0.2)

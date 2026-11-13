@@ -46,7 +46,7 @@ Rectangle {
                 width: root._naturalWidths[segment.index] + Math.max(0, track.width - root._naturalTotal) / root.model.length
                 height: parent.height
                 radius: height / 2
-                scale: Config.reducedMotion ? 1 : segmentMouse.pressed ? 0.94 : 1
+                scale: Config.reducedMotion ? 1 : segmentMouse.pressed ? Config.pressScaleSmall : 1
                 color: segment.active ? Colors.accent : (segHover.hovered ? Colors.surface : "transparent")
 
                 Behavior on color { ColorAnimation { duration: Config.animFast; easing.type: Easing.OutCubic } }

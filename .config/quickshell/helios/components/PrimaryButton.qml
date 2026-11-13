@@ -23,7 +23,7 @@ Rectangle {
     implicitHeight: 44
     radius: Colors.radiusSmall
     opacity: root.enabled ? 1 : 0.4
-    scale: Config.reducedMotion ? 1 : buttonMouse.pressed ? 0.97 : 1
+    scale: Config.reducedMotion ? 1 : buttonMouse.pressed ? Config.pressScale : 1
     color: active ? root.tint : (hoverHandler.hovered ? Colors.surfaceHigh : Colors.surface)
 
     Behavior on color { ColorAnimation { duration: Config.animFast; easing.type: Easing.OutCubic } }

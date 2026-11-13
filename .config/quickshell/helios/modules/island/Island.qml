@@ -20,6 +20,11 @@ PanelWindow {
     visible: Config.islandShownOn(modelData.name) || panelOpen || satelliteOpen
 
     readonly property bool panelOpen: IslandNavigation.panelOpenFor(modelData.name)
+    // The Launcher is opened from the keyboard many times a day, so its
+    // morph is never slower than the snappy preset.
+    readonly property real morphStiffness: bar.panelOpen && IslandNavigation.destinationId === "launcher"
+        ? Math.max(Config.islandSpringStiffness, Config.motionPresets.snappy.stiffness)
+        : Config.islandSpringStiffness
     property bool hovering: false
     readonly property string mode: IslandNavigation.modeFor(modelData.name, hovering)
     readonly property bool expanded: IslandNavigation.expandedFor(modelData.name, hovering)
@@ -327,14 +332,14 @@ PanelWindow {
             Behavior on width {
                 enabled: !Config.reducedMotion
                 SpringAnimation {
-                    spring: Config.islandSpringStiffness
+                    spring: bar.morphStiffness
                     damping: Config.islandSpringDamping
                 }
             }
             Behavior on height {
                 enabled: !Config.reducedMotion
                 SpringAnimation {
-                    spring: Config.islandSpringStiffness
+                    spring: bar.morphStiffness
                     damping: Config.islandSpringDamping
                 }
             }

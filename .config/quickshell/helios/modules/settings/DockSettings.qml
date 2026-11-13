@@ -145,13 +145,7 @@ SettingsPreviewPage {
             SettingsCard {
                 DockToggle { icon: "animation"; label: "Bounce while launching"; option: "launchBounce" }
                 DockToggle { icon: "label"; label: "App name on hover"; option: "showTooltips" }
-                DockSlider {
-                    icon: "speed"
-                    label: "Show/hide speed"
-                    option: "revealDuration"
-                    format: v => Math.round(v) + " ms"
-                    last: true
-                }
+                DockToggle { icon: "animation"; label: "Animate show/hide"; option: "revealAnimation"; last: true }
             }
 
             Item { width: 1; height: 4 }

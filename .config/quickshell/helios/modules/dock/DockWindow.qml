@@ -326,8 +326,8 @@ PanelWindow {
             opacity: dock.revealed ? 1 : 0
 
             Behavior on offset {
-                enabled: !Config.reducedMotion && Dock.revealDuration > 0
-                NumberAnimation { duration: Dock.revealDuration; easing.type: Easing.OutCubic }
+                enabled: !Config.reducedMotion && Dock.revealAnimation
+                Spring {}
             }
             Behavior on opacity { NumberAnimation { duration: Config.animFast } }
 
@@ -429,7 +429,7 @@ PanelWindow {
                             visible: !iconCell.separator
                             anchors.fill: parent
                             transformOrigin: dock.growOrigin
-                            scale: (iconMouse.pressed && !iconCell.dragged && !Config.reducedMotion ? 0.9 : 1)
+                            scale: (iconMouse.pressed && !iconCell.dragged && !Config.reducedMotion ? Config.pressScale : 1)
                                 * dock.magnification(iconCell.along)
                             opacity: iconCell.minimized ? 0.6 : 1
                             Behavior on scale { enabled: !Config.reducedMotion; Spring {} }

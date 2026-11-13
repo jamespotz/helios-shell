@@ -35,7 +35,8 @@ QtObject {
         runningScope: { value: "all", choices: ["all", "monitor", "workspace"] },
         launchBounce: { value: true },
         showTooltips: { value: true },
-        revealDuration: { value: 280, range: [0, 600] },
+        // Slide the Dock in and out with the UI spring; off shows/hides it instantly.
+        revealAnimation: { value: true },
         // "intellihide" = hide when a window would cover the Dock,
         // "always" = only on screen-edge hover, "never" = always shown and
         // reserves its space.
@@ -88,7 +89,7 @@ QtObject {
     property string runningScope: root.options.runningScope.value
     property bool launchBounce: root.options.launchBounce.value
     property bool showTooltips: root.options.showTooltips.value
-    property int revealDuration: root.options.revealDuration.value
+    property bool revealAnimation: root.options.revealAnimation.value
     property string autohide: root.options.autohide.value
     property int hideDelay: root.options.hideDelay.value
     property bool showRunning: root.options.showRunning.value
@@ -491,6 +492,9 @@ QtObject {
                 if (Array.isArray(parsed.pins)) root.pins = parsed.pins.map(String);
                 if (Array.isArray(parsed.hiddenScreens)) root.hiddenScreens = parsed.hiddenScreens.map(String);
                 if (Array.isArray(parsed.recents)) root.recents = parsed.recents.map(String).slice(0, root._recentsKept);
+                // Migrate the old ms slider: 0 ms meant no animation.
+                if (!("revealAnimation" in parsed) && typeof parsed.revealDuration === "number")
+                    parsed.revealAnimation = parsed.revealDuration > 0;
                 root.store.apply(parsed);
             } catch (error) {}
         }

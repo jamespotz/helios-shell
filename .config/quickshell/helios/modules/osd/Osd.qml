@@ -26,7 +26,8 @@ PanelWindow {
     implicitHeight: 56 + shadowPadding * 2
     color: "transparent"
     exclusiveZone: 0
-    visible: shown
+    // Stay mapped until the fade-out finishes.
+    visible: shown || panel.opacity > 0
 
     property bool shown: false
     property string kind: "volume"
@@ -149,6 +150,11 @@ PanelWindow {
         color: "transparent"
         border.width: 0.5
         border.color: Qt.rgba(Colors.outline.r, Colors.outline.g, Colors.outline.b, 0.5)
+        // Appear at once (key-driven, frequent); fade out so the hide reads as done.
+        opacity: osd.shown ? 1 : 0
+        Behavior on opacity {
+            NumberAnimation { duration: osd.shown ? 0 : Config.animFast; easing.type: Easing.OutCubic }
+        }
 
         // The shadow fills the panel's interior too, which darkens the
         // translucent glass tint — hide it with glass on so the OSD matches

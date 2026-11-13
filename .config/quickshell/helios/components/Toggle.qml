@@ -19,7 +19,7 @@ Rectangle {
     implicitHeight: 24
     radius: height / 2
     opacity: root.enabled ? 1 : 0.4
-    scale: Config.reducedMotion ? 1 : toggleMouse.pressed ? 0.92 : 1
+    scale: Config.reducedMotion ? 1 : toggleMouse.pressed ? Config.pressScaleSmall : 1
     color: checked ? Colors.success : Colors.surfaceHigh
     border.width: hoverHandler.hovered ? 2 : 0
     border.color: Colors.accent

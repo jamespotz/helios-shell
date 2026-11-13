@@ -27,7 +27,7 @@ Item {
 
     implicitWidth: 84
     implicitHeight: 84
-    scale: Config.reducedMotion ? 1 : actionMouse.pressed ? 0.96 : 1
+    scale: Config.reducedMotion ? 1 : actionMouse.pressed ? Config.pressScale : 1
     Behavior on scale { enabled: !Config.reducedMotion; Spring {} }
 
     Rectangle {

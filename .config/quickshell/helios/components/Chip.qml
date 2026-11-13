@@ -28,7 +28,7 @@ Rectangle {
     implicitHeight: 28
     radius: height / 2
     opacity: root.enabled ? 1 : 0.4
-    scale: Config.reducedMotion ? 1 : chipMouse.pressed ? 0.94 : 1
+    scale: Config.reducedMotion ? 1 : chipMouse.pressed ? Config.pressScaleSmall : 1
     color: active ? root.tint : (hoverHandler.hovered ? Colors.surfaceHigh : root.inactiveTint)
 
     Behavior on color { ColorAnimation { duration: Config.animFast; easing.type: Easing.OutCubic } }

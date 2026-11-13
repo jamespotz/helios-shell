@@ -36,6 +36,12 @@ QtObject {
     // instead of two singletons independently claiming to own it.
     readonly property int animSlow: 380
 
+    // Press feedback for shared controls. pressScaleSmall is for compact
+    // controls (<= 32 px) where 0.96 would not show. Full-width rows
+    // (HoverRow) keep their own subtler 0.985.
+    readonly property real pressScale: 0.96
+    readonly property real pressScaleSmall: 0.94
+
     // Dynamic island — Apple-style: slightly taller idle bump for better
     // readability, more breathing room from the screen edge. These are the
     // shipped defaults; user-tunable from Settings > Island.
