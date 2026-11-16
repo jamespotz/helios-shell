@@ -1,0 +1,7 @@
+{
+  "mcpServers": {
+    "quickshell": {
+      "command": "/home/jamespotz/Projects/helios-shell/.venv/bin/quickshell-mcp"
+    }
+  }
+}

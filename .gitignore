@@ -10,3 +10,5 @@ __pycache__
 /assets/
 /learning-records/
 /.superpowers/
+
+/.venv/
